@@ -1,4 +1,3 @@
-
 """
 ==============
 config_util.py
@@ -8,7 +7,6 @@ Module containing functions for parsing the INI config file used by the
 Ingress client script.
 
 """
-
 import configparser
 import logging
 import os
