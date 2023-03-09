@@ -8,6 +8,7 @@ import requests
 import subprocess
 
 from src.pds.ingress.util.config_util import ConfigUtil
+from src.pds.ingress.util.node_util import NodeUtil
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config):
 
     logger.info(f"Submitting ingress request to {api_gateway_url}")
 
-    params = {"node": node_id}
+    params = {"node": node_id, "node_name": NodeUtil.node_id_to_long_name[node_id]}
     payload = {"url": ingress_file_path}
     headers = {"content-type": "application/json", "x-amz-docs-region": api_gateway_region}
 
@@ -111,13 +112,18 @@ def ingress_file_to_s3(ingress_file_path, s3_ingress_uri):
     logger.info("Ingest complete")
 
 
-def main():
+def setup_argparser():
     """
-    Main entry point for the pds-ingress-client.py script.
+    Helper function to perform setup of the ArgumentParser for the Ingress client
+    script.
+
+    Returns
+    -------
+    parser : argparse.ArgumentParser
+        The command-line argument parser for use with the pds-ingress-client.py
+        script.
 
     """
-    logging.basicConfig(level=logging.INFO)
-
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter
@@ -127,10 +133,24 @@ def main():
                         help=f'Path to the INI config for use with this client. '
                              f'If not provided, the default config '
                              f'({ConfigUtil.default_config_path()}) is used.')
-    parser.add_argument('-n', '--node', type=str, default="sbn",
-                        help='PDS node identifier')
+    parser.add_argument('-n', '--node', type=str.lower, required=True,
+                        choices=NodeUtil.permissible_node_ids(),
+                        help='PDS node identifier of the ingress requestor. '
+                             'This value is used by the Ingress service to derive '
+                             'the S3 upload location. Argument is case-insensitive.')
     parser.add_argument('ingress_file', type=str,
                         help='Path to the file to ingest to s3')
+
+    return parser
+
+def main():
+    """
+    Main entry point for the pds-ingress-client.py script.
+
+    """
+    logging.basicConfig(level=logging.INFO)
+
+    parser = setup_argparser()
 
     args = parser.parse_args()
 
