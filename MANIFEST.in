@@ -1,6 +1,4 @@
 graft src
-include versioneer.py
-include src/pds/ingress/_version.py
 global-exclude *.py[cod]
 
 # Include package-level files and directories here; e.g.:
