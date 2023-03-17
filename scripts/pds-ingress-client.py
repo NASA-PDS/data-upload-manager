@@ -13,7 +13,7 @@ from src.pds.ingress.util.node_util import NodeUtil
 logger = logging.getLogger(__name__)
 
 
-def resolve_ingress_paths(user_paths, resolved_paths=None):
+def resolve_ingress_paths(user_paths, resolved_paths=None, prefix=None):
     """
     Iterates over the list of user-provided paths to derive the final
     set of file paths to request ingress for.
@@ -26,6 +26,8 @@ def resolve_ingress_paths(user_paths, resolved_paths=None):
     resolved_paths : list of str, optional
         The list of paths resolved so far. For top-level callers, this should
         be left as None.
+    prefix : str
+        Path prefix to trim from each resolved path, if present.
 
     Returns
     -------
@@ -47,6 +49,17 @@ def resolve_ingress_paths(user_paths, resolved_paths=None):
 
         if os.path.isfile(abs_user_path):
             logger.debug(f'Resolved path {abs_user_path}')
+
+            # Remove path prefix if one was configured
+            if prefix and abs_user_path.startswith(prefix):
+                abs_user_path = abs_user_path.replace(prefix, "")
+
+                # Trim any leading slash if one was left after removing prefix
+                if abs_user_path.startswith("/"):
+                    abs_user_path = abs_user_path[1:]
+
+                logger.debug(f"Removed prefix {prefix}, new path: {abs_user_path}")
+
             resolved_paths.append(abs_user_path)
         elif os.path.isdir(abs_user_path):
             logger.debug(f'Resolving directory {abs_user_path}')
@@ -60,7 +73,9 @@ def resolve_ingress_paths(user_paths, resolved_paths=None):
                     for filename in filter(lambda name: not name.startswith('.'), filenames)
                 ]
 
-                resolved_paths = resolve_ingress_paths(product_paths, resolved_paths)
+                resolved_paths = resolve_ingress_paths(
+                    product_paths, resolved_paths, prefix=prefix
+                )
         else:
             logger.warning(
                 f"Encountered path ({abs_user_path}) that is neither a file nor "
@@ -195,6 +210,16 @@ def setup_argparser():
                         help='PDS node identifier of the ingress requestor. '
                              'This value is used by the Ingress service to derive '
                              'the S3 upload location. Argument is case-insensitive.')
+    parser.add_argument('--prefix', '-p', type=str, default=None,
+                        help='Specify a path prefix to be trimmed from each '
+                             'resolved ingest path such that is is not included '
+                             'with the request to the Ingress Service. '
+                             'For example, specifying --prefix "/home/user" would '
+                             'modify paths such as "/home/user/bundle/file.xml" '
+                             'to just "bundle/file.xml". This can be useful for '
+                             'controlling which parts of a directory structure '
+                             'should be included with the S3 upload location returned '
+                             'by the Ingress Service.')
     parser.add_argument('--dry-run', action='store_true',
                         help='Derive the full set of ingress paths without '
                              'performing any submission requests to the server.')
@@ -221,7 +246,11 @@ def main():
 
     config = ConfigUtil.get_config(args.config_path)
 
-    resolved_ingress_paths = resolve_ingress_paths(args.ingress_paths)
+    # Derive the full list of ingress paths based on the set of paths requested
+    # by the user
+    resolved_ingress_paths = resolve_ingress_paths(
+        args.ingress_paths, prefix=args.prefix
+    )
 
     node_id = args.node
 
