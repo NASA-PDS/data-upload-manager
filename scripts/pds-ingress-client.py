@@ -13,6 +13,63 @@ from src.pds.ingress.util.node_util import NodeUtil
 logger = logging.getLogger(__name__)
 
 
+def resolve_ingress_paths(user_paths, resolved_paths=None):
+    """
+    Iterates over the list of user-provided paths to derive the final
+    set of file paths to request ingress for.
+
+    Parameters
+    ----------
+    user_paths : list of str
+        The collection of user-requested paths to include with the ingress
+        request. Can be any combination of file and directory paths.
+    resolved_paths : list of str, optional
+        The list of paths resolved so far. For top-level callers, this should
+        be left as None.
+
+    Returns
+    -------
+    resolved_paths : list of str
+        The list of all paths resolved from walking the set of user-provided
+        paths.
+
+    """
+    # Initialize the list of resolved paths if necessary
+    resolved_paths = resolved_paths or list()
+
+    for user_path in user_paths:
+        abs_user_path = os.path.abspath(user_path)
+
+        if not os.path.exists(abs_user_path):
+            logger.warning(f'Encountered path ({abs_user_path}) that does not '
+                           f'actually exist, skipping...')
+            continue
+
+        if os.path.isfile(abs_user_path):
+            logger.debug(f'Resolved path {abs_user_path}')
+            resolved_paths.append(abs_user_path)
+        elif os.path.isdir(abs_user_path):
+            logger.debug(f'Resolving directory {abs_user_path}')
+            for grouping in os.walk(abs_user_path, topdown=True):
+                dirpath, _, filenames = grouping
+
+                # TODO: add option to include hidden files
+                # TODO: add support for include/exclude path filters
+                product_paths = [
+                    os.path.join(dirpath, filename)
+                    for filename in filter(lambda name: not name.startswith('.'), filenames)
+                ]
+
+                resolved_paths = resolve_ingress_paths(product_paths, resolved_paths)
+        else:
+            logger.warning(
+                f"Encountered path ({abs_user_path}) that is neither a file nor "
+                f"directory, skipping..."
+            )
+
+    return resolved_paths
+
+
 def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config):
     """
     Submits a request for file ingress to the PDS Ingress App API.
@@ -138,8 +195,15 @@ def setup_argparser():
                         help='PDS node identifier of the ingress requestor. '
                              'This value is used by the Ingress service to derive '
                              'the S3 upload location. Argument is case-insensitive.')
-    parser.add_argument('ingress_file', type=str,
-                        help='Path to the file to ingest to s3')
+    parser.add_argument('--dry-run', action='store_true',
+                        help='Derive the full set of ingress paths without '
+                             'performing any submission requests to the server.')
+    parser.add_argument('ingress_paths', type=str, nargs='+',
+                        metavar='file_or_dir',
+                        help='One or more paths to the files to ingest to S3. '
+                             'For each directory path is provided, this script will '
+                             'automatically derive all sub-paths for inclusion with '
+                             'the ingress request.')
 
     return parser
 
@@ -148,7 +212,8 @@ def main():
     Main entry point for the pds-ingress-client.py script.
 
     """
-    logging.basicConfig(level=logging.INFO)
+    # TODO: create module to perform logger setup based on INI setting/user arg
+    logging.basicConfig(level=logging.DEBUG)
 
     parser = setup_argparser()
 
@@ -156,16 +221,19 @@ def main():
 
     config = ConfigUtil.get_config(args.config_path)
 
-    ingress_file_path = os.path.abspath(args.ingress_file)
-
-    if not os.path.exists(ingress_file_path):
-        raise ValueError(f"Ingress file path {ingress_file_path} does not exist")
+    resolved_ingress_paths = resolve_ingress_paths(args.ingress_paths)
 
     node_id = args.node
 
-    s3_ingress_uri = request_file_for_ingress(ingress_file_path, node_id, config["API_GATEWAY"])
+    if not args.dry_run:
+        for resolved_ingress_path in resolved_ingress_paths:
+            s3_ingress_uri = request_file_for_ingress(
+                resolved_ingress_path, node_id, config["API_GATEWAY"]
+            )
 
-    ingress_file_to_s3(ingress_file_path, s3_ingress_uri)
+            ingress_file_to_s3(resolved_ingress_path, s3_ingress_uri)
+    else:
+        logger.info("Dry run requested, skipping ingress request submission.")
 
 
 if __name__ == '__main__':
