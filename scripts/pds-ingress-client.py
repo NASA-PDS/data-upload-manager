@@ -6,9 +6,9 @@ import logging
 import requests
 import subprocess
 
-from src.pds.ingress.util.config_util import ConfigUtil
-from src.pds.ingress.util.node_util import NodeUtil
-from src.pds.ingress.util.path_util import PathUtil
+from pds.ingress.util.config_util import ConfigUtil
+from pds.ingress.util.node_util import NodeUtil
+from pds.ingress.util.path_util import PathUtil
 
 logger = logging.getLogger(__name__)
 

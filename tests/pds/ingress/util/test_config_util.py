@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import unittest
 
-from src.pds.ingress.util.config_util import ConfigUtil
+from pds.ingress.util.config_util import ConfigUtil
 
 
 class ConfigUtilTest(unittest.TestCase):

@@ -5,9 +5,8 @@ import unittest
 from os.path import abspath
 from os.path import join
 
+from pds.ingress.util.path_util import PathUtil
 from pkg_resources import resource_filename
-
-from src.pds.ingress.util.path_util import PathUtil
 
 
 class PathUtilTest(unittest.TestCase):
