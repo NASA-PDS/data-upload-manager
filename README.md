@@ -1,6 +1,6 @@
-# PDS Data Delivery Manager
+# PDS Data Upload Manager
 
-The PDS Data Delivery Manager provides the client application and server interface for managing data deliveries and retrievals between the Planetary Data Cloud and Data Providers.
+The PDS Data Upload Manager provides the client application and server interface for managing data deliveries and retrievals from the Data Providers to and from the Planetary Data Cloud.
 
 ## Prerequisites
 
