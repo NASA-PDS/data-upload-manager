@@ -1,13 +1,14 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-delivery-manager/tree/«unknown») (2023-03-09)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2023-03-28)
 
-[Full Changelog](https://github.com/NASA-PDS/data-delivery-manager/compare/ed1ba8db788146a62149df3915d6ccc0c4bcf6c6...«unknown»)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/ed1ba8db788146a62149df3915d6ccc0c4bcf6c6...«unknown»)
 
 **Other closed issues:**
 
-- Add External Config Support to Ingress Client Script [\#7](https://github.com/NASA-PDS/data-delivery-manager/issues/7)
-- Develop Initial Proof-of-Concept [\#2](https://github.com/NASA-PDS/data-delivery-manager/issues/2)
+- Add External Config Support to Ingress Client Script [\#7](https://github.com/NASA-PDS/data-upload-manager/issues/7)
+- Develop Initial Proof-of-Concept [\#2](https://github.com/NASA-PDS/data-upload-manager/issues/2)
+- Develop Initial Design and Architecture [\#1](https://github.com/NASA-PDS/data-upload-manager/issues/1)
 
 
 
