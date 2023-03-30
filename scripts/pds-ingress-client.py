@@ -3,11 +3,12 @@
 import argparse
 import json
 import logging
-import os
 import requests
 import subprocess
 
-from src.pds.ingress.util.config_util import ConfigUtil
+from pds.ingress.util.config_util import ConfigUtil
+from pds.ingress.util.node_util import NodeUtil
+from pds.ingress.util.path_util import PathUtil
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config):
 
     logger.info(f"Submitting ingress request to {api_gateway_url}")
 
-    params = {"node": node_id}
+    params = {"node": node_id, "node_name": NodeUtil.node_id_to_long_name[node_id]}
     payload = {"url": ingress_file_path}
     headers = {"content-type": "application/json", "x-amz-docs-region": api_gateway_region}
 
@@ -111,13 +112,18 @@ def ingress_file_to_s3(ingress_file_path, s3_ingress_uri):
     logger.info("Ingest complete")
 
 
-def main():
+def setup_argparser():
     """
-    Main entry point for the pds-ingress-client.py script.
+    Helper function to perform setup of the ArgumentParser for the Ingress client
+    script.
+
+    Returns
+    -------
+    parser : argparse.ArgumentParser
+        The command-line argument parser for use with the pds-ingress-client.py
+        script.
 
     """
-    logging.basicConfig(level=logging.INFO)
-
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter
@@ -127,25 +133,64 @@ def main():
                         help=f'Path to the INI config for use with this client. '
                              f'If not provided, the default config '
                              f'({ConfigUtil.default_config_path()}) is used.')
-    parser.add_argument('-n', '--node', type=str, default="sbn",
-                        help='PDS node identifier')
-    parser.add_argument('ingress_file', type=str,
-                        help='Path to the file to ingest to s3')
+    parser.add_argument('-n', '--node', type=str.lower, required=True,
+                        choices=NodeUtil.permissible_node_ids(),
+                        help='PDS node identifier of the ingress requestor. '
+                             'This value is used by the Ingress service to derive '
+                             'the S3 upload location. Argument is case-insensitive.')
+    parser.add_argument('--prefix', '-p', type=str, default=None,
+                        help='Specify a path prefix to be trimmed from each '
+                             'resolved ingest path such that is is not included '
+                             'with the request to the Ingress Service. '
+                             'For example, specifying --prefix "/home/user" would '
+                             'modify paths such as "/home/user/bundle/file.xml" '
+                             'to just "bundle/file.xml". This can be useful for '
+                             'controlling which parts of a directory structure '
+                             'should be included with the S3 upload location returned '
+                             'by the Ingress Service.')
+    parser.add_argument('--dry-run', action='store_true',
+                        help='Derive the full set of ingress paths without '
+                             'performing any submission requests to the server.')
+    parser.add_argument('ingress_paths', type=str, nargs='+',
+                        metavar='file_or_dir',
+                        help='One or more paths to the files to ingest to S3. '
+                             'For each directory path is provided, this script will '
+                             'automatically derive all sub-paths for inclusion with '
+                             'the ingress request.')
+
+    return parser
+
+def main():
+    """
+    Main entry point for the pds-ingress-client.py script.
+
+    """
+    # TODO: create module to perform logger setup based on INI setting/user arg
+    logging.basicConfig(level=logging.DEBUG)
+
+    parser = setup_argparser()
 
     args = parser.parse_args()
 
     config = ConfigUtil.get_config(args.config_path)
 
-    ingress_file_path = os.path.abspath(args.ingress_file)
-
-    if not os.path.exists(ingress_file_path):
-        raise ValueError(f"Ingress file path {ingress_file_path} does not exist")
+    # Derive the full list of ingress paths based on the set of paths requested
+    # by the user
+    resolved_ingress_paths = PathUtil.resolve_ingress_paths(
+        args.ingress_paths, prefix=args.prefix
+    )
 
     node_id = args.node
 
-    s3_ingress_uri = request_file_for_ingress(ingress_file_path, node_id, config["API_GATEWAY"])
+    if not args.dry_run:
+        for resolved_ingress_path in resolved_ingress_paths:
+            s3_ingress_uri = request_file_for_ingress(
+                resolved_ingress_path, node_id, config["API_GATEWAY"]
+            )
 
-    ingress_file_to_s3(ingress_file_path, s3_ingress_uri)
+            ingress_file_to_s3(resolved_ingress_path, s3_ingress_uri)
+    else:
+        logger.info("Dry run requested, skipping ingress request submission.")
 
 
 if __name__ == '__main__':
