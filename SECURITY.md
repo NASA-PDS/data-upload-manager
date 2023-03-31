@@ -14,4 +14,4 @@ The following table describes which versions of the PDS Data Delivery Manager ar
 
 ## Reporting a Vulnerability
 
-To report a vulnerability, [please submit an issue on our tracker](https://github.com/NASA-PDS/data-delivery-manager/issues/new?template=vulnerability-issue.md).
+To report a vulnerability, [please submit an issue on our tracker](https://github.com/NASA-PDS/data-upload-manager/issues/new?template=vulnerability-issue.md).

@@ -13,7 +13,7 @@ The PDS Data Delivery Manager has the following prerequisties:
 
 Install with:
 
-    pip install pds-data-delivery-manager
+    pip install pds-data-upload-manager
 
 To deploy the service components to an AWS environment:
 
