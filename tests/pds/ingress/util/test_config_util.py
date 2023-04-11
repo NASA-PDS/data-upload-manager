@@ -12,7 +12,7 @@ class ConfigUtilTest(unittest.TestCase):
         self.assertEqual(parser["AWS"]["profile"], "AWS_Profile_1234")
 
         self.assertEqual(
-            parser["API_GATEWAY"]["url_template"], "https://{id}.execute-api.{region}.amazonaws.com/{stage}/{request}"
+            parser["API_GATEWAY"]["url_template"], "https://{id}.execute-api.{region}.amazonaws.com/{stage}/{resource}"
         )
         self.assertEqual(parser["API_GATEWAY"]["id"], "abcdefghi")
         self.assertEqual(parser["API_GATEWAY"]["region"], "us-west-2")
