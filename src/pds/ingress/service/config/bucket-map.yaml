@@ -1,0 +1,5 @@
+MAP:
+  NODES:
+    SBN:
+      gbo.ast.catalina.survey: nucleus-pds-protected
+      default: nucleus-pds-public
