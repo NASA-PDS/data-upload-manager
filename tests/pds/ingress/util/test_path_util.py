@@ -54,24 +54,32 @@ class PathUtilTest(unittest.TestCase):
             abspath(join(self.working_dir.name, "dir_one", "dir_two", "low_level_file.txt")), resolved_ingress_paths
         )
 
-        # Test using a prefix to remove from all paths
-        resolved_ingress_paths = PathUtil.resolve_ingress_paths(
-            [self.working_dir.name], prefix=abspath(self.working_dir.name)
-        )
-
-        self.assertIsInstance(resolved_ingress_paths, list)
-        self.assertGreater(len(resolved_ingress_paths), 0)
-        self.assertEqual(len(resolved_ingress_paths), 3)
-
-        self.assertIn("top_level_file.txt", resolved_ingress_paths)
-        self.assertIn(join("dir_one", "mid_level_file.txt"), resolved_ingress_paths)
-        self.assertIn(join("dir_one", "dir_two", "low_level_file.txt"), resolved_ingress_paths)
-
         # Test with a non-existent path
         resolved_ingress_paths = PathUtil.resolve_ingress_paths(["/fake/path"])
 
         self.assertIsInstance(resolved_ingress_paths, list)
         self.assertEqual(len(resolved_ingress_paths), 0)
+
+    def test_trim_ingress_path(self):
+        """Test the trim_ingress_path() function"""
+        ingress_paths = [
+            join(abspath(self.working_dir.name), "top_level_file.txt"),
+            join(abspath(self.working_dir.name), "dir_one", "mid_level_file.txt"),
+            join(abspath(self.working_dir.name), "dir_one", "dir_two", "low_level_file.txt"),
+        ]
+
+        trimmed_paths = [
+            PathUtil.trim_ingress_path(ingress_path, prefix=abspath(self.working_dir.name))
+            for ingress_path in ingress_paths
+        ]
+
+        self.assertIn("top_level_file.txt", trimmed_paths)
+        self.assertIn(join("dir_one", "mid_level_file.txt"), trimmed_paths)
+        self.assertIn(join("dir_one", "dir_two", "low_level_file.txt"), trimmed_paths)
+
+        untrimmed_paths = [PathUtil.trim_ingress_path(ingress_path) for ingress_path in ingress_paths]
+
+        self.assertListEqual(ingress_paths, untrimmed_paths)
 
 
 if __name__ == "__main__":

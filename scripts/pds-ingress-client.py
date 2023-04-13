@@ -184,8 +184,11 @@ def main():
 
     if not args.dry_run:
         for resolved_ingress_path in resolved_ingress_paths:
+            # Remove path prefix if one was configured
+            trimmed_path = PathUtil.trim_ingress_path(resolved_ingress_path, args.prefix)
+
             s3_ingress_uri = request_file_for_ingress(
-                resolved_ingress_path, node_id, config["API_GATEWAY"]
+                trimmed_path, node_id, config["API_GATEWAY"]
             )
 
             ingress_file_to_s3(resolved_ingress_path, s3_ingress_uri)
