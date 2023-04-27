@@ -1,0 +1,16 @@
+{
+  "name": "lambda-auth",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/atob": "^2.1.2",
+    "jsonwebtoken": "^8.5.1",
+    "aws-jwt-verify": "^3.0.0"
+  }
+}
