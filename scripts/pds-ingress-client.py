@@ -6,6 +6,7 @@ import logging
 import requests
 import subprocess
 
+from pds.ingress.util.auth_util import AuthUtil
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.node_util import NodeUtil
 from pds.ingress.util.path_util import PathUtil
@@ -13,7 +14,7 @@ from pds.ingress.util.path_util import PathUtil
 logger = logging.getLogger(__name__)
 
 
-def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config):
+def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bearer_token):
     """
     Submits a request for file ingress to the PDS Ingress App API.
 
@@ -26,6 +27,9 @@ def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config):
     api_gateway_config : dict
         Dictionary or dictionary-like containing key/value pairs used to
         configure the API Gateway endpoint url.
+    bearer_token : str
+        The Bearer token authorizing the current user to access the Ingress
+        Lambda function.
 
     Returns
     -------
@@ -57,7 +61,9 @@ def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config):
 
     params = {"node": node_id, "node_name": NodeUtil.node_id_to_long_name[node_id]}
     payload = {"url": ingress_file_path}
-    headers = {"content-type": "application/json", "x-amz-docs-region": api_gateway_region}
+    headers = {"Authorization": bearer_token,
+               "content-type": "application/json",
+               "x-amz-docs-region": api_gateway_region}
 
     try:
         response = requests.post(
@@ -164,6 +170,12 @@ def main():
     """
     Main entry point for the pds-ingress-client.py script.
 
+    Raises
+    ------
+    ValueError
+        If a username and password are not defined within the parsed config,
+        and dry-run is not enabled.
+
     """
     # TODO: create module to perform logger setup based on INI setting/user arg
     logging.basicConfig(level=logging.DEBUG)
@@ -176,19 +188,29 @@ def main():
 
     # Derive the full list of ingress paths based on the set of paths requested
     # by the user
-    resolved_ingress_paths = PathUtil.resolve_ingress_paths(
-        args.ingress_paths, prefix=args.prefix
-    )
+    resolved_ingress_paths = PathUtil.resolve_ingress_paths(args.ingress_paths)
 
     node_id = args.node
 
     if not args.dry_run:
+        cognito_config = config["COGNITO"]
+
+        # TODO: add support for command-line username/password?
+        if not cognito_config["username"] and cognito_config["password"]:
+            raise ValueError(
+                "Username and Password must be specified in the COGNITO portion of the INI config"
+            )
+
+        authentication_result = AuthUtil.perform_cognito_authentication(cognito_config)
+
+        bearer_token = AuthUtil.create_bearer_token(authentication_result)
+
         for resolved_ingress_path in resolved_ingress_paths:
             # Remove path prefix if one was configured
             trimmed_path = PathUtil.trim_ingress_path(resolved_ingress_path, args.prefix)
 
             s3_ingress_uri = request_file_for_ingress(
-                trimmed_path, node_id, config["API_GATEWAY"]
+                trimmed_path, node_id, config["API_GATEWAY"], bearer_token
             )
 
             ingress_file_to_s3(resolved_ingress_path, s3_ingress_uri)
