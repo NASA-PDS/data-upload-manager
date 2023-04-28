@@ -1,11 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2023-04-13)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2023-04-28)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/ed1ba8db788146a62149df3915d6ccc0c4bcf6c6...«unknown»)
 
 **Other closed issues:**
 
+- Investigate integration of authentication Lambda/Cognito with API Gateway [\#16](https://github.com/NASA-PDS/data-upload-manager/issues/16)
 - Develop Ingress Client Interface [\#8](https://github.com/NASA-PDS/data-upload-manager/issues/8)
 - Add External Config Support to Ingress Client Script [\#7](https://github.com/NASA-PDS/data-upload-manager/issues/7)
 - Develop Ingress Service Routing Logic [\#5](https://github.com/NASA-PDS/data-upload-manager/issues/5)
