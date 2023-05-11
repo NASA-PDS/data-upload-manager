@@ -98,8 +98,9 @@ def lambda_handler(event, context):
     bucket_map = initialize_bucket_map()
 
     # Parse request details from event object
-    local_url = event.get("url")
-    request_node = event.get("node")
+    body = json.loads(event["body"])
+    local_url = body.get("url")
+    request_node = event["queryStringParameters"].get("node")
 
     if not local_url or not request_node:
         raise RuntimeError("Both a local URL and request Node ID must be provided")

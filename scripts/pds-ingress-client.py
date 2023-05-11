@@ -72,13 +72,11 @@ def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bea
         )
         response.raise_for_status()
     except requests.exceptions.HTTPError as err:
-        raise RuntimeError(f"Ingress request failed, reason: {str(err)}")
+        raise RuntimeError(f"Ingress request failed, reason: {str(err)}") from err
 
     logger.debug(f'Raw content returned from request: {response.text}')
 
-    json_response = response.json()
-
-    s3_ingress_uri = json.loads(json_response["body"])
+    s3_ingress_uri = json.loads(response.text)
 
     logger.info(f"S3 URI for request: {s3_ingress_uri}")
 
