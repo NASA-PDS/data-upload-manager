@@ -24,13 +24,10 @@
  */
 exports.handler = async(event, _context, callback) => {
     let token = event.headers.Authorization;
-    console.log(token);
-
     let accessToken;
 
     if (token.startsWith("Bearer")) {
         accessToken = token.split(' ')[1];
-        console.log("accessToken =" + accessToken);
     } else {
         console.log("Token not valid! Does not start with Bearer.");
         callback("Unauthorized");
@@ -67,10 +64,7 @@ exports.handler = async(event, _context, callback) => {
         callback("Unauthorized");
     }
 
-    console.log(decoded);
-
     let groups = decoded['cognito:groups'];
-    console.log(groups);
 
     let request_group = event.headers.UserGroup;
 
@@ -104,7 +98,6 @@ function parseJwt (token) {
  */
 function decode(base64Encoded) {
     let converted = Buffer.from(base64Encoded, 'base64').toString()
-    console.log(converted);
     return converted;
 }
 
