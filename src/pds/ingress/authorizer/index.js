@@ -1,5 +1,5 @@
 /**
- * Token-based lambda authorizer function to allow only JWT access tokens issued for the user pool
+ * Request-based lambda authorizer function to allow only JWT access tokens issued for the user pool
  * configured as lambda environment variable COGNITO_USER_POOL_ID and the list of
  * client ids configured as lambda environment variable COGNITO_CLIENT_ID_LIST.
  *
@@ -9,9 +9,11 @@
  */
 
 /**
- * Verifies a JWT token and check Cognito groups.
+ * Verifies a JWT token and checks requested group against the Cognito groups of the decoded token.
+ * The requested group must be among the Cognito groups for the authenticated use to authorize the
+ * incoming request.
  *
- * The JWT access token is verified using the aws-jwt-verify  JavaScript library developed by the AWS Labs.
+ * The JWT access token is verified using the aws-jwt-verify JavaScript library developed by AWS Labs.
  *
  * References:
  * https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-tokens-verifying-a-jwt.html
@@ -20,8 +22,8 @@
  * https://github.com/awslabs/aws-jwt-verify
  *
  */
-exports.handler =  async(event, _context, callback) => {
-    let token = event.authorizationToken;
+exports.handler = async(event, _context, callback) => {
+    let token = event.headers.Authorization;
     console.log(token);
 
     let accessToken;
@@ -70,10 +72,13 @@ exports.handler =  async(event, _context, callback) => {
     let groups = decoded['cognito:groups'];
     console.log(groups);
 
-    if (groups.includes("PDS_DUM_USERS")) {
-        console.log("VALID TOKEN, ALLOW!!")
+    let request_group = event.headers.UserGroup;
+
+    if (groups.includes(request_group)) {
+        console.log("VALID TOKEN, ALLOW!!");
         callback(null, generatePolicy('user', 'Allow', event.methodArn));
     } else {
+        console.log("Invalid request group, denying access.")
         callback("Unauthorized");
     }
 
