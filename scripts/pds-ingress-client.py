@@ -62,6 +62,7 @@ def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bea
     params = {"node": node_id, "node_name": NodeUtil.node_id_to_long_name[node_id]}
     payload = {"url": ingress_file_path}
     headers = {"Authorization": bearer_token,
+               "UserGroup": NodeUtil.node_id_to_group_name(node_id),
                "content-type": "application/json",
                "x-amz-docs-region": api_gateway_region}
 

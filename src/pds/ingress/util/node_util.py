@@ -30,3 +30,11 @@ class NodeUtil:
     def permissible_node_ids(cls):
         """Returns a list of the Node IDs accepted by the Ingress client"""
         return cls.node_id_to_long_name.keys()
+
+    @classmethod
+    def node_id_to_group_name(cls, node_id):
+        """Returns the Cognito group name for the given node ID"""
+        if node_id.lower() not in cls.node_id_to_long_name.keys():
+            raise ValueError(f'Unknown node ID "{node_id}"')
+
+        return f"PDS_{node_id.upper()}_USERS"
