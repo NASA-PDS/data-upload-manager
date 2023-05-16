@@ -67,7 +67,10 @@ class PDSIngressAppTest(unittest.TestCase):
 
     def test_lambda_handler(self):
         """Test the lambda_handler function with the default bucket map"""
-        test_event = {"url": "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml", "node": "sbn"}
+        test_event = {
+            "body": json.dumps({"url": "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"}),
+            "queryStringParameters": {"node": "sbn"},
+        }
 
         context = {}  # Unused by lambda_handler
 
@@ -84,7 +87,10 @@ class PDSIngressAppTest(unittest.TestCase):
 
         self.assertEqual(response_body, expected_body)
 
-        test_event = {"url": "some.other.survey/bundle.some.other.survey_v1.0.xml", "node": "sbn"}
+        test_event = {
+            "body": json.dumps({"url": "some.other.survey/bundle.some.other.survey_v1.0.xml"}),
+            "queryStringParameters": {"node": "sbn"},
+        }
 
         response = lambda_handler(test_event, context)
 
@@ -93,12 +99,15 @@ class PDSIngressAppTest(unittest.TestCase):
 
         self.assertEqual(response_body, expected_body)
 
-        test_event = {"url": "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml", "node": "unk"}
+        test_event = {
+            "body": json.dumps({"url": "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"}),
+            "queryStringParameters": {"node": "unk"},
+        }
 
         with self.assertRaises(RuntimeError, msg="No bucket map entries configured for Node ID unk"):
             lambda_handler(test_event, context)
 
-        test_event = {"node": "eng"}
+        test_event = {"body": json.dumps({}), "queryStringParameters": {"node": "eng"}}
 
         with self.assertRaises(RuntimeError, msg="Both a local URL and request Node ID must be provided"):
             lambda_handler(test_event, context)

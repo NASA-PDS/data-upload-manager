@@ -30,6 +30,10 @@
 #
 # Items for Git to ignore
 
+# Package specific
+src/pds/ingress/authorizer/node_modules
+src/pds/ingress/authorizer/*.zip
+
 # Python build, virtual environments, and buildouts
 venv
 __pycache__/
