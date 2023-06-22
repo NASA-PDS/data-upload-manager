@@ -8,12 +8,11 @@ Ingress client script.
 
 """
 import configparser
-import logging
 import os
 
 from pkg_resources import resource_filename
 
-logger = logging.getLogger(__name__)
+CONFIG = None
 
 
 class ConfigUtil:
@@ -33,6 +32,14 @@ class ConfigUtil:
         Returns a ConfigParser instance containing the parsed contents of the
         requested config path.
 
+        Notes
+        -----
+        After the initial call to this method, the parsed config object is
+        cached as the singleton to be returned by all subsequent calls to
+        get_config(). This ensures that the initialized config can be obtained
+        by any subsequent callers without needing to know the path to the
+        originating INI file.
+
         Parameters
         ----------
         config_path : str, optional
@@ -45,6 +52,11 @@ class ConfigUtil:
             The parser instance containing the contents of the read config.
 
         """
+        global CONFIG
+
+        if CONFIG is not None:
+            return CONFIG
+
         if not config_path:
             config_path = ConfigUtil.default_config_path()
 
@@ -53,13 +65,11 @@ class ConfigUtil:
         if not os.path.exists(config_path):
             raise ValueError(f"Requested config {config_path} does not exist")
 
-        parser = configparser.ConfigParser()
-
-        logger.info(f"Loading config file {config_path}")
+        parser = configparser.RawConfigParser()
 
         with open(config_path, "r") as infile:
             parser.read_file(infile, source=os.path.basename(config_path))
 
-        # TODO: add validation to ensure provided INI conforms to expected format
+        CONFIG = parser
 
-        return parser
+        return CONFIG

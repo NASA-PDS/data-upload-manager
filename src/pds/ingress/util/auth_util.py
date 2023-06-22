@@ -7,11 +7,9 @@ Module containing functions for performing user authentication to the
 Ingress Service Lambda.
 
 """
-import logging
-
 import boto3  # type: ignore
 
-logger = logging.getLogger(__name__)
+from .log_util import get_logger
 
 
 class AuthUtil:
@@ -44,6 +42,8 @@ class AuthUtil:
             If authentication fails for any reason.
 
         """
+        logger = get_logger(__name__)
+
         client = boto3.client("cognito-idp", region_name=cognito_config["region"])
 
         auth_params = {"USERNAME": cognito_config["username"], "PASSWORD": cognito_config["password"]}
@@ -82,6 +82,8 @@ class AuthUtil:
             an HTTP request.
 
         """
+        logger = get_logger(__name__)
+
         logger.info("Creating Bearer token")
 
         access_token = authentication_result["AccessToken"]
