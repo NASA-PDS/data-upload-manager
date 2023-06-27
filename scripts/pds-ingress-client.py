@@ -9,7 +9,7 @@ import pds.ingress.util.log_util as log_util
 
 from pds.ingress.util.auth_util import AuthUtil
 from pds.ingress.util.config_util import ConfigUtil
-from pds.ingress.util.log_util import get_logger
+from pds.ingress.util.log_util import get_logger, get_log_level
 from pds.ingress.util.node_util import NodeUtil
 from pds.ingress.util.path_util import PathUtil
 
@@ -158,6 +158,11 @@ def setup_argparser():
     parser.add_argument('--dry-run', action='store_true',
                         help='Derive the full set of ingress paths without '
                              'performing any submission requests to the server.')
+    parser.add_argument('--log-level', '-l', type=str, default=None,
+                        choices=["warn", "warning", "info", "debug"],
+                        help="Sets the Logging level for logged messages. If not "
+                             "provided, the logging level set in the INI config "
+                             "is used instead.")
     parser.add_argument('ingress_paths', type=str, nargs='+',
                         metavar='file_or_dir',
                         help='One or more paths to the files to ingest to S3. '
@@ -184,7 +189,7 @@ def main():
 
     config = ConfigUtil.get_config(args.config_path)
 
-    logger = get_logger(__name__)
+    logger = get_logger(__name__, log_level=get_log_level(args.log_level))
 
     logger.info(f"Loaded config file {args.config_path}")
 

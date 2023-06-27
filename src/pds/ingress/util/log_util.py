@@ -31,10 +31,11 @@ CLOUDWATCH_HANDLER = None
 
 def get_log_level(log_level):
     """Translates name of a log level to the constant used by the logging module"""
-    return LOG_LEVELS[log_level.lower()]
+    if log_level is not None:
+        return LOG_LEVELS.get(log_level.lower())
 
 
-def get_logger(name):
+def get_logger(name, log_level=None):
     """
     Returns the logging object for the provided module name.
 
@@ -42,6 +43,9 @@ def get_logger(name):
     ----------
     name : str
         Name of the module to get a logger for.
+    log_level : int, optional
+        The logging level to use. If not provided, the level will be determined
+        from the INI config.
 
     Returns
     -------
@@ -51,10 +55,10 @@ def get_logger(name):
     """
     _logger = logging.getLogger(name)
 
-    return setup_logging(_logger, ConfigUtil.get_config())
+    return setup_logging(_logger, ConfigUtil.get_config(), log_level)
 
 
-def setup_logging(logger, config):
+def setup_logging(logger, config, log_level=None):
     """
     Sets up a logger object with handler objects for logging to the console,
     as well as the buffer that submits logs to CloudWatch.
@@ -65,6 +69,9 @@ def setup_logging(logger, config):
         The logger object to set up.
     config : ConfigParser
         The parsed config used to initialize the log handlers.
+    log_level : int, optional
+        The logging level to use. If not provided, the level will be determined
+        from the INI config.
 
     Returns
     -------
@@ -72,13 +79,14 @@ def setup_logging(logger, config):
         The setup logger object.
 
     """
-    log_level = get_log_level(config["OTHER"]["log_level"])
+    # Prioritize the provided log level. If it is None, use the value from the INI
+    log_level = log_level or get_log_level(config["OTHER"]["log_level"])
     logger.setLevel(log_level)
 
-    return setup_console_log(setup_cloudwatch_log(logger, config), config)
+    return setup_console_log(setup_cloudwatch_log(logger, config, log_level), config, log_level)
 
 
-def setup_console_log(logger, config):
+def setup_console_log(logger, config, log_level):
     """
     Sets up the handler used to log to the console.
 
@@ -88,6 +96,8 @@ def setup_console_log(logger, config):
         The logger object to set up.
     config : ConfigParser
         The parsed config used to initialize the console log handler.
+    log_level : int
+        The logging level to use.
 
     Returns
     -------
@@ -98,7 +108,6 @@ def setup_console_log(logger, config):
     global CONSOLE_HANDLER
 
     log_format = logging.Formatter(config["OTHER"]["log_format"])
-    log_level = get_log_level(config["OTHER"]["log_level"])
 
     if CONSOLE_HANDLER is None:
         CONSOLE_HANDLER = logging.StreamHandler()
@@ -111,7 +120,7 @@ def setup_console_log(logger, config):
     return logger
 
 
-def setup_cloudwatch_log(logger, config):
+def setup_cloudwatch_log(logger, config, log_level):
     """
     Sets up the handler used to log to AWS CloudWatch Logs.
 
@@ -129,6 +138,8 @@ def setup_cloudwatch_log(logger, config):
         The logger object to set up.
     config : ConfigParser
         The parsed config used to initialize the console log handler.
+    log_level : int
+        The logging level to use.
 
     Returns
     -------
@@ -139,12 +150,10 @@ def setup_cloudwatch_log(logger, config):
     global CLOUDWATCH_HANDLER
 
     log_format = logging.Formatter(config["OTHER"]["log_format"])
-    log_level = get_log_level(config["OTHER"]["log_level"])
     log_group_name = config["OTHER"]["log_group_name"]
 
     if CLOUDWATCH_HANDLER is None:
         CLOUDWATCH_HANDLER = CloudWatchHandler(log_group_name, config["API_GATEWAY"])
-
         CLOUDWATCH_HANDLER.setLevel(log_level)
         CLOUDWATCH_HANDLER.setFormatter(log_format)
 

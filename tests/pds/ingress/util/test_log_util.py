@@ -35,6 +35,20 @@ class LogUtilTest(unittest.TestCase):
         self.assertIsNone(log_util.CLOUDWATCH_HANDLER.bearer_token)
         self.assertIsNone(log_util.CLOUDWATCH_HANDLER.node_id)
 
+        # Test with log level override
+        logger = logging.getLogger("test")
+        log_util.CONSOLE_HANDLER = None
+        log_util.CLOUDWATCH_HANDLER = None
+
+        logger = log_util.setup_logging(logger, config, log_util.get_log_level("warning"))
+
+        self.assertEqual(len(logger.handlers), 2)
+        self.assertIsNotNone(log_util.CONSOLE_HANDLER)
+        self.assertIsNotNone(log_util.CLOUDWATCH_HANDLER)
+        self.assertEqual(logger.level, log_util.get_log_level("warning"))
+        self.assertEqual(log_util.CONSOLE_HANDLER.level, log_util.get_log_level("warning"))
+        self.assertEqual(log_util.CLOUDWATCH_HANDLER.level, log_util.get_log_level("warning"))
+
     def test_send_log_events_to_cloud_watch(self):
         """Tests for CloudWatchHandler.send_log_events_to_cloud_watch()"""
         logger = logging.getLogger(__name__)
