@@ -6,10 +6,9 @@ path_util.py
 Module containing functions for working with local file system paths.
 
 """
-import logging
 import os
 
-logger = logging.getLogger(__name__)
+from .log_util import get_logger
 
 
 class PathUtil:
@@ -37,6 +36,8 @@ class PathUtil:
             paths.
 
         """
+        logger = get_logger(__name__)
+
         # Initialize the list of resolved paths if necessary
         resolved_paths = resolved_paths or list()
 
@@ -91,6 +92,8 @@ class PathUtil:
             is provided, the untrimmed path is returned.
 
         """
+        logger = get_logger(__name__)
+
         trimmed_ingress_path = ingress_path
 
         # Remove path prefix if one was configured

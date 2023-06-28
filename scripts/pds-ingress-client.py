@@ -2,16 +2,16 @@
 
 import argparse
 import json
-import logging
 import requests
 import subprocess
 
+import pds.ingress.util.log_util as log_util
+
 from pds.ingress.util.auth_util import AuthUtil
 from pds.ingress.util.config_util import ConfigUtil
+from pds.ingress.util.log_util import get_logger, get_log_level
 from pds.ingress.util.node_util import NodeUtil
 from pds.ingress.util.path_util import PathUtil
-
-logger = logging.getLogger(__name__)
 
 
 def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bearer_token):
@@ -43,6 +43,8 @@ def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bea
         If the request to the Ingress Service fails.
 
     """
+    logger = get_logger(__name__)
+
     logger.info(f"Requesting ingress of file {ingress_file_path} for node ID {node_id}")
 
     # Extract the API Gateway configuration params
@@ -74,8 +76,6 @@ def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bea
     except requests.exceptions.HTTPError as err:
         raise RuntimeError(f"Ingress request failed, reason: {str(err)}") from err
 
-    logger.debug(f'Raw content returned from request: {response.text}')
-
     s3_ingress_uri = json.loads(response.text)
 
     logger.info(f"S3 URI for request: {s3_ingress_uri}")
@@ -101,6 +101,8 @@ def ingress_file_to_s3(ingress_file_path, s3_ingress_uri):
         If the S3 upload fails for any reason.
 
     """
+    logger = get_logger(__name__)
+
     logger.info(f"Ingesting {ingress_file_path} to {s3_ingress_uri}")
 
     result = subprocess.run(
@@ -156,6 +158,11 @@ def setup_argparser():
     parser.add_argument('--dry-run', action='store_true',
                         help='Derive the full set of ingress paths without '
                              'performing any submission requests to the server.')
+    parser.add_argument('--log-level', '-l', type=str, default=None,
+                        choices=["warn", "warning", "info", "debug"],
+                        help="Sets the Logging level for logged messages. If not "
+                             "provided, the logging level set in the INI config "
+                             "is used instead.")
     parser.add_argument('ingress_paths', type=str, nargs='+',
                         metavar='file_or_dir',
                         help='One or more paths to the files to ingest to S3. '
@@ -176,14 +183,15 @@ def main():
         and dry-run is not enabled.
 
     """
-    # TODO: create module to perform logger setup based on INI setting/user arg
-    logging.basicConfig(level=logging.DEBUG)
-
     parser = setup_argparser()
 
     args = parser.parse_args()
 
     config = ConfigUtil.get_config(args.config_path)
+
+    logger = get_logger(__name__, log_level=get_log_level(args.log_level))
+
+    logger.info(f"Loaded config file {args.config_path}")
 
     # Derive the full list of ingress paths based on the set of paths requested
     # by the user
@@ -204,6 +212,11 @@ def main():
 
         bearer_token = AuthUtil.create_bearer_token(authentication_result)
 
+        # Set the bearer token on the CloudWatchHandler singleton, so it can
+        # be used to authenticate submissions to the CloudWatch Logs API endpoint
+        log_util.CLOUDWATCH_HANDLER.bearer_token = bearer_token
+        log_util.CLOUDWATCH_HANDLER.node_id = node_id
+
         for resolved_ingress_path in resolved_ingress_paths:
             # Remove path prefix if one was configured
             trimmed_path = PathUtil.trim_ingress_path(resolved_ingress_path, args.prefix)
@@ -213,6 +226,9 @@ def main():
             )
 
             ingress_file_to_s3(resolved_ingress_path, s3_ingress_uri)
+
+        # Flush all logged statements to CloudWatch Logs
+        log_util.CLOUDWATCH_HANDLER.flush()
     else:
         logger.info("Dry run requested, skipping ingress request submission.")
 

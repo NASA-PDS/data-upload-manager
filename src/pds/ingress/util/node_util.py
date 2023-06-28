@@ -6,9 +6,6 @@ node_util.py
 Module containing functions for working with PDS Node identifiers.
 
 """
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 class NodeUtil:
