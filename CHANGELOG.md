@@ -1,12 +1,13 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2023-06-28)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2023-07-06)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.1.0...«unknown»)
 
 **Other closed issues:**
 
 - Develop Ingress Client Logging Capabilities [\#21](https://github.com/NASA-PDS/data-upload-manager/issues/21)
+- Develop initial design doc [\#3](https://github.com/NASA-PDS/data-upload-manager/issues/3)
 
 ## [v0.1.0](https://github.com/NASA-PDS/data-upload-manager/tree/v0.1.0) (2023-05-16)
 
