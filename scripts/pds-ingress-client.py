@@ -13,6 +13,41 @@ from pds.ingress.util.log_util import get_logger, get_log_level
 from pds.ingress.util.node_util import NodeUtil
 from pds.ingress.util.path_util import PathUtil
 
+from joblib import Parallel, delayed
+
+PARALLEL = Parallel(require='sharedmem')
+
+def _perform_ingress(ingress_path, node_id, prefix, bearer_token, api_gateway_config):
+    """
+    Performs an ingress request and transfer to S3 using credentials obtained from
+    Cognito. This helper function is intended for use with a Joblib parallelized
+    loop.
+
+    Parameters
+    ----------
+    ingress_path : str
+        Path to the file to request ingress for.
+    node_id : str
+        The PDS Node Identifier to associate with the ingress request.
+    prefix : str
+        Global path prefix to trim from the ingress path before making the
+        ingress request.
+    bearer_token : str
+        JWT Bearer token string obtained from a successful authentication to
+        Cognito.
+    api_gateway_config : dict
+        Dictionary containing configuration details for the API Gateway instance
+        used to request ingress.
+
+    """
+    # Remove path prefix if one was configured
+    trimmed_path = PathUtil.trim_ingress_path(ingress_path, prefix)
+
+    s3_ingress_uri = request_file_for_ingress(
+        trimmed_path, node_id, api_gateway_config, bearer_token
+    )
+
+    ingress_file_to_s3(ingress_path, s3_ingress_uri)
 
 def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bearer_token):
     """
@@ -155,6 +190,10 @@ def setup_argparser():
                              'controlling which parts of a directory structure '
                              'should be included with the S3 upload location returned '
                              'by the Ingress Service.')
+    parser.add_argument('--num-threads', '-t', type=int, default=-1,
+                        help='Specify the number of threads to use when uploading '
+                             'files to S3 in parallel. By default, all available '
+                             'cores are used.')
     parser.add_argument('--dry-run', action='store_true',
                         help='Derive the full set of ingress paths without '
                              'performing any submission requests to the server.')
@@ -217,15 +256,19 @@ def main():
         log_util.CLOUDWATCH_HANDLER.bearer_token = bearer_token
         log_util.CLOUDWATCH_HANDLER.node_id = node_id
 
-        for resolved_ingress_path in resolved_ingress_paths:
-            # Remove path prefix if one was configured
-            trimmed_path = PathUtil.trim_ingress_path(resolved_ingress_path, args.prefix)
+        # Perform uploads in parallel using the number of requested threads
+        PARALLEL.n_jobs = args.num_threads
 
-            s3_ingress_uri = request_file_for_ingress(
-                trimmed_path, node_id, config["API_GATEWAY"], bearer_token
+        PARALLEL(
+            delayed(_perform_ingress)(
+                resolved_ingress_path,
+                node_id,
+                args.prefix,
+                bearer_token,
+                config["API_GATEWAY"]
             )
-
-            ingress_file_to_s3(resolved_ingress_path, s3_ingress_uri)
+            for resolved_ingress_path in resolved_ingress_paths
+        )
 
         # Flush all logged statements to CloudWatch Logs
         log_util.CLOUDWATCH_HANDLER.flush()
