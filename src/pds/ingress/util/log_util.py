@@ -229,7 +229,7 @@ class CloudWatchHandler(BufferingHandler):
             log_events = [
                 {
                     "timestamp": int(round(record.created)) * MILLI_PER_SEC,
-                    "message": f"{record.levelname} {record.message}",
+                    "message": f"{record.levelname} {record.threadName} {record.name}:{record.funcName} {record.message}",
                 }
                 for record in self.buffer
             ]
