@@ -13,6 +13,48 @@ from pds.ingress.util.log_util import get_logger, get_log_level
 from pds.ingress.util.node_util import NodeUtil
 from pds.ingress.util.path_util import PathUtil
 
+from joblib import Parallel, delayed
+
+PARALLEL = Parallel(require='sharedmem')
+
+def _perform_ingress(ingress_path, node_id, prefix, bearer_token, api_gateway_config):
+    """
+    Performs an ingress request and transfer to S3 using credentials obtained from
+    Cognito. This helper function is intended for use with a Joblib parallelized
+    loop.
+
+    Parameters
+    ----------
+    ingress_path : str
+        Path to the file to request ingress for.
+    node_id : str
+        The PDS Node Identifier to associate with the ingress request.
+    prefix : str
+        Global path prefix to trim from the ingress path before making the
+        ingress request.
+    bearer_token : str
+        JWT Bearer token string obtained from a successful authentication to
+        Cognito.
+    api_gateway_config : dict
+        Dictionary containing configuration details for the API Gateway instance
+        used to request ingress.
+
+    """
+    logger = get_logger(__name__)
+
+    # Remove path prefix if one was configured
+    trimmed_path = PathUtil.trim_ingress_path(ingress_path, prefix)
+
+    try:
+        s3_ingress_uri = request_file_for_ingress(
+            trimmed_path, node_id, api_gateway_config, bearer_token
+        )
+
+        ingress_file_to_s3(ingress_path, trimmed_path, s3_ingress_uri)
+    except Exception as err:
+        # Only log the error as a warning, so we don't bring down the entire
+        # transfer process
+        logger.warning(f'{trimmed_path} : Ingress failed, reason: {str(err)}')
 
 def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bearer_token):
     """
@@ -45,7 +87,7 @@ def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bea
     """
     logger = get_logger(__name__)
 
-    logger.info(f"Requesting ingress of file {ingress_file_path} for node ID {node_id}")
+    logger.info(f"{ingress_file_path} : Requesting ingress for node ID {node_id}")
 
     # Extract the API Gateway configuration params
     api_gateway_template = api_gateway_config["url_template"]
@@ -58,8 +100,6 @@ def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bea
                                                   region=api_gateway_region,
                                                   stage=api_gateway_stage,
                                                   resource=api_gateway_resource)
-
-    logger.info(f"Submitting ingress request to {api_gateway_url}")
 
     params = {"node": node_id, "node_name": NodeUtil.node_id_to_long_name[node_id]}
     payload = {"url": ingress_file_path}
@@ -74,16 +114,16 @@ def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bea
         )
         response.raise_for_status()
     except requests.exceptions.HTTPError as err:
-        raise RuntimeError(f"Ingress request failed, reason: {str(err)}") from err
+        raise RuntimeError(
+            f"Request to API gateway failed, reason: {str(err)}"
+        ) from err
 
     s3_ingress_uri = json.loads(response.text)
-
-    logger.info(f"S3 URI for request: {s3_ingress_uri}")
 
     return s3_ingress_uri
 
 
-def ingress_file_to_s3(ingress_file_path, s3_ingress_uri):
+def ingress_file_to_s3(ingress_file_path, trimmed_path, s3_ingress_uri):
     """
     Copies the local file path to the S3 location returned from the Ingress App.
 
@@ -91,6 +131,8 @@ def ingress_file_to_s3(ingress_file_path, s3_ingress_uri):
     ----------
     ingress_file_path : str
         Local path to the file to be copied to S3.
+    trimmed_path : str
+        Trimmed version of the ingress file path. Used for logging purposes.
     s3_ingress_uri : str
         The S3 URI location for upload returned from the Ingress Service lambda
         function.
@@ -103,7 +145,7 @@ def ingress_file_to_s3(ingress_file_path, s3_ingress_uri):
     """
     logger = get_logger(__name__)
 
-    logger.info(f"Ingesting {ingress_file_path} to {s3_ingress_uri}")
+    logger.info(f"{trimmed_path} : Ingesting to {s3_ingress_uri}")
 
     result = subprocess.run(
         ["aws", "s3", "cp", "--quiet", "--no-progress",
@@ -116,7 +158,7 @@ def ingress_file_to_s3(ingress_file_path, s3_ingress_uri):
             f"S3 copy failed, reason: {result.stderr}"
         )
 
-    logger.info("Ingest complete")
+    logger.info(f"{trimmed_path} : Ingest complete")
 
 
 def setup_argparser():
@@ -155,6 +197,10 @@ def setup_argparser():
                              'controlling which parts of a directory structure '
                              'should be included with the S3 upload location returned '
                              'by the Ingress Service.')
+    parser.add_argument('--num-threads', '-t', type=int, default=-1,
+                        help='Specify the number of threads to use when uploading '
+                             'files to S3 in parallel. By default, all available '
+                             'cores are used.')
     parser.add_argument('--dry-run', action='store_true',
                         help='Derive the full set of ingress paths without '
                              'performing any submission requests to the server.')
@@ -217,15 +263,19 @@ def main():
         log_util.CLOUDWATCH_HANDLER.bearer_token = bearer_token
         log_util.CLOUDWATCH_HANDLER.node_id = node_id
 
-        for resolved_ingress_path in resolved_ingress_paths:
-            # Remove path prefix if one was configured
-            trimmed_path = PathUtil.trim_ingress_path(resolved_ingress_path, args.prefix)
+        # Perform uploads in parallel using the number of requested threads
+        PARALLEL.n_jobs = args.num_threads
 
-            s3_ingress_uri = request_file_for_ingress(
-                trimmed_path, node_id, config["API_GATEWAY"], bearer_token
+        PARALLEL(
+            delayed(_perform_ingress)(
+                resolved_ingress_path,
+                node_id,
+                args.prefix,
+                bearer_token,
+                config["API_GATEWAY"]
             )
-
-            ingress_file_to_s3(resolved_ingress_path, s3_ingress_uri)
+            for resolved_ingress_path in resolved_ingress_paths
+        )
 
         # Flush all logged statements to CloudWatch Logs
         log_util.CLOUDWATCH_HANDLER.flush()
