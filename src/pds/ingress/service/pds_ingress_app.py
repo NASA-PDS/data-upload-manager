@@ -6,12 +6,15 @@ pds_ingress_app.py
 Lambda function which acts as the PDS Ingress Service, mapping local file paths
 to their destinations in S3.
 """
+import boto3
 import json
 import logging
 import os
 from os.path import join
 
 import yaml
+
+from botocore.exceptions import ClientError
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
@@ -74,6 +77,47 @@ def initialize_bucket_map():
 
     return bucket_map
 
+def generate_presigned_upload_url(bucket_name, object_key, expires_in=1000):
+    """
+    Generates a presigned URL suitable for uploading to the S3 location
+    corresponding to the provided bucket name and object key.
+
+    Parameters
+    ----------
+    bucket_name : str
+        Name of the S3 bucket to be uploaded to.
+    object_key : str
+        Object key location within the S3 bucket to be uploaded to.
+    expires_in : str
+        Expiration time of the generated URL in seconds. After this time,
+        the URL should no longer be valid.
+
+    Returns
+    -------
+    url : str
+        The generated presigned upload URL corresponding to the requested S3
+        location.
+
+    """
+    s3_client = boto3.client('s3')
+    client_method = 'put_object'
+    method_parameters = {'Bucket': bucket_name, 'Key': object_key}
+
+    try:
+        url = s3_client.generate_presigned_url(
+            ClientMethod=client_method,
+            Params=method_parameters,
+            ExpiresIn=expires_in
+        )
+
+        logger.info(f"Generated presigned URL: {url}")
+    except ClientError:
+        logger.exception(
+            f"Failed to generate a presigned URL for {join(bucket_name, object_key)}"
+        )
+        raise
+
+    return url
 
 def lambda_handler(event, context):
     """
@@ -103,14 +147,16 @@ def lambda_handler(event, context):
     request_node = event["queryStringParameters"].get("node")
 
     if not local_url or not request_node:
-        raise RuntimeError("Both a local URL and request Node ID must be provided")
+        logger.exception("Both a local URL and request Node ID must be provided")
+        raise RuntimeError
 
     logger.info(f"Processing request from node {request_node} for local url {local_url}")
 
     node_bucket_map = bucket_map["MAP"]["NODES"].get(request_node.upper())
 
     if not node_bucket_map:
-        raise RuntimeError(f"No bucket map entries configured for Node ID {request_node}")
+        logger.exception(f"No bucket map entries configured for Node ID {request_node}")
+        raise RuntimeError
 
     prefix_key = local_url.split(os.sep)[0]
 
@@ -123,8 +169,8 @@ def lambda_handler(event, context):
             f"No bucket location configured for prefix {prefix_key}, using default bucket {destination_bucket}"
         )
 
-    s3_uri = f"s3://{destination_bucket}/{request_node.upper()}/{local_url}"
+    object_key = join(request_node.upper(), local_url)
 
-    logger.info(f"Derived S3 URI {s3_uri}")
+    s3_url = generate_presigned_upload_url(destination_bucket, object_key)
 
-    return {"statusCode": 200, "body": json.dumps(s3_uri)}
+    return {"statusCode": 200, "body": json.dumps(s3_url)}
