@@ -1,8 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2023-07-06)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2023-07-27)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.1.0...«unknown»)
+
+**Requirements:**
+
+- As a user, I want to parallelize upload of data products to PDC [\#24](https://github.com/NASA-PDS/data-upload-manager/issues/24)
 
 **Other closed issues:**
 
