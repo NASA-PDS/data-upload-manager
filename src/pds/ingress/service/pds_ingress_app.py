@@ -6,14 +6,13 @@ pds_ingress_app.py
 Lambda function which acts as the PDS Ingress Service, mapping local file paths
 to their destinations in S3.
 """
-import boto3
 import json
 import logging
 import os
 from os.path import join
 
+import boto3
 import yaml
-
 from botocore.exceptions import ClientError
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
@@ -77,6 +76,7 @@ def initialize_bucket_map():
 
     return bucket_map
 
+
 def generate_presigned_upload_url(bucket_name, object_key, expires_in=1000):
     """
     Generates a presigned URL suitable for uploading to the S3 location
@@ -99,25 +99,22 @@ def generate_presigned_upload_url(bucket_name, object_key, expires_in=1000):
         location.
 
     """
-    s3_client = boto3.client('s3')
-    client_method = 'put_object'
-    method_parameters = {'Bucket': bucket_name, 'Key': object_key}
+    s3_client = boto3.client("s3")
+    client_method = "put_object"
+    method_parameters = {"Bucket": bucket_name, "Key": object_key}
 
     try:
         url = s3_client.generate_presigned_url(
-            ClientMethod=client_method,
-            Params=method_parameters,
-            ExpiresIn=expires_in
+            ClientMethod=client_method, Params=method_parameters, ExpiresIn=expires_in
         )
 
         logger.info(f"Generated presigned URL: {url}")
     except ClientError:
-        logger.exception(
-            f"Failed to generate a presigned URL for {join(bucket_name, object_key)}"
-        )
+        logger.exception(f"Failed to generate a presigned URL for {join(bucket_name, object_key)}")
         raise
 
     return url
+
 
 def lambda_handler(event, context):
     """
