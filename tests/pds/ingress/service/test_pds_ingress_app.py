@@ -2,9 +2,12 @@ import json
 import os
 import tempfile
 import unittest
+from functools import partial
 from os.path import abspath
 from os.path import join
+from unittest.mock import patch
 
+import boto3
 from pds.ingress.service.pds_ingress_app import initialize_bucket_map
 from pds.ingress.service.pds_ingress_app import lambda_handler
 from pkg_resources import resource_filename
@@ -65,6 +68,16 @@ class PDSIngressAppTest(unittest.TestCase):
             self.assertIn("default", bucket_map["MAP"]["NODES"]["ENG"])
             self.assertEqual(bucket_map["MAP"]["NODES"]["ENG"]["default"], "test-bucket-name")
 
+    # Hard-wire some fake credentials into the S3 client so botocore has something
+    # to use in environments that have no credentials otherwise (such as GitHub Actions)
+    boto3_client_w_creds = partial(
+        boto3.client,
+        aws_access_key_id="fake_access_key",
+        aws_secret_access_key="fake_secret_key",
+        aws_session_token="fake_session_token",
+    )
+
+    @patch.object(boto3, "client", boto3_client_w_creds)
     def test_lambda_handler(self):
         """Test the lambda_handler function with the default bucket map"""
         test_event = {
@@ -83,9 +96,17 @@ class PDSIngressAppTest(unittest.TestCase):
         self.assertIn("body", response)
 
         response_body = json.loads(response["body"])
-        expected_body = "s3://nucleus-pds-protected/SBN/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"
+        response_url, signature_params = response_body.split("?")
 
-        self.assertEqual(response_body, expected_body)
+        expected_url = "https://nucleus-pds-protected.s3.amazonaws.com/SBN/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"
+
+        self.assertEqual(response_url, expected_url)
+
+        # Ensure we got all the expected tokens in the security parameters (actual values don't matter)
+        self.assertIn("AWSAccessKeyId=", signature_params)
+        self.assertIn("Signature=", signature_params)
+        self.assertIn("x-amz-security-token=", signature_params)
+        self.assertIn("Expires=", signature_params)
 
         test_event = {
             "body": json.dumps({"url": "some.other.survey/bundle.some.other.survey_v1.0.xml"}),
@@ -95,9 +116,18 @@ class PDSIngressAppTest(unittest.TestCase):
         response = lambda_handler(test_event, context)
 
         response_body = json.loads(response["body"])
-        expected_body = "s3://nucleus-pds-public/SBN/some.other.survey/bundle.some.other.survey_v1.0.xml"
+        response_url, signature_params = response_body.split("?")
 
-        self.assertEqual(response_body, expected_body)
+        expected_url = (
+            "https://nucleus-pds-public.s3.amazonaws.com/SBN/some.other.survey/bundle.some.other.survey_v1.0.xml"
+        )
+
+        self.assertEqual(response_url, expected_url)
+
+        self.assertIn("AWSAccessKeyId=", signature_params)
+        self.assertIn("Signature=", signature_params)
+        self.assertIn("x-amz-security-token=", signature_params)
+        self.assertIn("Expires=", signature_params)
 
         test_event = {
             "body": json.dumps({"url": "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"}),
