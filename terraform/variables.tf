@@ -19,3 +19,16 @@ variable "lambda_s3_bucket_name" {
 variable "lambda_ingress_service_iam_role_arn" {
   type = string
 }
+
+variable "nucleus_dum_cognito_initial_users" {
+  type = list(
+    object(
+      {
+        username = string
+        password = string
+        group    = string
+        email    = string
+      }
+    )
+  )
+}
