@@ -20,6 +20,10 @@ variable "lambda_ingress_service_iam_role_arn" {
   type = string
 }
 
+variable "lambda_authorizer_iam_role_arn" {
+  type = string
+}
+
 variable "nucleus_dum_cognito_initial_users" {
   type = list(
     object(

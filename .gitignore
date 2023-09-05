@@ -33,6 +33,7 @@
 # Package specific
 src/pds/ingress/authorizer/node_modules
 src/pds/ingress/authorizer/*.zip
+terraform/modules/lambda/authorizer/files
 terraform/modules/lambda/service/files
 
 ## Terraform
