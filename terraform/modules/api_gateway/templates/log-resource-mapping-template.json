@@ -1,0 +1,17 @@
+#set($context.requestOverride.header['X-Amz-Target'] = "Logs_20140328.PutLogEvents")
+#set($context.requestOverride.header['Content-Type'] = "application/x-amz-json-1.1")
+
+#set($inputRoot = $input.path('$'))
+{
+  "logEvents" : [
+#foreach($elem in $inputRoot.logEvents)
+ {
+     "message" : "$elem.message",
+     "timestamp" : $elem.timestamp
+ }
+#if($foreach.hasNext),#end
+#end
+],
+  "logGroupName" : "$inputRoot.logGroupName",
+  "logStreamName" : "$inputRoot.logStreamName"
+}

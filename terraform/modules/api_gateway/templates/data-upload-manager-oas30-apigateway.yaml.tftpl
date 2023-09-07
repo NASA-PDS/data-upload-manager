@@ -1,0 +1,134 @@
+openapi: "3.0.1"
+info:
+  title: "nucleus-data-upload-manager-api"
+  description: "REST API Gateway for use with the PDS Data Upload Manager"
+  version: "2023-06-20T19:42:47Z"
+paths:
+  /log:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/logEventModel"
+        required: true
+      responses:
+        "200":
+          description: "200 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Empty"
+      security:
+      - ${lambdaAuthorizerFunctionName}: []
+      x-amazon-apigateway-integration:
+        credentials: ${apiGatewayLambdaRole}
+        httpMethod: "POST"
+        uri: "arn:aws:apigateway:${awsRegion}:logs:action/PutLogEvents"
+        responses:
+          default:
+            statusCode: "200"
+        requestTemplates:
+          application/json: ${logResourceMappingTemplate}
+        passthroughBehavior: "when_no_templates"
+        type: "aws"
+  /request:
+    post:
+      responses:
+        "200":
+          description: "200 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Empty"
+      security:
+      - ${lambdaAuthorizerFunctionName}: []
+      x-amazon-apigateway-integration:
+        httpMethod: "POST"
+        uri: "arn:aws:apigateway:${awsRegion}:lambda:path/2015-03-31/functions/${lambdaServiceARN}/invocations"
+        responses:
+          default:
+            statusCode: "200"
+        passthroughBehavior: "when_no_match"
+        contentHandling: "CONVERT_TO_TEXT"
+        type: "aws_proxy"
+  /createstream:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/createLogStreamModel"
+        required: true
+      responses:
+        "200":
+          description: "200 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Empty"
+      security:
+      - ${lambdaAuthorizerFunctionName}: []
+      x-amazon-apigateway-integration:
+        credentials: ${apiGatewayLambdaRole}
+        httpMethod: "POST"
+        uri: "arn:aws:apigateway:${awsRegion}:logs:action/CreateLogStream"
+        responses:
+          default:
+            statusCode: "200"
+        requestTemplates:
+          application/json: ${createStreamResourceMappingTemplate}
+        passthroughBehavior: "when_no_templates"
+        type: "aws"
+components:
+  schemas:
+    Empty:
+      title: "Empty Schema"
+      type: "object"
+    createLogStreamModel:
+      title: "createLogStreamModelSchema"
+      type: "object"
+      properties:
+        logGroupName:
+          type: "string"
+        logStreamName:
+          type: "string"
+    logEventModel:
+      title: "logEventModelSchema"
+      type: "object"
+      properties:
+        logEvents:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              message:
+                type: "string"
+              timestamp:
+                type: "integer"
+        logGroupName:
+          type: "string"
+        logStreamName:
+          type: "string"
+  securitySchemes:
+    ${lambdaAuthorizerFunctionName}:
+      type: "apiKey"
+      name: "Unused"
+      in: "header"
+      x-amazon-apigateway-authtype: "custom"
+      x-amazon-apigateway-authorizer:
+        authorizerUri: "arn:aws:apigateway:${awsRegion}:lambda:path/2015-03-31/functions/${lambdaAuthorizerARN}/invocations"
+        authorizerCredentials: ${apiGatewayLambdaRole}
+        authorizerResultTtlInSeconds: 300
+        identitySource: "method.request.header.Authorization, method.request.header.UserGroup"
+        type: "request"
+x-amazon-apigateway-policy:
+  Version: "2012-10-17"
+  Statement:
+  - Effect: "Allow"
+    Principal: "*"
+    Action: "*"
+    Resource: "*"
+    Condition:
+      StringEquals:
+        aws:SourceVpc: "${apiGatewaySourceVpc}"

@@ -1,4 +1,5 @@
 # Main Terraform module for automated deployment of the PDS Data Upload Manager (DUM)
+
 provider "aws" {
   region  = var.region
   profile = var.profile
@@ -27,4 +28,23 @@ module "nucleus_dum_lambda_authorizer" {
   lambda_authorizer_cognito_client_id = module.nucleus_dum_cognito.nucleus_dum_cognito_user_pool_client_id
 
   depends_on = [module.nucleus_dum_cognito]
+}
+
+module "nucleus_dum_api" {
+  source = "./modules/api_gateway"
+
+  api_gateway_lambda_role_arn          = var.api_gateway_lambda_role_arn
+  api_gateway_policy_source_vpc        = var.api_gateway_policy_source_vpc
+  lambda_authorizer_function_arn       = module.nucleus_dum_lambda_authorizer.lambda_authorizer_function_arn
+  lambda_authorizer_function_name      = module.nucleus_dum_lambda_authorizer.lambda_authorizer_function_name
+  lambda_ingress_service_function_name = module.nucleus_dum_ingress_service_lambda.lambda_ingress_service_function_name
+  lambda_ingress_service_function_arn  = module.nucleus_dum_ingress_service_lambda.lambda_ingress_service_function_arn
+
+  depends_on = [module.nucleus_dum_lambda_authorizer, module.nucleus_dum_ingress_service_lambda]
+}
+
+resource "aws_cloudwatch_log_group" "ingress_client_cloudwatch_log_group" {
+  name = var.nucleus_dum_client_cloudwatch_log_group
+
+  retention_in_days = 30
 }
