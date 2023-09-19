@@ -1,0 +1,8 @@
+#set($context.requestOverride.header['X-Amz-Target'] = "Logs_20140328.CreateLogStream")
+#set($context.requestOverride.header['Content-Type'] = "application/x-amz-json-1.1")
+
+#set($inputRoot = $input.path('$'))
+{
+  "logGroupName" : "$inputRoot.logGroupName",
+  "logStreamName" : "$inputRoot.logStreamName"
+}
