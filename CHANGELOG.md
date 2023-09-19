@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2023-08-01)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2023-09-19)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.1.0...«unknown»)
 
@@ -12,6 +12,7 @@
 
 - Add support for presigned upload URL usage [\#26](https://github.com/NASA-PDS/data-upload-manager/issues/26)
 - Develop Ingress Client Logging Capabilities [\#21](https://github.com/NASA-PDS/data-upload-manager/issues/21)
+- Implement API Gateway request authentication [\#10](https://github.com/NASA-PDS/data-upload-manager/issues/10)
 - Develop initial design doc [\#3](https://github.com/NASA-PDS/data-upload-manager/issues/3)
 
 ## [v0.1.0](https://github.com/NASA-PDS/data-upload-manager/tree/v0.1.0) (2023-05-16)
