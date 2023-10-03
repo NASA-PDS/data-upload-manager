@@ -1,18 +1,21 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2023-09-19)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2023-10-03)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.1.0...«unknown»)
 
 **Requirements:**
 
 - As a user, I want to parallelize upload of data products to PDC [\#24](https://github.com/NASA-PDS/data-upload-manager/issues/24)
+- Develop Ingress Client Logging Capabilities [\#21](https://github.com/NASA-PDS/data-upload-manager/issues/21)
+- As a user, I want to use Cognito Single Sign On to authenticate to the DUM service [\#10](https://github.com/NASA-PDS/data-upload-manager/issues/10)
+
+**Improvements:**
+
+- Add support for presigned upload URL usage [\#26](https://github.com/NASA-PDS/data-upload-manager/issues/26)
 
 **Other closed issues:**
 
-- Add support for presigned upload URL usage [\#26](https://github.com/NASA-PDS/data-upload-manager/issues/26)
-- Develop Ingress Client Logging Capabilities [\#21](https://github.com/NASA-PDS/data-upload-manager/issues/21)
-- Implement API Gateway request authentication [\#10](https://github.com/NASA-PDS/data-upload-manager/issues/10)
 - Develop initial design doc [\#3](https://github.com/NASA-PDS/data-upload-manager/issues/3)
 
 ## [v0.1.0](https://github.com/NASA-PDS/data-upload-manager/tree/v0.1.0) (2023-05-16)
