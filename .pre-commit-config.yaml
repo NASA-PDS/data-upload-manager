@@ -3,7 +3,7 @@ repos:
     rev: v4.0.1
     hooks:
     -   id: trailing-whitespace
-        exclude: REQUIREMENTS\.md$|codeql-analysis\.yml$
+        exclude: dependabot\.yml$|REQUIREMENTS\.md$|codeql-analysis\.yml$
     -   id: end-of-file-fixer
         exclude: REQUIREMENTS\.md$
     -   id: check-executables-have-shebangs
