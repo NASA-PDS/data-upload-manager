@@ -1,11 +1,14 @@
 # Terraform module for the Data Upload Manager (DUM) API Gateway
 
+data "aws_iam_role" "cloudwatch_role" {
+  name = var.iam_role
+}
 resource "aws_api_gateway_rest_api" "nucleus_dum_api" {
   name        = var.rest_api_name
   description = var.rest_api_description
 
   endpoint_configuration {
-    types = ["PRIVATE"]  # TODO this will change to "REGIONAL" at some point (?)
+    types = ["PRIVATE"] # TODO this will change to "REGIONAL" at some point (?)
   }
 
   body = templatefile(
@@ -56,12 +59,16 @@ resource "aws_api_gateway_deployment" "nucleus_dum_api_deployments" {
   }
 }
 
+resource "aws_api_gateway_account" "cloudwatch_role_arn_setting" {
+  cloudwatch_role_arn = data.aws_iam_role.cloudwatch_role.arn
+}
+
 resource "aws_api_gateway_method_settings" "nucleus_dum_api_deployment_settings" {
   count = length(var.api_deployment_stages)
 
   rest_api_id = aws_api_gateway_rest_api.nucleus_dum_api.id
   stage_name  = aws_api_gateway_deployment.nucleus_dum_api_deployments[count.index].stage_name
-  method_path = "*/*"  # Apply settings to all methods in deployment
+  method_path = "*/*" # Apply settings to all methods in deployment
 
   settings {
     # These settings map to the "Errors and Info Logs" setting for API Gateway

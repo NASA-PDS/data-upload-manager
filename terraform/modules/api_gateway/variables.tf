@@ -24,7 +24,7 @@ variable "api_gateway_lambda_role_arn" {
 
 # TODO: this may go away when API is deployed as REGIONAL instead of PRIVATE
 variable "api_gateway_policy_source_vpc" {
-  type = string
+  type        = string
   description = "VPC ID to allow traffic from within the DUM API Gateway"
 }
 
@@ -44,7 +44,7 @@ variable "lambda_ingress_service_function_arn" {
 }
 
 variable "lambda_ingress_service_function_name" {
-  type = string
+  type        = string
   description = "Name of the DUM Lambda Ingress Service function"
 }
 
@@ -52,4 +52,9 @@ variable "api_deployment_stages" {
   type        = list(string)
   description = "List of stages to create initial API Gateway deployments for"
   default     = ["test"]
+}
+
+variable "iam_role" {
+  type        = string
+  description = "IAM Role for CloudWatch Logging"
 }

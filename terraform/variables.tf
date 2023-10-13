@@ -5,19 +5,24 @@ variable "region" {
   description = "AWS region to allocate AWS resources to"
 }
 
-variable "profile" {
-  type        = string
-  description = "Name of the AWS account profile"
-}
+# variable "profile" {
+#   type        = string
+#   description = "Name of the AWS account profile"
+# }
 
-variable "credential_file" {
-  type        = string
-  description = "Path to an AWS credentials file on the local machine"
-}
+# variable "credential_file" {
+#   type        = string
+#   description = "Path to an AWS credentials file on the local machine"
+# }
 
 variable "lambda_s3_bucket_name" {
   type        = string
   description = "Name of the S3 bucket to upload Lambda artifacts to"
+}
+
+variable "iam_role" {
+  type        = string
+  description = "IAM Role for CloudWatch Logging"
 }
 
 variable "api_gateway_lambda_role_arn" {
@@ -37,7 +42,7 @@ variable "lambda_ingress_service_iam_role_arn" {
 }
 
 variable "lambda_authorizer_iam_role_arn" {
-  type = string
+  type        = string
   description = "IAM role ARN to allocate to the Lambda Authorizer function"
 }
 

@@ -1,7 +1,7 @@
 
-output "aws_profile" {
-  value = var.profile
-}
+# output "aws_profile" {
+#   value = var.profile
+# }
 
 output "nucleus_dum_api_id" {
   value = module.nucleus_dum_api.nucleus_dum_api_id
