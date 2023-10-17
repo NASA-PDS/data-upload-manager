@@ -1,5 +1,9 @@
 # Terraform module for the Data Upload Manager (DUM) API Gateway
 
+data "aws_iam_role" "cloudwatch_iam_role" {
+  name = var.cloudwatch_iam_role_name
+}
+
 resource "aws_api_gateway_rest_api" "nucleus_dum_api" {
   name        = var.rest_api_name
   description = var.rest_api_description
@@ -54,6 +58,10 @@ resource "aws_api_gateway_deployment" "nucleus_dum_api_deployments" {
   lifecycle {
     create_before_destroy = true
   }
+}
+
+resource "aws_api_gateway_account" "cloudwatch_role_arn_setting" {
+  cloudwatch_role_arn = data.aws_iam_role.cloudwatch_iam_role.arn
 }
 
 resource "aws_api_gateway_method_settings" "nucleus_dum_api_deployment_settings" {

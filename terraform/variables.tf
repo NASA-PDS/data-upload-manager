@@ -20,6 +20,11 @@ variable "lambda_s3_bucket_name" {
   description = "Name of the S3 bucket to upload Lambda artifacts to"
 }
 
+variable "cloudwatch_iam_role_name" {
+  type        = string
+  description = "IAM Role name used for CloudWatch Logging"
+}
+
 variable "api_gateway_lambda_role_arn" {
   type        = string
   description = "ARN for an IAM role which has permissions for both API Gateway and Lambda"
@@ -37,7 +42,7 @@ variable "lambda_ingress_service_iam_role_arn" {
 }
 
 variable "lambda_authorizer_iam_role_arn" {
-  type = string
+  type        = string
   description = "IAM role ARN to allocate to the Lambda Authorizer function"
 }
 

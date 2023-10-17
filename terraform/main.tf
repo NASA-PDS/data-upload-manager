@@ -1,8 +1,8 @@
 # Main Terraform module for automated deployment of the PDS Data Upload Manager (DUM)
 
 provider "aws" {
-  region  = var.region
-  profile = var.profile
+  region                   = var.region
+  profile                  = var.profile
   shared_credentials_files = [var.credential_file]
 }
 
@@ -33,6 +33,7 @@ module "nucleus_dum_lambda_authorizer" {
 module "nucleus_dum_api" {
   source = "./modules/api_gateway"
 
+  cloudwatch_iam_role_name             = var.cloudwatch_iam_role_name
   api_gateway_lambda_role_arn          = var.api_gateway_lambda_role_arn
   api_gateway_policy_source_vpc        = var.api_gateway_policy_source_vpc
   lambda_authorizer_function_arn       = module.nucleus_dum_lambda_authorizer.lambda_authorizer_function_arn
