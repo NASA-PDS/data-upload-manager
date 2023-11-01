@@ -55,6 +55,11 @@ def get_logger(name, log_level=None):
     """
     _logger = logging.getLogger(name)
 
+    # Set default level for the parent logger to its "lowest" value (debug),
+    # this is necessary so the handlers can take on separate "higher" levels
+    # (info, warning, etc..)
+    _logger.setLevel(logging.DEBUG)
+
     return setup_logging(_logger, ConfigUtil.get_config(), log_level)
 
 
@@ -79,11 +84,7 @@ def setup_logging(logger, config, log_level=None):
         The setup logger object.
 
     """
-    # Prioritize the provided log level. If it is None, use the value from the INI
-    log_level = log_level or get_log_level(config["OTHER"]["log_level"])
-    logger.setLevel(log_level)
-
-    return setup_console_log(setup_cloudwatch_log(logger, config, log_level), config, log_level)
+    return setup_console_log(setup_cloudwatch_log(logger, config), config, log_level)
 
 
 def setup_console_log(logger, config, log_level):
@@ -107,6 +108,10 @@ def setup_console_log(logger, config, log_level):
     """
     global CONSOLE_HANDLER
 
+    # Prioritize the provided log level. If it is None, use the value from the INI
+    log_level = log_level or get_log_level(config["OTHER"]["log_level"])
+
+    # Set the format based on the setting in the INI config
     log_format = logging.Formatter(config["OTHER"]["log_format"])
 
     if CONSOLE_HANDLER is None:
@@ -120,7 +125,7 @@ def setup_console_log(logger, config, log_level):
     return logger
 
 
-def setup_cloudwatch_log(logger, config, log_level):
+def setup_cloudwatch_log(logger, config):
     """
     Sets up the handler used to log to AWS CloudWatch Logs.
 
@@ -138,8 +143,6 @@ def setup_cloudwatch_log(logger, config, log_level):
         The logger object to set up.
     config : ConfigParser
         The parsed config used to initialize the console log handler.
-    log_level : int
-        The logging level to use.
 
     Returns
     -------
@@ -149,7 +152,12 @@ def setup_cloudwatch_log(logger, config, log_level):
     """
     global CLOUDWATCH_HANDLER
 
+    # Always use the level defined in the config, which can differ from the
+    # level configured for the console logger
+    log_level = get_log_level(config["OTHER"]["log_level"])
+
     log_format = logging.Formatter(config["OTHER"]["log_format"])
+
     log_group_name = config["OTHER"]["log_group_name"]
 
     if CLOUDWATCH_HANDLER is None:

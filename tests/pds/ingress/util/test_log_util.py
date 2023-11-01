@@ -13,12 +13,12 @@ from pds.ingress.util.node_util import NodeUtil
 class LogUtilTest(unittest.TestCase):
     def test_setup_logging(self):
         """Tests for log_util.setup_logging()"""
-        logger = logging.getLogger(__name__)
+        logger = log_util.get_logger("test1")
         config = ConfigUtil.get_config()
 
         logger = log_util.setup_logging(logger, config)
 
-        self.assertEqual(logger.level, log_util.get_log_level(config["OTHER"]["log_level"]))
+        self.assertEqual(logger.level, log_util.get_log_level("debug"))
         self.assertEqual(len(logger.handlers), 2)
 
         self.assertIn(log_util.CONSOLE_HANDLER, logger.handlers)
@@ -36,18 +36,19 @@ class LogUtilTest(unittest.TestCase):
         self.assertIsNone(log_util.CLOUDWATCH_HANDLER.node_id)
 
         # Test with log level override
-        logger = logging.getLogger("test")
         log_util.CONSOLE_HANDLER = None
         log_util.CLOUDWATCH_HANDLER = None
-
-        logger = log_util.setup_logging(logger, config, log_util.get_log_level("warning"))
+        logger = log_util.get_logger("test2", log_util.get_log_level("warning"))
 
         self.assertEqual(len(logger.handlers), 2)
         self.assertIsNotNone(log_util.CONSOLE_HANDLER)
         self.assertIsNotNone(log_util.CLOUDWATCH_HANDLER)
-        self.assertEqual(logger.level, log_util.get_log_level("warning"))
+        self.assertEqual(logger.level, log_util.get_log_level("debug"))
         self.assertEqual(log_util.CONSOLE_HANDLER.level, log_util.get_log_level("warning"))
-        self.assertEqual(log_util.CLOUDWATCH_HANDLER.level, log_util.get_log_level("warning"))
+
+        # Provided log level should only affect console, CloudWatch logger
+        # always defaults to what is defined in the INI
+        self.assertEqual(log_util.CLOUDWATCH_HANDLER.level, log_util.get_log_level(config["OTHER"]["log_level"]))
 
     def test_send_log_events_to_cloud_watch(self):
         """Tests for CloudWatchHandler.send_log_events_to_cloud_watch()"""
