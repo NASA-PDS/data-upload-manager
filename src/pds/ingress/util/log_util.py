@@ -212,6 +212,7 @@ class CloudWatchHandler(BufferingHandler):
         Append the record. If shouldFlush() tells us to, call flush() to process
         the buffer.
         """
+        self.format(record)
         self.buffer.append(record)
 
         if self.shouldFlush(record):
