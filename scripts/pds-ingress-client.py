@@ -210,9 +210,9 @@ def setup_argparser():
                              'performing any submission requests to the server.')
     parser.add_argument('--log-level', '-l', type=str, default=None,
                         choices=["warn", "warning", "info", "debug"],
-                        help="Sets the Logging level for logged messages. If not "
-                             "provided, the logging level set in the INI config "
-                             "is used instead.")
+                        help="Sets the Logging level for messages logged to the "
+                             "console. If not provided, the logging level set in "
+                             "the INI config is used instead.")
     parser.add_argument('ingress_paths', type=str, nargs='+',
                         metavar='file_or_dir',
                         help='One or more paths to the files to ingest to S3. '
