@@ -1,8 +1,20 @@
 # Changelog
 
-## [release/0.2.0](https://github.com/NASA-PDS/data-upload-manager/tree/release/0.2.0) (2023-10-17)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2023-11-02)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.1.0...release/0.2.0)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.2.0...«unknown»)
+
+**Defects:**
+
+- Log upload to Cloudwatch fails during batch upload [\#43](https://github.com/NASA-PDS/data-upload-manager/issues/43) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
+
+**Other closed issues:**
+
+- Upload test data set with manual trigger of Nucleus [\#31](https://github.com/NASA-PDS/data-upload-manager/issues/31)
+
+## [v0.2.0](https://github.com/NASA-PDS/data-upload-manager/tree/v0.2.0) (2023-10-17)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.1.0...v0.2.0)
 
 **Requirements:**
 
