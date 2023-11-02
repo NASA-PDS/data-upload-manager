@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
+"""
+==================
+pds_ingress_client
+==================
 
+Client side script used to perform ingress request to the DUM service in AWS.
+"""
 import argparse
 import json
-import requests
 
 import pds.ingress.util.log_util as log_util
-
+import requests
+from joblib import delayed
+from joblib import Parallel
 from pds.ingress.util.auth_util import AuthUtil
 from pds.ingress.util.config_util import ConfigUtil
-from pds.ingress.util.log_util import get_logger, get_log_level
+from pds.ingress.util.log_util import get_log_level
+from pds.ingress.util.log_util import get_logger
 from pds.ingress.util.node_util import NodeUtil
 from pds.ingress.util.path_util import PathUtil
 
-from joblib import Parallel, delayed
+PARALLEL = Parallel(require="sharedmem")
 
-PARALLEL = Parallel(require='sharedmem')
 
 def _perform_ingress(ingress_path, node_id, prefix, bearer_token, api_gateway_config):
     """
@@ -45,15 +52,14 @@ def _perform_ingress(ingress_path, node_id, prefix, bearer_token, api_gateway_co
     trimmed_path = PathUtil.trim_ingress_path(ingress_path, prefix)
 
     try:
-        s3_ingress_url = request_file_for_ingress(
-            trimmed_path, node_id, api_gateway_config, bearer_token
-        )
+        s3_ingress_url = request_file_for_ingress(trimmed_path, node_id, api_gateway_config, bearer_token)
 
         ingress_file_to_s3(ingress_path, trimmed_path, s3_ingress_url)
     except Exception as err:
         # Only log the error as a warning, so we don't bring down the entire
         # transfer process
-        logger.warning(f'{trimmed_path} : Ingress failed, reason: {str(err)}')
+        logger.warning(f"{trimmed_path} : Ingress failed, reason: {str(err)}")
+
 
 def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bearer_token):
     """
@@ -97,27 +103,24 @@ def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bea
     api_gateway_stage = api_gateway_config["stage"]
     api_gateway_resource = api_gateway_config["resource"]
 
-    api_gateway_url = api_gateway_template.format(id=api_gateway_id,
-                                                  region=api_gateway_region,
-                                                  stage=api_gateway_stage,
-                                                  resource=api_gateway_resource)
+    api_gateway_url = api_gateway_template.format(
+        id=api_gateway_id, region=api_gateway_region, stage=api_gateway_stage, resource=api_gateway_resource
+    )
 
     params = {"node": node_id, "node_name": NodeUtil.node_id_to_long_name[node_id]}
     payload = {"url": ingress_file_path}
-    headers = {"Authorization": bearer_token,
-               "UserGroup": NodeUtil.node_id_to_group_name(node_id),
-               "content-type": "application/json",
-               "x-amz-docs-region": api_gateway_region}
+    headers = {
+        "Authorization": bearer_token,
+        "UserGroup": NodeUtil.node_id_to_group_name(node_id),
+        "content-type": "application/json",
+        "x-amz-docs-region": api_gateway_region,
+    }
 
     try:
-        response = requests.post(
-            api_gateway_url, params=params, data=json.dumps(payload), headers=headers
-        )
+        response = requests.post(api_gateway_url, params=params, data=json.dumps(payload), headers=headers)
         response.raise_for_status()
     except requests.exceptions.HTTPError as err:
-        raise RuntimeError(
-            f"Request to API gateway failed, reason: {str(err)}"
-        ) from err
+        raise RuntimeError(f"Request to API gateway failed, reason: {str(err)}") from err
 
     s3_ingress_url = json.loads(response.text)
 
@@ -152,7 +155,7 @@ def ingress_file_to_s3(ingress_file_path, trimmed_path, s3_ingress_url):
 
     # TODO: slurping entire file could be problematic for large files,
     #       investigate alternative if/when necessary
-    with open(ingress_file_path, 'rb') as object_file:
+    with open(ingress_file_path, "rb") as object_file:
         object_body = object_file.read()
 
     try:
@@ -173,58 +176,87 @@ def setup_argparser():
     Returns
     -------
     parser : argparse.ArgumentParser
-        The command-line argument parser for use with the pds-ingress-client.py
+        The command-line argument parser for use with the pds-ingress-client
         script.
 
     """
-    parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    parser.add_argument('-c', '--config-path', type=str, default=None,
-                        help=f'Path to the INI config for use with this client. '
-                             f'If not provided, the default config '
-                             f'({ConfigUtil.default_config_path()}) is used.')
-    parser.add_argument('-n', '--node', type=str.lower, required=True,
-                        choices=NodeUtil.permissible_node_ids(),
-                        help='PDS node identifier of the ingress requestor. '
-                             'This value is used by the Ingress service to derive '
-                             'the S3 upload location. Argument is case-insensitive.')
-    parser.add_argument('--prefix', '-p', type=str, default=None,
-                        help='Specify a path prefix to be trimmed from each '
-                             'resolved ingest path such that is is not included '
-                             'with the request to the Ingress Service. '
-                             'For example, specifying --prefix "/home/user" would '
-                             'modify paths such as "/home/user/bundle/file.xml" '
-                             'to just "bundle/file.xml". This can be useful for '
-                             'controlling which parts of a directory structure '
-                             'should be included with the S3 upload location returned '
-                             'by the Ingress Service.')
-    parser.add_argument('--num-threads', '-t', type=int, default=-1,
-                        help='Specify the number of threads to use when uploading '
-                             'files to S3 in parallel. By default, all available '
-                             'cores are used.')
-    parser.add_argument('--dry-run', action='store_true',
-                        help='Derive the full set of ingress paths without '
-                             'performing any submission requests to the server.')
-    parser.add_argument('--log-level', '-l', type=str, default=None,
-                        choices=["warn", "warning", "info", "debug"],
-                        help="Sets the Logging level for messages logged to the "
-                             "console. If not provided, the logging level set in "
-                             "the INI config is used instead.")
-    parser.add_argument('ingress_paths', type=str, nargs='+',
-                        metavar='file_or_dir',
-                        help='One or more paths to the files to ingest to S3. '
-                             'For each directory path is provided, this script will '
-                             'automatically derive all sub-paths for inclusion with '
-                             'the ingress request.')
+    parser.add_argument(
+        "-c",
+        "--config-path",
+        type=str,
+        default=None,
+        help=f"Path to the INI config for use with this client. "
+        f"If not provided, the default config "
+        f"({ConfigUtil.default_config_path()}) is used.",
+    )
+    parser.add_argument(
+        "-n",
+        "--node",
+        type=str.lower,
+        required=True,
+        choices=NodeUtil.permissible_node_ids(),
+        help="PDS node identifier of the ingress requestor. "
+        "This value is used by the Ingress service to derive "
+        "the S3 upload location. Argument is case-insensitive.",
+    )
+    parser.add_argument(
+        "--prefix",
+        "-p",
+        type=str,
+        default=None,
+        help="Specify a path prefix to be trimmed from each "
+        "resolved ingest path such that is is not included "
+        "with the request to the Ingress Service. "
+        'For example, specifying --prefix "/home/user" would '
+        'modify paths such as "/home/user/bundle/file.xml" '
+        'to just "bundle/file.xml". This can be useful for '
+        "controlling which parts of a directory structure "
+        "should be included with the S3 upload location returned "
+        "by the Ingress Service.",
+    )
+    parser.add_argument(
+        "--num-threads",
+        "-t",
+        type=int,
+        default=-1,
+        help="Specify the number of threads to use when uploading "
+        "files to S3 in parallel. By default, all available "
+        "cores are used.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Derive the full set of ingress paths without " "performing any submission requests to the server.",
+    )
+    parser.add_argument(
+        "--log-level",
+        "-l",
+        type=str,
+        default=None,
+        choices=["warn", "warning", "info", "debug"],
+        help="Sets the Logging level for logged messages. If not "
+        "provided, the logging level set in the INI config "
+        "is used instead.",
+    )
+    parser.add_argument(
+        "ingress_paths",
+        type=str,
+        nargs="+",
+        metavar="file_or_dir",
+        help="One or more paths to the files to ingest to S3. "
+        "For each directory path is provided, this script will "
+        "automatically derive all sub-paths for inclusion with "
+        "the ingress request.",
+    )
 
     return parser
 
+
 def main():
     """
-    Main entry point for the pds-ingress-client.py script.
+    Main entry point for the pds-ingress-client script.
 
     Raises
     ------
@@ -254,9 +286,7 @@ def main():
 
         # TODO: add support for command-line username/password?
         if not cognito_config["username"] and cognito_config["password"]:
-            raise ValueError(
-                "Username and Password must be specified in the COGNITO portion of the INI config"
-            )
+            raise ValueError("Username and Password must be specified in the COGNITO portion of the INI config")
 
         authentication_result = AuthUtil.perform_cognito_authentication(cognito_config)
 
@@ -271,13 +301,7 @@ def main():
         PARALLEL.n_jobs = args.num_threads
 
         PARALLEL(
-            delayed(_perform_ingress)(
-                resolved_ingress_path,
-                node_id,
-                args.prefix,
-                bearer_token,
-                config["API_GATEWAY"]
-            )
+            delayed(_perform_ingress)(resolved_ingress_path, node_id, args.prefix, bearer_token, config["API_GATEWAY"])
             for resolved_ingress_path in resolved_ingress_paths
         )
 
@@ -287,5 +311,5 @@ def main():
         logger.info("Dry run requested, skipping ingress request submission.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
