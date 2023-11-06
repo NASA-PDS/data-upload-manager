@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Overview &mdash; My PDS Project 0.0 documentation</title>
+  <title>PDS Data Upload Manager &mdash; PDS Data Upload Manager  documentation</title>
   
 
   
@@ -37,7 +37,7 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Contact Us" href="support/contact.html" /> 
+    <link rel="next" title="📦 Installation" href="installation/index.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -51,7 +51,7 @@
           
 
           
-            <a href="#" class="icon icon-home" alt="Documentation Home"> My PDS Project
+            <a href="#" class="icon icon-home" alt="Documentation Home"> PDS Data Upload Manager
           
 
           
@@ -62,10 +62,6 @@
 
           
             
-            
-              <div class="version">
-                0.0
-              </div>
             
           
 
@@ -89,8 +85,17 @@
               
             
             
-              <p class="caption"><span class="caption-text">Support</span></p>
+              <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="installation/index.html">📦 Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development/index.html">👩‍💻 Development</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/index.html">🏃‍ ️Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="terraform/index.html">Deployment Scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="terraform/index.html#creating-the-deployment-tfvars-file">Creating the deployment .tfvars file</a></li>
+<li class="toctree-l1"><a class="reference internal" href="terraform/index.html#deploying-the-terraform">Deploying the Terraform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="terraform/index.html#utilizing-terraform-outputs">Utilizing Terraform Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="terraform/index.html#destroying-a-deployment">Destroying a Deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">️Command Line API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="support/contact.html">Contact Us</a></li>
 <li class="toctree-l1"><a class="reference internal" href="support/contribute.html">Contribute</a></li>
 <li class="toctree-l1"><a class="reference internal" href="support/contribute.html#report-a-bug-or-new-feature-request">Report a Bug or New Feature Request</a></li>
@@ -110,7 +115,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="#">My PDS Project</a>
+          <a href="#">PDS Data Upload Manager</a>
         
       </nav>
 
@@ -141,7 +146,7 @@
     
       <li><a href="#" class="icon icon-home"></a> &raquo;</li>
         
-      <li>Overview</li>
+      <li>PDS Data Upload Manager</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -162,15 +167,62 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="overview">
-<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h1>
-<p>Welcome to your PDS template package! Have Fun!</p>
+  <div class="section" id="pds-data-upload-manager">
+<h1>PDS Data Upload Manager<a class="headerlink" href="#pds-data-upload-manager" title="Permalink to this headline">¶</a></h1>
+<p>The Planetary Data System (<a class="reference external" href="https://pds.nasa.gov/">PDS</a>) Data Upload Manager (<a class="reference external" href="https://github.com/NASA-PDS/data-upload-manager/">DUM</a>) Service provides a
+means for PDS Node end-users to request upload of files (PDS collections, labels, etc.)
+to the PDS Nucleus Cloud Computing environment. Use of the DUM is typically the
+first step in ingesting large data volumes to the PDS cloud for indexing, validation and
+eventual dissemination.</p>
+<p>Currently, the DUM service is deployed as a Python package, and consists of two
+major facets:</p>
+<ul class="simple">
+<li><p>A client-side application (<cite>pds-ingress-client</cite>) to be used with on-prem environments
+to select the files to be uploaded to Nucleus.</p></li>
+<li><p>A server-side framework of <a class="reference external" href="https://aws.amazon.com/">AWS</a> services to handle tasks such as
+user-authentication, mapping of requested files to S3 bucket(s), and log management.
+This framework can be deployed automatically via Terraform scripts bundled with the
+DUM repo.</p></li>
+</ul>
 </div>
 <div class="section" id="sitemap">
 <h1>Sitemap<a class="headerlink" href="#sitemap" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Support</span></p>
+<p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="installation/index.html">📦 Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation/index.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation/index.html#installation-instructions">Installation Instructions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="installation/index.html#id1">Installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="installation/index.html#client-configuration">Client Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="installation/index.html#running-the-client-script">Running the Client script</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="installation/index.html#upgrading-the-service">Upgrading the Service</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation/index.html#configuring-the-server-side-bucket-map">Configuring the Server side Bucket Map</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation/index.html#adding-users-to-the-aws-cognito-user-pool">Adding users to the AWS Cognito User Pool</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="development/index.html">👩‍💻 Development</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="development/index.html#quick-start">Quick start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development/index.html#testing">Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development/index.html#making-releases">Making Releases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development/index.html#contribute">Contribute</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage/index.html">🏃‍ ️Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage/index.html#pds-ingress-client-description">pds-ingress-client Description</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="terraform/index.html">Deployment Scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="terraform/index.html#creating-the-deployment-tfvars-file">Creating the deployment .tfvars file</a></li>
+<li class="toctree-l1"><a class="reference internal" href="terraform/index.html#deploying-the-terraform">Deploying the Terraform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="terraform/index.html#utilizing-terraform-outputs">Utilizing Terraform Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="terraform/index.html#destroying-a-deployment">Destroying a Deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">️Command Line API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/index.html#pds-ingress-client">pds-ingress-client</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="support/contact.html">Contact Us</a></li>
 <li class="toctree-l1"><a class="reference internal" href="support/contribute.html">Contribute</a></li>
 <li class="toctree-l1"><a class="reference internal" href="support/contribute.html#report-a-bug-or-new-feature-request">Report a Bug or New Feature Request</a></li>
@@ -187,7 +239,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="support/contact.html" class="btn btn-neutral float-right" title="Contact Us" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="installation/index.html" class="btn btn-neutral float-right" title="📦 Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
     </div>
@@ -198,7 +250,7 @@
   <div role="contentinfo">
     <p>
         
-        &copy; Copyright 2022 California Institute of Technology
+        &copy; Copyright 2023 California Institute of Technology
 
     </p>
   </div>

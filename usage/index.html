@@ -1,0 +1,275 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>🏃‍ ️Usage &mdash; PDS Data Upload Manager  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/theme_overrides.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Deployment Scripts" href="../terraform/index.html" />
+    <link rel="prev" title="👩‍💻 Development" href="../development/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> PDS Data Upload Manager
+          
+
+          
+            
+            <img src="../_static/PDS_Planets.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation/index.html">📦 Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../development/index.html">👩‍💻 Development</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">🏃‍ ️Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#pds-ingress-client-description">pds-ingress-client Description</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html">Deployment Scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html#creating-the-deployment-tfvars-file">Creating the deployment .tfvars file</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html#deploying-the-terraform">Deploying the Terraform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html#utilizing-terraform-outputs">Utilizing Terraform Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html#destroying-a-deployment">Destroying a Deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">️Command Line API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../support/contact.html">Contact Us</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../support/contribute.html">Contribute</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../support/contribute.html#report-a-bug-or-new-feature-request">Report a Bug or New Feature Request</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../support/help.html">Help</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PDS Data Upload Manager</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>🏃‍ ️Usage</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            
+              <a href="https://github.com/nasa-pds/template-repo-python/blob/main/docs/source/usage/index.rst" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="usage">
+<h1>🏃‍ ️Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
+<p>This section describes how to use the PDS DUM client script.</p>
+<div class="section" id="pds-ingress-client-description">
+<h2>pds-ingress-client Description<a class="headerlink" href="#pds-ingress-client-description" title="Permalink to this headline">¶</a></h2>
+<p>Upon installation of the DUM application, the <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code> script will
+be available for use on the command-line.</p>
+<p>To see the usage documentation, you can run the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pds-ingress-client --help
+</pre></div>
+</div>
+<p>The client application only has two arguments which must provided on each invocation,
+at least one path to files or directories to be uploaded, and the name of the PDS
+node the submission is on behalf of (via the <code class="docutils literal notranslate"><span class="pre">--node</span></code> argument).</p>
+<p>When specifying the list of paths to be uploaded, any paths corresponding to
+directories will be automatically recursed by the client script, and each file
+within the directory will be included in the set uploaded to PDS Cloud. Any
+sub-directories will be similarly recursed to find any additional files within,
+until the entire directory tree is traversed.</p>
+<p>Specifying the node ID of the requestor is accomplished via the <code class="docutils literal notranslate"><span class="pre">--node</span></code> argument,
+specifying one of the following node name values: <code class="docutils literal notranslate"><span class="pre">atm,eng,geo,img,naif,ppi,rs,rms,sbn</span></code></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">--dry-run</span></code> flag can be used to have <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code> determine the
+full set of files and directories to  be processed without actually submitting
+anything for ingest to PDS Cloud. This feature can be useful to ensure the correct
+set of files are being included for a request before performing any communication
+with the Server side of DUM.</p>
+<p>The details of where the client script should submit ingest requests to are configured
+within an INI file. After installing DUM, a new INI config should be created with the
+appropriate values for each field. Once available, the config for use with a request
+can be specified via the <code class="docutils literal notranslate"><span class="pre">--config-path</span></code> argument. See the Client Configuration section
+of the <a class="reference external" href="../installation/index.html">installation</a> instructions for more details on creating the INI config.</p>
+<p>In its default configuration, the <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code> script includes the full path
+of each discovered file when sending the request to the Server side components. Typically,
+this can include unwanted path components, such as a user’s home directory. To control
+the path components included, the <code class="docutils literal notranslate"><span class="pre">--prefix</span></code> argument can be used to specify a path
+prefix that will be trimmed from all file paths discovered by <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code>.</p>
+<p>For example, if the file <code class="docutils literal notranslate"><span class="pre">/home/user/bundle/file.xml</span></code> were to be uploaded, and
+<code class="docutils literal notranslate"><span class="pre">--prefix</span> <span class="pre">/home/user</span></code> were also provided, the path provided to the ingress service
+in AWS would resolve to <code class="docutils literal notranslate"><span class="pre">bundle/file.xml</span></code>.</p>
+<p>Lastly, the <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code> by default utilizes all available CPUs on the
+local machine to perform parallelized ingress requests to the ingress service. The exact
+number of threads can be controlled via the <code class="docutils literal notranslate"><span class="pre">--num-threads</span></code> argument.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../terraform/index.html" class="btn btn-neutral float-right" title="Deployment Scripts" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../development/index.html" class="btn btn-neutral float-left" title="👩‍💻 Development" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2023 California Institute of Technology
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

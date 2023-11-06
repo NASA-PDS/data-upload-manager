@@ -1,0 +1,353 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Deployment Scripts &mdash; PDS Data Upload Manager  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/theme_overrides.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="️Command Line API" href="../api/index.html" />
+    <link rel="prev" title="🏃‍ ️Usage" href="../usage/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> PDS Data Upload Manager
+          
+
+          
+            
+            <img src="../_static/PDS_Planets.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation/index.html">📦 Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../development/index.html">👩‍💻 Development</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage/index.html">🏃‍ ️Usage</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Deployment Scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#creating-the-deployment-tfvars-file">Creating the deployment .tfvars file</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#deploying-the-terraform">Deploying the Terraform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#utilizing-terraform-outputs">Utilizing Terraform Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#destroying-a-deployment">Destroying a Deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">️Command Line API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../support/contact.html">Contact Us</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../support/contribute.html">Contribute</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../support/contribute.html#report-a-bug-or-new-feature-request">Report a Bug or New Feature Request</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../support/help.html">Help</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PDS Data Upload Manager</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Deployment Scripts</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            
+              <a href="https://github.com/nasa-pds/template-repo-python/blob/main/docs/source/terraform/index.rst" class="fa fa-github"> Edit on GitHub</a>
+            
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <blockquote>
+<div><p>🌎  Terraform</p>
+</div></blockquote>
+<hr class="docutils" />
+<p>This section describes how to deploy the server side components of the DUM to
+AWS via <a class="reference external" href="https://www.terraform.io/">Terraform</a>. These instructions are intended for PDS Engineering Node
+operators who will be in charge of deploying and maintaining new instances of the
+DUM server components. For submitters of data to PDS Cloud, consult the <a class="reference external" href="../usage/index.html">usage</a>
+section for details on running the client-side script.</p>
+<p>Prior to utilizing this documentation, ensure Terraform 1.0.11 or greater has
+been installed on the same machine that the DUM repository has been cloned to.</p>
+<div class="section" id="deployment-scripts">
+<h1>Deployment Scripts<a class="headerlink" href="#deployment-scripts" title="Permalink to this headline">¶</a></h1>
+<p>The DUM repository maintains a set of Terraform deployment scripts within the
+<cite>terraform</cite> directory at the root of the repository. These scripts define the
+AWS service components and their various inter-connections which Terraform
+sets up automatically on a deployment.</p>
+<p>The high-level Terraform script components consist of the following:</p>
+<ul class="simple">
+<li><p>A submodule for deploying Lambda functions used by DUM (under <cite>terraform/modules/lambda</cite>)</p></li>
+<li><p>A submodule for deploying the Cognito user authentication service (under <cite>terraform/modules/cognito</cite>)</p></li>
+<li><p>A submodule for deploying the API Gateway used to communicate with the client script (under <cite>terraform/modules/api_gateway</cite>)</p></li>
+<li><p>A main module which composes each of the submodues together to form the entire deployment (<cite>terraform/main.tf</cite>)</p></li>
+</ul>
+</div>
+<div class="section" id="creating-the-deployment-tfvars-file">
+<h1>Creating the deployment .tfvars file<a class="headerlink" href="#creating-the-deployment-tfvars-file" title="Permalink to this headline">¶</a></h1>
+<p>By default, the Terraform scripts/modules described above are parameterized such that the service
+can be easily deployed to different AWS environments without hardcoding any sensitive or account-specific
+information within.</p>
+<p>To provide values for the parameters that the Terraform scripts expect, a <cite>tfvars</cite> file must be created
+to define the account-specific informations pertaining to the environment to deploy to. The following
+template can be used when creating a new <cite>tfvars</cite> file for use with a specific AWS environment:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Terraform override variables for use with the MCP AWS environment</span>
+<span class="n">profile</span>         <span class="o">=</span> <span class="s2">&quot;&lt;AWS_Profile_Name&gt;&quot;</span>
+<span class="n">credential_file</span> <span class="o">=</span> <span class="s2">&quot;&lt;Path_to_local_aws_credentials_file&gt;&quot;</span>
+
+<span class="n">lambda_s3_bucket_name</span> <span class="o">=</span> <span class="s2">&quot;&lt;S3_Bucket_Name&gt;&quot;</span>
+
+<span class="n">api_gateway_policy_source_vpc</span> <span class="o">=</span> <span class="s2">&quot;&lt;VPC_ID&gt;&quot;</span>
+
+<span class="n">api_gateway_lambda_role_arn</span>         <span class="o">=</span> <span class="s2">&quot;&lt;AWS_IAM_Role_ARN&gt;&quot;</span>
+<span class="n">lambda_ingress_service_iam_role_arn</span> <span class="o">=</span> <span class="s2">&quot;&lt;AWS_IAM_Role_ARN&gt;&quot;</span>
+<span class="n">lambda_authorizer_iam_role_arn</span>      <span class="o">=</span> <span class="s2">&quot;&lt;AWS_IAM_Role_ARN&gt;&quot;</span>
+
+<span class="n">nucleus_dum_cognito_initial_users</span> <span class="o">=</span> <span class="p">[</span>
+  <span class="p">{</span>
+    <span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;Username&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;Password&gt;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;PDS_Group_Name&gt;&quot;</span>
+    <span class="s2">&quot;email&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;Email address&gt;&quot;</span>
+  <span class="p">},</span>
+  <span class="o">...</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>Each of the bracketed values above must be filled in with an appropriate value
+prior to deployment. Descriptions of each field follow:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;AWS_Profile_Name&gt;</span></code>: The AWS Profile/Account name of the environment to deploy to.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;Path_to_local_aws_credentials_file&gt;</span></code>: Path to a local file (such as <code class="docutils literal notranslate"><span class="pre">~/.aws/credentials</span></code>) containing a valid set of AWS <a class="reference external" href="https://docs.aws.amazon.com/cli/latest/userguide/cli-authentication-short-term.html">credentials</a> for the specifed profile.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;S3_Bucket_Name&gt;</span></code>: Name of an S3 bucket which Terraform will use to stage intermediate build products. The bucket will be created by Terraform and should not already exist.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;VPC_ID&gt;</span></code>: ID of the Virtual Private Cloud instance where the deployed service will reside.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;AWS_IAM_Role_ARN&gt;</span></code>: Amazon Resource Name (ARN) for the AWS Identity Access Management Role which grants the required permissions for the DUM server components to communicate.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul class="simple">
+<li><p>The selected Role(s) must include both <code class="docutils literal notranslate"><span class="pre">lambda.amazonaws.com</span></code> and <code class="docutils literal notranslate"><span class="pre">apigateway.amazonaws.com</span></code> as “Trusted Entities”.</p></li>
+<li><p>The policy attached to the Role(s) must also grant adequate permissions for the following services: API Gateway, Cloudwatch, Cloudwatch Logs, Lambda, and S3</p></li>
+</ul>
+</div>
+<ul class="simple">
+<li><p>The <cite>nucleus_dum_cognito_initial_users</cite> can be populated with a list of dictionaries defining a set of user accounts to
+populate the Cognito user pool with upon creation. An arbitrary number of initial users can be provided.
+* The <code class="docutils literal notranslate"><span class="pre">&lt;Username&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;Password&gt;</span></code> fields can be anything, but the password must conform to the Password policy set on the Cognito user pool.
+* For <code class="docutils literal notranslate"><span class="pre">&lt;PDS_Group_Name&gt;</span></code>, one of the following may be used: <code class="docutils literal notranslate"><span class="pre">PDS_ATM_USERS,</span> <span class="pre">PDS_ENG_USERS,</span> <span class="pre">PDS_GEO_NODE,</span> <span class="pre">PDS_IMG_NODE,</span> <span class="pre">PDS_NAIF_NODE,</span> <span class="pre">PDS_PPI_NODE,</span> <span class="pre">PDS_RS_NODE,</span> <span class="pre">PDS_RMS_NODE,</span> <span class="pre">PDS_SBN_NODE</span></code>
+* <code class="docutils literal notranslate"><span class="pre">&lt;Email</span> <span class="pre">address&gt;</span></code> should be a valid email address for the user, as this is where things such as password resets will be sent.</p></li>
+</ul>
+</div>
+<div class="section" id="deploying-the-terraform">
+<h1>Deploying the Terraform<a class="headerlink" href="#deploying-the-terraform" title="Permalink to this headline">¶</a></h1>
+<p>Once the user <cite>.tfvars</cite> is created and saved locally, run the following commands to deploy the DUM service with terraform:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">terraform</span> <span class="n">init</span>
+<span class="n">terraform</span> <span class="n">plan</span> <span class="o">-</span><span class="n">var</span><span class="o">-</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;&lt;path to user .tfvars file&gt;&quot;</span> <span class="o">-</span><span class="n">out</span><span class="o">=</span><span class="s2">&quot;pds-dum.tfplan&quot;</span>
+<span class="n">terraform</span> <span class="n">apply</span> <span class="s2">&quot;pds-dum.tfplan&quot;</span>
+</pre></div>
+</div>
+<p>If everything is configured correctly, deployment should only take about 5-10 minutes.</p>
+</div>
+<div class="section" id="utilizing-terraform-outputs">
+<h1>Utilizing Terraform Outputs<a class="headerlink" href="#utilizing-terraform-outputs" title="Permalink to this headline">¶</a></h1>
+<p>On successful deployment, Terraform will output a number of key/value pairs with
+information needed to configure the INI config of the client-side <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code>
+application.</p>
+<p>A sample of this output follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ingress_client_cloudwatch_log_group_name</span> <span class="o">=</span> <span class="s2">&quot;&lt;Cloudwatch_Log_Group_Name&gt;&quot;</span>
+<span class="n">nucleus_dum_api_id</span> <span class="o">=</span> <span class="s2">&quot;&lt;API_Gateway_ID&gt;&quot;</span>
+<span class="n">nucleus_dum_api_stages</span> <span class="o">=</span> <span class="p">[</span>
+  <span class="p">[</span>
+    <span class="s2">&quot;&lt;API_Gateway_Stage_Name&gt;&quot;</span><span class="p">,</span>
+  <span class="p">],</span>
+<span class="p">]</span>
+<span class="n">nucleus_dum_cognito_user_pool_client_id</span> <span class="o">=</span> <span class="s2">&quot;&lt;Cognito_Client_ID&gt;&quot;</span>
+<span class="n">nucleus_dum_cognito_users</span> <span class="o">=</span> <span class="p">[</span>
+  <span class="n">tolist</span><span class="p">([</span>
+    <span class="s2">&quot;&lt;Cognito_Username&gt;&quot;</span><span class="p">,</span>
+  <span class="p">]),</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>Each of the bracketed fields correspond directly with the fields referenced in the
+Client Configuration section of the <a class="reference external" href="../installation/index.html">installation</a> documentation. The values of these
+outputs should be securly stored for reference, as installers of the client script will
+have a need to know these values when setting up their local INI config.</p>
+</div>
+<div class="section" id="destroying-a-deployment">
+<h1>Destroying a Deployment<a class="headerlink" href="#destroying-a-deployment" title="Permalink to this headline">¶</a></h1>
+<p>To destroy an existing deployment of the DUM Service, run the following from the same location
+the initial deploy was executed:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">terraform</span> <span class="n">destroy</span> <span class="o">-</span><span class="n">var</span><span class="o">-</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;&lt;path to user .tfvars file&gt;&quot;</span>
+</pre></div>
+</div>
+<p>Where <code class="docutils literal notranslate"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">user</span> <span class="pre">.tfvars</span> <span class="pre">file&gt;</span></code> is the same <cite>.tfvars</cite> file used for the initial deployment.</p>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../api/index.html" class="btn btn-neutral float-right" title="️Command Line API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../usage/index.html" class="btn btn-neutral float-left" title="🏃‍ ️Usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2023 California Institute of Technology
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
