@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2023-11-02)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2023-11-06)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.2.0...«unknown»)
 
@@ -10,6 +10,7 @@
 
 **Other closed issues:**
 
+- Populate Sphinx documentation for entire DUM service [\#47](https://github.com/NASA-PDS/data-upload-manager/issues/47)
 - Upload test data set with manual trigger of Nucleus [\#31](https://github.com/NASA-PDS/data-upload-manager/issues/31)
 
 ## [v0.2.0](https://github.com/NASA-PDS/data-upload-manager/tree/v0.2.0) (2023-10-17)
