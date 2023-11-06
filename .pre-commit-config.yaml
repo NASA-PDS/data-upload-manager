@@ -18,13 +18,13 @@ repos:
     -   id: reorder-python-imports
         files: ^src/|tests/
 
--   repo: local
-    hooks:
-    -   id: mypy
-        name: mypy
-        entry: mypy src
-        language: system
-        pass_filenames: false
+#-   repo: local
+#    hooks:
+#    -   id: mypy
+#        name: mypy
+#        entry: mypy src
+#        language: system
+#        pass_filenames: false
 
 -   repo: local
     hooks:

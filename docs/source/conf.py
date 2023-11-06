@@ -17,12 +17,9 @@
 
 # -- Project information -----------------------------------------------------
 
-# TODO - Update with your project name
-project = 'My PDS Project'
-copyright = '2022 California Institute of Technology'
+project = 'PDS Data Upload Manager'
+copyright = '2023 California Institute of Technology'
 author = 'NASA Planetary Data System'
-release = '0.0'
-version = '0.0'
 
 
 # -- General configuration ---------------------------------------------------
