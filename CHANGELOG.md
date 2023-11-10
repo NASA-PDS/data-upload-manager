@@ -1,8 +1,8 @@
 # Changelog
 
-## [release/0.3.0](https://github.com/NASA-PDS/data-upload-manager/tree/release/0.3.0) (2023-11-06)
+## [v0.3.0](https://github.com/NASA-PDS/data-upload-manager/tree/v0.3.0) (2023-11-06)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.2.0...release/0.3.0)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.2.0...v0.3.0)
 
 **Defects:**
 
