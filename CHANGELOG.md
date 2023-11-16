@@ -15,11 +15,7 @@
 
 ## [v0.2.0](https://github.com/NASA-PDS/data-upload-manager/tree/v0.2.0) (2023-10-17)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/release/0.2.0...v0.2.0)
-
-## [release/0.2.0](https://github.com/NASA-PDS/data-upload-manager/tree/release/0.2.0) (2023-10-17)
-
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.1.0...release/0.2.0)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.1.0...v0.2.0)
 
 **Requirements:**
 
