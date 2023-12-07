@@ -1,5 +1,13 @@
 # Changelog
 
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2023-12-07)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.3.0...«unknown»)
+
+**Other closed issues:**
+
+- Test upload subset of CSS with manual trigger of Nucleus [\#32](https://github.com/NASA-PDS/data-upload-manager/issues/32)
+
 ## [v0.3.0](https://github.com/NASA-PDS/data-upload-manager/tree/v0.3.0) (2023-11-06)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.2.0...v0.3.0)
