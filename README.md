@@ -83,7 +83,7 @@ Our unit tests are launched with command:
 
 You can build this projects' docs with:
 
-    python setup.py build_sphinx
+    sphinx-build docs/source docs/build
 
 You can access the build files in the following directory relative to the project root:
 
