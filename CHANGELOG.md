@@ -1,8 +1,8 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2024-03-07)
+## [release/1.0.0](https://github.com/NASA-PDS/data-upload-manager/tree/release/1.0.0) (2024-03-07)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.3.0...«unknown»)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.3.0...release/1.0.0)
 
 **Other closed issues:**
 
