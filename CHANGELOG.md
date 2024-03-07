@@ -1,8 +1,16 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2024-03-06)
+## [1.0.0](https://github.com/NASA-PDS/data-upload-manager/tree/1.0.0) (2024-03-07)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.3.0...«unknown»)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/release/1.0.0...1.0.0)
+
+**Other closed issues:**
+
+- Temporarily disable centralized logging [\#78](https://github.com/NASA-PDS/data-upload-manager/issues/78)
+
+## [release/1.0.0](https://github.com/NASA-PDS/data-upload-manager/tree/release/1.0.0) (2024-03-07)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.3.0...release/1.0.0)
 
 **Other closed issues:**
 
@@ -10,7 +18,11 @@
 
 ## [v0.3.0](https://github.com/NASA-PDS/data-upload-manager/tree/v0.3.0) (2023-11-06)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.2.0...v0.3.0)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/release/0.3.0...v0.3.0)
+
+## [release/0.3.0](https://github.com/NASA-PDS/data-upload-manager/tree/release/0.3.0) (2023-11-06)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.2.0...release/0.3.0)
 
 **Defects:**
 
@@ -23,7 +35,11 @@
 
 ## [v0.2.0](https://github.com/NASA-PDS/data-upload-manager/tree/v0.2.0) (2023-10-17)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.1.0...v0.2.0)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/release/0.2.0...v0.2.0)
+
+## [release/0.2.0](https://github.com/NASA-PDS/data-upload-manager/tree/release/0.2.0) (2023-10-17)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.1.0...release/0.2.0)
 
 **Requirements:**
 
