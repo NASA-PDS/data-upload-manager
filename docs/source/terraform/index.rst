@@ -74,7 +74,7 @@ prior to deployment. Descriptions of each field follow:
 * The `nucleus_dum_cognito_initial_users` can be populated with a list of dictionaries defining a set of user accounts to
   populate the Cognito user pool with upon creation. An arbitrary number of initial users can be provided.
   * The ``<Username>`` and ``<Password>`` fields can be anything, but the password must conform to the Password policy set on the Cognito user pool.
-  * For ``<PDS_Group_Name>``, one of the following may be used: ``PDS_ATM_USERS, PDS_ENG_USERS, PDS_GEO_NODE, PDS_IMG_NODE, PDS_NAIF_NODE, PDS_PPI_NODE, PDS_RS_NODE, PDS_RMS_NODE, PDS_SBN_NODE``
+  * For ``<PDS_Group_Name>``, one of the following may be used: ``PDS_ATM_USERS, PDS_ENG_USERS, PDS_GEO_USERS, PDS_IMG_NODE, PDS_NAIF_USERS, PDS_PPI_USERS, PDS_RS_USERS, PDS_RMS_USERS, PDS_SBN_USERS``
   * ``<Email address>`` should be a valid email address for the user, as this is where things such as password resets will be sent.
 
 Deploying the Terraform

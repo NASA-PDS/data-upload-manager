@@ -61,31 +61,31 @@ variable "nucleus_dum_cognito_user_groups" {
       description = "User group for PDS Engineering Node"
     },
     {
-      name        = "PDS_GEO_NODE"
+      name        = "PDS_GEO_USERS"
       description = "User group for PDS Geosciences Node"
     },
     {
-      name        = "PDS_IMG_NODE"
+      name        = "PDS_IMG_USERS"
       description = "User group for PDS Cartography and Imaging Sciences Discipline Node"
     },
     {
-      name        = "PDS_NAIF_NODE"
+      name        = "PDS_NAIF_USERS"
       description = "User group for PDS Navigational and Ancillary Information Facility Node"
     },
     {
-      name        = "PDS_PPI_NODE"
+      name        = "PDS_PPI_USERS"
       description = "User group for PDS Planetary Plasma Interactions Node"
     },
     {
-      name        = "PDS_RS_NODE"
+      name        = "PDS_RS_USERS"
       description = "User group for PDS Radio Science Node"
     },
     {
-      name        = "PDS_RMS_NODE",
+      name        = "PDS_RMS_USERS",
       description = "User group for PDS Ring-Moon Systems Node"
     },
     {
-      name        = "PDS_SBN_NODE",
+      name        = "PDS_SBN_USERS",
       description = "User group for PDS Small Bodies Node"
     }
   ]
