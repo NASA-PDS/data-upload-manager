@@ -119,16 +119,5 @@ components:
       x-amazon-apigateway-authorizer:
         authorizerUri: "arn:aws:apigateway:${awsRegion}:lambda:path/2015-03-31/functions/${lambdaAuthorizerARN}/invocations"
         authorizerCredentials: ${apiGatewayLambdaRole}
-        authorizerResultTtlInSeconds: 300
         identitySource: "method.request.header.Authorization, method.request.header.UserGroup"
         type: "request"
-x-amazon-apigateway-policy:
-  Version: "2012-10-17"
-  Statement:
-  - Effect: "Allow"
-    Principal: "*"
-    Action: "*"
-    Resource: "*"
-    Condition:
-      StringEquals:
-        aws:SourceVpc: "${apiGatewaySourceVpc}"
