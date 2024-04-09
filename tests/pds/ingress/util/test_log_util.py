@@ -50,7 +50,6 @@ class LogUtilTest(unittest.TestCase):
         # always defaults to what is defined in the INI
         self.assertEqual(log_util.CLOUDWATCH_HANDLER.level, log_util.get_log_level(config["OTHER"]["log_level"]))
 
-    @unittest.skip("skip because of bug https://github.com/NASA-PDS/data-upload-manager/issues/75")
     def test_send_log_events_to_cloud_watch(self):
         """Tests for CloudWatchHandler.send_log_events_to_cloud_watch()"""
         logger = logging.getLogger(__name__)
