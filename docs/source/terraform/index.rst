@@ -44,6 +44,8 @@ template can be used when creating a new `tfvars` file for use with a specific A
 
     api_gateway_policy_source_vpc = "<VPC_ID>"
 
+    api_gateway_endpoint_type = <"REGIONAL"|"PRIVATE">
+
     api_gateway_lambda_role_arn         = "<AWS_IAM_Role_ARN>"
     lambda_ingress_service_iam_role_arn = "<AWS_IAM_Role_ARN>"
     lambda_authorizer_iam_role_arn      = "<AWS_IAM_Role_ARN>"
@@ -66,6 +68,7 @@ prior to deployment. Descriptions of each field follow:
 * ``<S3_Bucket_Name>``: Name of an S3 bucket which Terraform will use to stage intermediate build products. The bucket will be created by Terraform and should not already exist.
 * ``<VPC_ID>``: ID of the Virtual Private Cloud instance where the deployed service will reside.
 * ``<AWS_IAM_Role_ARN>``: Amazon Resource Name (ARN) for the AWS Identity Access Management Role which grants the required permissions for the DUM server components to communicate.
+* ``<"REGIONAL"|"PRIVATE">``: Select the type of endpoint of the API Gateway. "REGIONAL" should only be used for deployments to the OPS environment.
 
 .. note::
   * The selected Role(s) must include both ``lambda.amazonaws.com`` and ``apigateway.amazonaws.com`` as "Trusted Entities".
@@ -74,7 +77,7 @@ prior to deployment. Descriptions of each field follow:
 * The `nucleus_dum_cognito_initial_users` can be populated with a list of dictionaries defining a set of user accounts to
   populate the Cognito user pool with upon creation. An arbitrary number of initial users can be provided.
   * The ``<Username>`` and ``<Password>`` fields can be anything, but the password must conform to the Password policy set on the Cognito user pool.
-  * For ``<PDS_Group_Name>``, one of the following may be used: ``PDS_ATM_USERS, PDS_ENG_USERS, PDS_GEO_NODE, PDS_IMG_NODE, PDS_NAIF_NODE, PDS_PPI_NODE, PDS_RS_NODE, PDS_RMS_NODE, PDS_SBN_NODE``
+  * For ``<PDS_Group_Name>``, one of the following may be used: ``PDS_ATM_USERS, PDS_ENG_USERS, PDS_GEO_USERS, PDS_IMG_NODE, PDS_NAIF_USERS, PDS_PPI_USERS, PDS_RS_USERS, PDS_RMS_USERS, PDS_SBN_USERS``
   * ``<Email address>`` should be a valid email address for the user, as this is where things such as password resets will be sent.
 
 Deploying the Terraform

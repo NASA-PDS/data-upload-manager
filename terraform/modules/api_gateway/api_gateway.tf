@@ -9,7 +9,7 @@ resource "aws_api_gateway_rest_api" "nucleus_dum_api" {
   description = var.rest_api_description
 
   endpoint_configuration {
-    types = ["PRIVATE"]  # TODO this will change to "REGIONAL" at some point (?)
+    types = [var.api_gateway_endpoint_type]
   }
 
   body = templatefile(

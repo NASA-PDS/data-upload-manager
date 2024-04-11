@@ -34,6 +34,7 @@ module "nucleus_dum_api" {
   source = "./modules/api_gateway"
 
   cloudwatch_iam_role_name             = var.cloudwatch_iam_role_name
+  api_gateway_endpoint_type            = var.api_gateway_endpoint_type
   api_gateway_lambda_role_arn          = var.api_gateway_lambda_role_arn
   api_gateway_policy_source_vpc        = var.api_gateway_policy_source_vpc
   lambda_authorizer_function_arn       = module.nucleus_dum_lambda_authorizer.lambda_authorizer_function_arn

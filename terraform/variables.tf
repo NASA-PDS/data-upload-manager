@@ -25,6 +25,12 @@ variable "cloudwatch_iam_role_name" {
   description = "IAM Role name used for CloudWatch Logging"
 }
 
+variable "api_gateway_endpoint_type" {
+  type        = string
+  default     = "PRIVATE"
+  description = "The endpoint type to assign to the API Gateway. Should be one of PRIVATE or REGIONAL"
+}
+
 variable "api_gateway_lambda_role_arn" {
   type        = string
   description = "ARN for an IAM role which has permissions for both API Gateway and Lambda"

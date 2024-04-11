@@ -246,8 +246,7 @@ class CloudWatchHandler(BufferingHandler):
             # CloudWatch Logs wants all records sorted by ascending timestamp
             log_events = list(sorted(log_events, key=lambda event: event["timestamp"]))
 
-            # deactivated until https://github.com/NASA-PDS/data-upload-manager/issues/75 is fixed
-            # self.send_log_events_to_cloud_watch(log_events)
+            self.send_log_events_to_cloud_watch(log_events)
 
             self.buffer.clear()
         except Exception as err:
