@@ -17,6 +17,12 @@ variable "rest_api_description" {
   description = "Description text for the DUM API Gateway"
 }
 
+variable "api_gateway_endpoint_type" {
+  type        = string
+  default     = "PRIVATE"
+  description = "The endpoint type to assign to the API Gateway. Should be one of PRIVATE or REGIONAL"
+}
+
 variable "api_gateway_lambda_role_arn" {
   type        = string
   description = "ARN of the IAM role to assign to the API Gateway. Must have permission to access AWS Lambda."
