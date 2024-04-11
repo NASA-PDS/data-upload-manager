@@ -98,7 +98,7 @@ class PDSIngressAppTest(unittest.TestCase):
         response_body = json.loads(response["body"])
         response_url, signature_params = response_body.split("?")
 
-        expected_url = "https://nucleus-pds-protected.s3.amazonaws.com/SBN/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"
+        expected_url = "https://nucleus-pds-protected.s3.amazonaws.com/sbn/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"
 
         self.assertEqual(response_url, expected_url)
 
@@ -119,7 +119,7 @@ class PDSIngressAppTest(unittest.TestCase):
         response_url, signature_params = response_body.split("?")
 
         expected_url = (
-            "https://nucleus-pds-public.s3.amazonaws.com/SBN/some.other.survey/bundle.some.other.survey_v1.0.xml"
+            "https://nucleus-pds-public.s3.amazonaws.com/sbn/some.other.survey/bundle.some.other.survey_v1.0.xml"
         )
 
         self.assertEqual(response_url, expected_url)

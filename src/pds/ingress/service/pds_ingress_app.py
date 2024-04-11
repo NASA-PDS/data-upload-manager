@@ -166,7 +166,7 @@ def lambda_handler(event, context):
             f"No bucket location configured for prefix {prefix_key}, using default bucket {destination_bucket}"
         )
 
-    object_key = join(request_node.upper(), local_url)
+    object_key = join(request_node.lower(), local_url)
 
     s3_url = generate_presigned_upload_url(destination_bucket, object_key)
 
