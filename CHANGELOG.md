@@ -1,5 +1,13 @@
 # Changelog
 
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2024-04-11)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v1.0.0...«unknown»)
+
+**Defects:**
+
+- DUM client is unable to create CloudWatch Log Stream pds-ingress-client-sbn-\* when upload data to cloud [\#75](https://github.com/NASA-PDS/data-upload-manager/issues/75) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
+
 ## [v1.0.0](https://github.com/NASA-PDS/data-upload-manager/tree/v1.0.0) (2024-03-07)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v0.3.0...v1.0.0)
