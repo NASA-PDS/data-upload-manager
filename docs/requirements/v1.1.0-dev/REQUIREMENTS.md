@@ -44,7 +44,7 @@ This requirement is not impacted by the current version
 
 
 This requirement is not impacted by the current version
-## As a user, I'd like the option to bypass uploading duplicate data products ([#92](https://github.com/NASA-PDS/data-upload-manager/issues/92)) 
+## As a user, I want to bypass uploading duplicate data products ([#92](https://github.com/NASA-PDS/data-upload-manager/issues/92)) 
 
 
 This requirement is not impacted by the current version
