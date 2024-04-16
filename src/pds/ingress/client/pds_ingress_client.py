@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 
+import backoff
 import pds.ingress.util.log_util as log_util
 import requests
 from joblib import delayed
@@ -23,6 +24,21 @@ from pds.ingress.util.node_util import NodeUtil
 from pds.ingress.util.path_util import PathUtil
 
 PARALLEL = Parallel(require="sharedmem")
+
+
+def fatal_code(err: requests.exceptions.RequestException) -> bool:
+    """Only retry for common transient errors"""
+    return 400 <= err.response.status_code < 500
+
+
+def backoff_logger(details):
+    """Log details about the current backoff/retry"""
+    logger = get_logger(__name__)
+    logger.warning(
+        f"Backing off {details['target']} function for {details['wait']:0.1f} "
+        f"seconds after {details['tries']} tries."
+    )
+    logger.warning(f"Total time elapsed: {details['elapsed']:0.1f} seconds.")
 
 
 def _perform_ingress(ingress_path, node_id, prefix, bearer_token, api_gateway_config):
@@ -68,6 +84,14 @@ def _perform_ingress(ingress_path, node_id, prefix, bearer_token, api_gateway_co
         logger.warning(f"{trimmed_path} : Ingress failed, reason: {str(err)}")
 
 
+@backoff.on_exception(
+    backoff.constant,
+    requests.exceptions.RequestException,
+    max_time=300,
+    giveup=fatal_code,
+    on_backoff=backoff_logger,
+    interval=15,
+)
 def request_file_for_ingress(object_body, ingress_file_path, node_id, api_gateway_config, bearer_token):
     """
     Submits a request for file ingress to the PDS Ingress App API.
@@ -135,11 +159,8 @@ def request_file_for_ingress(object_body, ingress_file_path, node_id, api_gatewa
         "x-amz-docs-region": api_gateway_region,
     }
 
-    try:
-        response = requests.post(api_gateway_url, params=params, data=json.dumps(payload), headers=headers)
-        response.raise_for_status()
-    except requests.exceptions.HTTPError as err:
-        raise RuntimeError(f"Request to API gateway failed, reason: {str(err)}") from err
+    response = requests.post(api_gateway_url, params=params, data=json.dumps(payload), headers=headers)
+    response.raise_for_status()
 
     s3_ingress_url = json.loads(response.text)
 
@@ -148,6 +169,14 @@ def request_file_for_ingress(object_body, ingress_file_path, node_id, api_gatewa
     return s3_ingress_url
 
 
+@backoff.on_exception(
+    backoff.constant,
+    requests.exceptions.RequestException,
+    max_time=300,
+    giveup=fatal_code,
+    on_backoff=backoff_logger,
+    interval=15,
+)
 def ingress_file_to_s3(object_body, trimmed_path, s3_ingress_url):
     """
     Copies the local file path to the S3 location returned from the Ingress App.
@@ -172,12 +201,8 @@ def ingress_file_to_s3(object_body, trimmed_path, s3_ingress_url):
 
     logger.info(f"{trimmed_path} : Ingesting to {s3_ingress_url.split('?')[0]}")
 
-    try:
-        response = requests.put(s3_ingress_url, data=object_body)
-        response.raise_for_status()
-    except requests.exceptions.HTTPError as err:
-        # TODO: add support for automatic retry in the case of a 500 errors
-        raise RuntimeError(f"S3 copy failed, reason: {str(err)}") from err
+    response = requests.put(s3_ingress_url, data=object_body)
+    response.raise_for_status()
 
     logger.info(f"{trimmed_path} : Ingest complete")
 
