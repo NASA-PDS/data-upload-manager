@@ -2,14 +2,20 @@ import json
 import os
 import tempfile
 import unittest
+from datetime import datetime
+from datetime import timezone
 from functools import partial
 from os.path import abspath
 from os.path import join
+from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import boto3
+import botocore.client
+import botocore.exceptions
 from pds.ingress.service.pds_ingress_app import initialize_bucket_map
 from pds.ingress.service.pds_ingress_app import lambda_handler
+from pds.ingress.service.pds_ingress_app import should_overwrite_file
 from pkg_resources import resource_filename
 
 
@@ -77,12 +83,21 @@ class PDSIngressAppTest(unittest.TestCase):
         aws_session_token="fake_session_token",
     )
 
+    def mock_make_api_call(self, operation_name, kwarg):
+        return {"ContentLength": 2, "LastModified": datetime.now(), "ETag": "0hashfakehashfakehashfake0"}
+
     @patch.object(boto3, "client", boto3_client_w_creds)
+    @patch.object(botocore.client.BaseClient, "_make_api_call", mock_make_api_call)
     def test_lambda_handler(self):
         """Test the lambda_handler function with the default bucket map"""
         test_event = {
             "body": json.dumps({"url": "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"}),
             "queryStringParameters": {"node": "sbn"},
+            "headers": {
+                "ContentLength": 1,
+                "LastModified": os.path.getmtime(os.path.abspath(__file__)),
+                "ContentMD5": "fakehashfakehashfakehash",
+            },
         }
 
         context = {}  # Unused by lambda_handler
@@ -111,6 +126,11 @@ class PDSIngressAppTest(unittest.TestCase):
         test_event = {
             "body": json.dumps({"url": "some.other.survey/bundle.some.other.survey_v1.0.xml"}),
             "queryStringParameters": {"node": "sbn"},
+            "headers": {
+                "ContentLength": 1,
+                "LastModified": os.path.getmtime(os.path.abspath(__file__)),
+                "ContentMD5": "fakehashfakehashfakehash",
+            },
         }
 
         response = lambda_handler(test_event, context)
@@ -132,15 +152,72 @@ class PDSIngressAppTest(unittest.TestCase):
         test_event = {
             "body": json.dumps({"url": "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"}),
             "queryStringParameters": {"node": "unk"},
+            "headers": {
+                "ContentLength": 1,
+                "LastModified": os.path.getmtime(os.path.abspath(__file__)),
+                "ContentMD5": "fakehashfakehashfakehash",
+            },
         }
 
         with self.assertRaises(RuntimeError, msg="No bucket map entries configured for Node ID unk"):
             lambda_handler(test_event, context)
 
-        test_event = {"body": json.dumps({}), "queryStringParameters": {"node": "eng"}}
+        test_event = {
+            "body": json.dumps({}),
+            "queryStringParameters": {"node": "eng"},
+            "headers": {
+                "ContentLength": 1,
+                "LastModified": os.path.getmtime(os.path.abspath(__file__)),
+                "ContentMD5": "fakehashfakehashfakehash",
+            },
+        }
 
         with self.assertRaises(RuntimeError, msg="Both a local URL and request Node ID must be provided"):
             lambda_handler(test_event, context)
+
+    def test_should_overwrite_file(self):
+        """Test check for overwrite of prexisting file in S3"""
+        # Create sample data sent by client script
+        test_headers = {
+            "ContentLength": os.stat(os.path.abspath(__file__)).st_size,
+            "ContentMD5": "validhash",
+            "LastModified": os.path.getmtime(os.path.abspath(__file__)),
+        }
+        bucket = "sample_bucket"
+        key = "path/to/sample_file"
+
+        # Setup mock return values for head_object, one which matches the requested
+        # file exactly, and one that does not
+        match = {
+            "ContentLength": test_headers["ContentLength"],
+            "ETag": "0validhash0",
+            "LastModified": datetime.fromtimestamp(test_headers["LastModified"], tz=timezone.utc),
+        }
+        mismatch = {"ContentLength": 2, "LastModified": datetime.now(tz=timezone.utc), "ETag": "0mismatchhash0"}
+
+        mock_head_object = MagicMock(side_effect=[mismatch, match])
+
+        with patch.object(botocore.client.BaseClient, "_make_api_call", mock_head_object):
+            # First call should not match, meaning file should be overwritten
+            self.assertTrue(should_overwrite_file(bucket, key, test_headers))
+
+            # Second call should match, meaning file should not be overwritten
+            self.assertFalse(should_overwrite_file(bucket, key, test_headers))
+
+        err = {"Error": {"Code": "404"}}
+        mock_head_object = MagicMock(side_effect=botocore.exceptions.ClientError(err, "head_object"))
+
+        with patch.object(botocore.client.BaseClient, "_make_api_call", mock_head_object):
+            # File not existing should always result in True
+            self.assertTrue(should_overwrite_file(bucket, key, test_headers))
+
+        err = {"Error": {"Code": "403"}}
+        mock_head_object = MagicMock(side_effect=botocore.exceptions.ClientError(err, "head_object"))
+
+        with patch.object(botocore.client.BaseClient, "_make_api_call", mock_head_object):
+            # Any type of exception from head_object other than file not found (404) should
+            # get reraised
+            self.assertRaises(botocore.exceptions.ClientError)
 
 
 if __name__ == "__main__":
