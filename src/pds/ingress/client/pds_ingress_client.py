@@ -77,7 +77,8 @@ def _perform_ingress(ingress_path, node_id, prefix, bearer_token, api_gateway_co
     try:
         s3_ingress_url = request_file_for_ingress(object_body, trimmed_path, node_id, api_gateway_config, bearer_token)
 
-        ingress_file_to_s3(object_body, trimmed_path, s3_ingress_url)
+        if s3_ingress_url:
+            ingress_file_to_s3(object_body, trimmed_path, s3_ingress_url)
     except Exception as err:
         # Only log the error as a warning, so we don't bring down the entire
         # transfer process
@@ -117,7 +118,8 @@ def request_file_for_ingress(object_body, ingress_file_path, node_id, api_gatewa
         The presigned S3 URL returned from the Ingress service lambda, which
         identifies the location in S3 the client should upload the file to and
         includes temporary credentials to allow the client to upload to
-        S3 via an HTTP PUT.
+        S3 via an HTTP PUT. If this file already exists in S3 and should not
+        be overwritten, this function will return None instead.
 
     Raises
     ------
@@ -162,11 +164,20 @@ def request_file_for_ingress(object_body, ingress_file_path, node_id, api_gatewa
     response = requests.post(api_gateway_url, params=params, data=json.dumps(payload), headers=headers)
     response.raise_for_status()
 
-    s3_ingress_url = json.loads(response.text)
+    # Ingress request successful
+    if response.status_code == 200:
+        s3_ingress_url = json.loads(response.text)
 
-    logger.debug(f"{ingress_file_path} : Got URL for ingress path {s3_ingress_url.split('?')[0]}")
+        logger.debug(f"{ingress_file_path} : Got URL for ingress path {s3_ingress_url.split('?')[0]}")
 
-    return s3_ingress_url
+        return s3_ingress_url
+    # Ingress service indiciates file already exists in S3 and should not be overwritten
+    elif response.status_code == 204:
+        logger.info(f"{ingress_file_path} : File already exists unchanged on S3, skipping ingress")
+
+        return None
+    else:
+        raise RuntimeError(f"Unexpected status code ({response.status_code}) returned from ingress request")
 
 
 @backoff.on_exception(
