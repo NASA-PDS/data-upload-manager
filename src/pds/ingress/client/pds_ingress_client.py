@@ -75,7 +75,9 @@ def _perform_ingress(ingress_path, node_id, prefix, bearer_token, api_gateway_co
     trimmed_path = PathUtil.trim_ingress_path(ingress_path, prefix)
 
     try:
-        s3_ingress_url = request_file_for_ingress(object_body, trimmed_path, node_id, api_gateway_config, bearer_token)
+        s3_ingress_url = request_file_for_ingress(
+            object_body, ingress_path, trimmed_path, node_id, api_gateway_config, bearer_token
+        )
 
         if s3_ingress_url:
             ingress_file_to_s3(object_body, trimmed_path, s3_ingress_url)
@@ -93,7 +95,7 @@ def _perform_ingress(ingress_path, node_id, prefix, bearer_token, api_gateway_co
     on_backoff=backoff_logger,
     interval=15,
 )
-def request_file_for_ingress(object_body, ingress_file_path, node_id, api_gateway_config, bearer_token):
+def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, api_gateway_config, bearer_token):
     """
     Submits a request for file ingress to the PDS Ingress App API.
 
@@ -101,8 +103,10 @@ def request_file_for_ingress(object_body, ingress_file_path, node_id, api_gatewa
     ----------
     object_body : bytes
         Contents of the file to be copied to S3.
-    ingress_file_path : str
+    ingress_path : str
         Local path to the file to request ingress for.
+    trimmed_path : str
+        Ingress path with any user-configured prefix removed
     node_id : str
         PDS node identifier.
     api_gateway_config : dict
@@ -129,7 +133,7 @@ def request_file_for_ingress(object_body, ingress_file_path, node_id, api_gatewa
     """
     logger = get_logger(__name__)
 
-    logger.info(f"{ingress_file_path} : Requesting ingress for node ID {node_id}")
+    logger.info(f"{trimmed_path} : Requesting ingress for node ID {node_id}")
 
     # Extract the API Gateway configuration params
     api_gateway_template = api_gateway_config["url_template"]
@@ -146,11 +150,11 @@ def request_file_for_ingress(object_body, ingress_file_path, node_id, api_gatewa
     md5_digest = hashlib.md5(object_body).hexdigest()
 
     # Get the size and last modified time of the file
-    file_size = os.stat(ingress_file_path).st_size
-    last_modified_time = os.path.getmtime(ingress_file_path)
+    file_size = os.stat(ingress_path).st_size
+    last_modified_time = os.path.getmtime(ingress_path)
 
     params = {"node": node_id, "node_name": NodeUtil.node_id_to_long_name[node_id]}
-    payload = {"url": ingress_file_path}
+    payload = {"url": trimmed_path}
     headers = {
         "Authorization": bearer_token,
         "UserGroup": NodeUtil.node_id_to_group_name(node_id),
@@ -168,12 +172,12 @@ def request_file_for_ingress(object_body, ingress_file_path, node_id, api_gatewa
     if response.status_code == 200:
         s3_ingress_url = json.loads(response.text)
 
-        logger.debug(f"{ingress_file_path} : Got URL for ingress path {s3_ingress_url.split('?')[0]}")
+        logger.debug(f"{trimmed_path} : Got URL for ingress path {s3_ingress_url.split('?')[0]}")
 
         return s3_ingress_url
     # Ingress service indiciates file already exists in S3 and should not be overwritten
     elif response.status_code == 204:
-        logger.info(f"{ingress_file_path} : File already exists unchanged on S3, skipping ingress")
+        logger.info(f"{trimmed_path} : File already exists unchanged on S3, skipping ingress")
 
         return None
     else:
