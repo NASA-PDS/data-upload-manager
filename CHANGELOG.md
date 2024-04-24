@@ -1,12 +1,23 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2024-04-15)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2024-04-24)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v1.0.0...«unknown»)
+
+**Requirements:**
+
+- As a user, I want to bypass uploading duplicate data products [\#92](https://github.com/NASA-PDS/data-upload-manager/issues/92)
+- As a user, I want to include the modification datetime in the the user-defined object metadata being sent in the upload payload [\#87](https://github.com/NASA-PDS/data-upload-manager/issues/87)
+- As a user, I want to include a MD5 checksum in the the user-defined object metadata being sent in the upload payload [\#50](https://github.com/NASA-PDS/data-upload-manager/issues/50)
+- As a user, I want to upload only data products that have not been previously ingested [\#33](https://github.com/NASA-PDS/data-upload-manager/issues/33)
 
 **Defects:**
 
 - DUM client is unable to create CloudWatch Log Stream pds-ingress-client-sbn-\* when upload data to cloud [\#75](https://github.com/NASA-PDS/data-upload-manager/issues/75) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
+
+**Other closed issues:**
+
+- Update lambda function to lowercase the node prefix in buckets [\#90](https://github.com/NASA-PDS/data-upload-manager/issues/90)
 
 ## [v1.0.0](https://github.com/NASA-PDS/data-upload-manager/tree/v1.0.0) (2024-03-07)
 
