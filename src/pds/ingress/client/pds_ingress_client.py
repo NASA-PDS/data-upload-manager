@@ -7,8 +7,11 @@ pds_ingress_client
 Client side script used to perform ingress request to the DUM service in AWS.
 """
 import argparse
+import hashlib
 import json
+import os
 
+import backoff
 import pds.ingress.util.log_util as log_util
 import requests
 from joblib import delayed
@@ -21,6 +24,21 @@ from pds.ingress.util.node_util import NodeUtil
 from pds.ingress.util.path_util import PathUtil
 
 PARALLEL = Parallel(require="sharedmem")
+
+
+def fatal_code(err: requests.exceptions.RequestException) -> bool:
+    """Only retry for common transient errors"""
+    return 400 <= err.response.status_code < 500
+
+
+def backoff_logger(details):
+    """Log details about the current backoff/retry"""
+    logger = get_logger(__name__)
+    logger.warning(
+        f"Backing off {details['target']} function for {details['wait']:0.1f} "
+        f"seconds after {details['tries']} tries."
+    )
+    logger.warning(f"Total time elapsed: {details['elapsed']:0.1f} seconds.")
 
 
 def _perform_ingress(ingress_path, node_id, prefix, bearer_token, api_gateway_config):
@@ -48,27 +66,47 @@ def _perform_ingress(ingress_path, node_id, prefix, bearer_token, api_gateway_co
     """
     logger = get_logger(__name__)
 
+    # TODO: slurping entire file could be problematic for large files,
+    #       investigate alternative if/when necessary
+    with open(ingress_path, "rb") as object_file:
+        object_body = object_file.read()
+
     # Remove path prefix if one was configured
     trimmed_path = PathUtil.trim_ingress_path(ingress_path, prefix)
 
     try:
-        s3_ingress_url = request_file_for_ingress(trimmed_path, node_id, api_gateway_config, bearer_token)
+        s3_ingress_url = request_file_for_ingress(
+            object_body, ingress_path, trimmed_path, node_id, api_gateway_config, bearer_token
+        )
 
-        ingress_file_to_s3(ingress_path, trimmed_path, s3_ingress_url)
+        if s3_ingress_url:
+            ingress_file_to_s3(object_body, trimmed_path, s3_ingress_url)
     except Exception as err:
         # Only log the error as a warning, so we don't bring down the entire
         # transfer process
         logger.warning(f"{trimmed_path} : Ingress failed, reason: {str(err)}")
 
 
-def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bearer_token):
+@backoff.on_exception(
+    backoff.constant,
+    requests.exceptions.RequestException,
+    max_time=300,
+    giveup=fatal_code,
+    on_backoff=backoff_logger,
+    interval=15,
+)
+def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, api_gateway_config, bearer_token):
     """
     Submits a request for file ingress to the PDS Ingress App API.
 
     Parameters
     ----------
-    ingress_file_path : str
+    object_body : bytes
+        Contents of the file to be copied to S3.
+    ingress_path : str
         Local path to the file to request ingress for.
+    trimmed_path : str
+        Ingress path with any user-configured prefix removed
     node_id : str
         PDS node identifier.
     api_gateway_config : dict
@@ -84,7 +122,8 @@ def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bea
         The presigned S3 URL returned from the Ingress service lambda, which
         identifies the location in S3 the client should upload the file to and
         includes temporary credentials to allow the client to upload to
-        S3 via an HTTP PUT.
+        S3 via an HTTP PUT. If this file already exists in S3 and should not
+        be overwritten, this function will return None instead.
 
     Raises
     ------
@@ -94,7 +133,7 @@ def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bea
     """
     logger = get_logger(__name__)
 
-    logger.info(f"{ingress_file_path} : Requesting ingress for node ID {node_id}")
+    logger.info(f"{trimmed_path} : Requesting ingress for node ID {node_id}")
 
     # Extract the API Gateway configuration params
     api_gateway_template = api_gateway_config["url_template"]
@@ -107,36 +146,60 @@ def request_file_for_ingress(ingress_file_path, node_id, api_gateway_config, bea
         id=api_gateway_id, region=api_gateway_region, stage=api_gateway_stage, resource=api_gateway_resource
     )
 
+    # Calculate the MD5 checksum of the file payload
+    md5_digest = hashlib.md5(object_body).hexdigest()
+
+    # Get the size and last modified time of the file
+    file_size = os.stat(ingress_path).st_size
+    last_modified_time = os.path.getmtime(ingress_path)
+
     params = {"node": node_id, "node_name": NodeUtil.node_id_to_long_name[node_id]}
-    payload = {"url": ingress_file_path}
+    payload = {"url": trimmed_path}
     headers = {
         "Authorization": bearer_token,
         "UserGroup": NodeUtil.node_id_to_group_name(node_id),
+        "ContentMD5": md5_digest,
+        "ContentLength": str(file_size),
+        "LastModified": str(last_modified_time),
         "content-type": "application/json",
         "x-amz-docs-region": api_gateway_region,
     }
 
-    try:
-        response = requests.post(api_gateway_url, params=params, data=json.dumps(payload), headers=headers)
-        response.raise_for_status()
-    except requests.exceptions.HTTPError as err:
-        raise RuntimeError(f"Request to API gateway failed, reason: {str(err)}") from err
+    response = requests.post(api_gateway_url, params=params, data=json.dumps(payload), headers=headers)
+    response.raise_for_status()
 
-    s3_ingress_url = json.loads(response.text)
+    # Ingress request successful
+    if response.status_code == 200:
+        s3_ingress_url = json.loads(response.text)
 
-    logger.debug(f"{ingress_file_path} : Got URL for ingress path {s3_ingress_url.split('?')[0]}")
+        logger.debug(f"{trimmed_path} : Got URL for ingress path {s3_ingress_url.split('?')[0]}")
 
-    return s3_ingress_url
+        return s3_ingress_url
+    # Ingress service indiciates file already exists in S3 and should not be overwritten
+    elif response.status_code == 204:
+        logger.info(f"{trimmed_path} : File already exists unchanged on S3, skipping ingress")
+
+        return None
+    else:
+        raise RuntimeError(f"Unexpected status code ({response.status_code}) returned from ingress request")
 
 
-def ingress_file_to_s3(ingress_file_path, trimmed_path, s3_ingress_url):
+@backoff.on_exception(
+    backoff.constant,
+    requests.exceptions.RequestException,
+    max_time=300,
+    giveup=fatal_code,
+    on_backoff=backoff_logger,
+    interval=15,
+)
+def ingress_file_to_s3(object_body, trimmed_path, s3_ingress_url):
     """
     Copies the local file path to the S3 location returned from the Ingress App.
 
     Parameters
     ----------
-    ingress_file_path : str
-        Local path to the file to be copied to S3.
+    object_body : bytes
+        Contents of the file to be copied to S3.
     trimmed_path : str
         Trimmed version of the ingress file path. Used for logging purposes.
     s3_ingress_url : str
@@ -153,17 +216,8 @@ def ingress_file_to_s3(ingress_file_path, trimmed_path, s3_ingress_url):
 
     logger.info(f"{trimmed_path} : Ingesting to {s3_ingress_url.split('?')[0]}")
 
-    # TODO: slurping entire file could be problematic for large files,
-    #       investigate alternative if/when necessary
-    with open(ingress_file_path, "rb") as object_file:
-        object_body = object_file.read()
-
-    try:
-        response = requests.put(s3_ingress_url, data=object_body)
-        response.raise_for_status()
-    except requests.exceptions.HTTPError as err:
-        # TODO: add support for automatic retry in the case of a 500 errors
-        raise RuntimeError(f"S3 copy failed, reason: {str(err)}") from err
+    response = requests.put(s3_ingress_url, data=object_body)
+    response.raise_for_status()
 
     logger.info(f"{trimmed_path} : Ingest complete")
 

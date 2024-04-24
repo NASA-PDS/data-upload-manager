@@ -9,9 +9,12 @@ to their destinations in S3.
 import json
 import logging
 import os
+from datetime import datetime
+from datetime import timezone
 from os.path import join
 
 import boto3
+import botocore
 import yaml
 from botocore.exceptions import ClientError
 
@@ -77,6 +80,63 @@ def initialize_bucket_map():
     return bucket_map
 
 
+def should_overwrite_file(destination_bucket, object_key, headers):
+    """
+    Determines if the file requested for ingress already exists in the S3
+    location we plan to upload to, and whether it should be overwritten with a
+    new version based on file info provided in the request headers.
+
+    Parameters
+    ----------
+    destination_bucket : str
+        Name of the S3 bucket to be uploaded to.
+    object_key : str
+        Object key location within the S3 bucket to be uploaded to.
+    headers : dict
+        Contains the headers of the ingress HTTP request from the client.
+        This includes information about the file that will be used to
+        determine if an overwrite on S3 should occur
+
+    Returns
+    -------
+    True if overwrite (or write) should occur, False otherwise.
+
+    """
+    s3_client = boto3.client("s3")
+
+    try:
+        object_head = s3_client.head_object(Bucket=destination_bucket, Key=object_key)
+    except botocore.exceptions.ClientError as e:
+        if e.response["Error"]["Code"] == "404":
+            # File does not already exist, safe to write
+            return True
+        else:
+            # Some other kind of unexpected error
+            raise
+
+    object_length = int(object_head["ContentLength"])
+    object_last_modified = object_head["LastModified"]
+    object_md5 = object_head["ETag"][1:-1]  # strip embedded quotes
+
+    logger.debug(f"{object_length=}")
+    logger.debug(f"{object_last_modified=}")
+    logger.debug(f"{object_md5=}")
+
+    request_length = int(headers["ContentLength"])
+    request_last_modified = datetime.fromtimestamp(float(headers["LastModified"]), tz=timezone.utc)
+    request_md5 = headers["ContentMD5"]
+
+    logger.debug(f"{request_length=}")
+    logger.debug(f"{request_last_modified=}")
+    logger.debug(f"{request_md5=}")
+
+    # If the request object differs from current version in S3 (newer, different contents),
+    # then it should be overwritten
+    return not (
+        object_length == request_length and object_md5 == request_md5 and object_last_modified >= request_last_modified
+    )
+
+
 def generate_presigned_upload_url(bucket_name, object_key, expires_in=1000):
     """
     Generates a presigned URL suitable for uploading to the S3 location
@@ -140,6 +200,7 @@ def lambda_handler(event, context):
 
     # Parse request details from event object
     body = json.loads(event["body"])
+    headers = event["headers"]
     local_url = body.get("url")
     request_node = event["queryStringParameters"].get("node")
 
@@ -166,8 +227,12 @@ def lambda_handler(event, context):
             f"No bucket location configured for prefix {prefix_key}, using default bucket {destination_bucket}"
         )
 
-    object_key = join(request_node.upper(), local_url)
+    object_key = join(request_node.lower(), local_url)
 
-    s3_url = generate_presigned_upload_url(destination_bucket, object_key)
+    if should_overwrite_file(destination_bucket, object_key, headers):
+        s3_url = generate_presigned_upload_url(destination_bucket, object_key)
 
-    return {"statusCode": 200, "body": json.dumps(s3_url)}
+        return {"statusCode": 200, "body": json.dumps(s3_url)}
+    else:
+        logger.info(f"{object_key} already exists in bucket {destination_bucket} and should not be overwritten")
+        return {"statusCode": 204}
