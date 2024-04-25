@@ -209,6 +209,8 @@ template can be used when creating a new <cite>tfvars</cite> file for use with a
 
 <span class="n">api_gateway_policy_source_vpc</span> <span class="o">=</span> <span class="s2">&quot;&lt;VPC_ID&gt;&quot;</span>
 
+<span class="n">api_gateway_endpoint_type</span> <span class="o">=</span> <span class="o">&lt;</span><span class="s2">&quot;REGIONAL&quot;</span><span class="o">|</span><span class="s2">&quot;PRIVATE&quot;</span><span class="o">&gt;</span>
+
 <span class="n">api_gateway_lambda_role_arn</span>         <span class="o">=</span> <span class="s2">&quot;&lt;AWS_IAM_Role_ARN&gt;&quot;</span>
 <span class="n">lambda_ingress_service_iam_role_arn</span> <span class="o">=</span> <span class="s2">&quot;&lt;AWS_IAM_Role_ARN&gt;&quot;</span>
 <span class="n">lambda_authorizer_iam_role_arn</span>      <span class="o">=</span> <span class="s2">&quot;&lt;AWS_IAM_Role_ARN&gt;&quot;</span>
@@ -232,6 +234,7 @@ prior to deployment. Descriptions of each field follow:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">&lt;S3_Bucket_Name&gt;</span></code>: Name of an S3 bucket which Terraform will use to stage intermediate build products. The bucket will be created by Terraform and should not already exist.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">&lt;VPC_ID&gt;</span></code>: ID of the Virtual Private Cloud instance where the deployed service will reside.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">&lt;AWS_IAM_Role_ARN&gt;</span></code>: Amazon Resource Name (ARN) for the AWS Identity Access Management Role which grants the required permissions for the DUM server components to communicate.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;&quot;REGIONAL&quot;|&quot;PRIVATE&quot;&gt;</span></code>: Select the type of endpoint of the API Gateway. “REGIONAL” should only be used for deployments to the OPS environment.</p></li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -244,7 +247,7 @@ prior to deployment. Descriptions of each field follow:</p>
 <li><p>The <cite>nucleus_dum_cognito_initial_users</cite> can be populated with a list of dictionaries defining a set of user accounts to
 populate the Cognito user pool with upon creation. An arbitrary number of initial users can be provided.
 * The <code class="docutils literal notranslate"><span class="pre">&lt;Username&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;Password&gt;</span></code> fields can be anything, but the password must conform to the Password policy set on the Cognito user pool.
-* For <code class="docutils literal notranslate"><span class="pre">&lt;PDS_Group_Name&gt;</span></code>, one of the following may be used: <code class="docutils literal notranslate"><span class="pre">PDS_ATM_USERS,</span> <span class="pre">PDS_ENG_USERS,</span> <span class="pre">PDS_GEO_NODE,</span> <span class="pre">PDS_IMG_NODE,</span> <span class="pre">PDS_NAIF_NODE,</span> <span class="pre">PDS_PPI_NODE,</span> <span class="pre">PDS_RS_NODE,</span> <span class="pre">PDS_RMS_NODE,</span> <span class="pre">PDS_SBN_NODE</span></code>
+* For <code class="docutils literal notranslate"><span class="pre">&lt;PDS_Group_Name&gt;</span></code>, one of the following may be used: <code class="docutils literal notranslate"><span class="pre">PDS_ATM_USERS,</span> <span class="pre">PDS_ENG_USERS,</span> <span class="pre">PDS_GEO_USERS,</span> <span class="pre">PDS_IMG_NODE,</span> <span class="pre">PDS_NAIF_USERS,</span> <span class="pre">PDS_PPI_USERS,</span> <span class="pre">PDS_RS_USERS,</span> <span class="pre">PDS_RMS_USERS,</span> <span class="pre">PDS_SBN_USERS</span></code>
 * <code class="docutils literal notranslate"><span class="pre">&lt;Email</span> <span class="pre">address&gt;</span></code> should be a valid email address for the user, as this is where things such as password resets will be sent.</p></li>
 </ul>
 </div>
