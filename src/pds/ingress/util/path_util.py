@@ -54,7 +54,7 @@ class PathUtil:
                 resolved_paths.append(abs_user_path)
             elif os.path.isdir(abs_user_path):
                 logger.debug(f"Resolving directory {abs_user_path}")
-                for grouping in os.walk(abs_user_path, topdown=True):
+                for grouping in os.walk(abs_user_path, topdown=True, followlinks=True):
                     dirpath, _, filenames = grouping
 
                     # TODO: add option to include hidden files
