@@ -1,12 +1,20 @@
 # Changelog
 
-## [release/1.1.0](https://github.com/NASA-PDS/data-upload-manager/tree/release/1.1.0) (2024-04-24)
+## [1.0.0](https://github.com/NASA-PDS/data-upload-manager/tree/1.0.0) (2024-05-09)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v1.0.0...release/1.1.0)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v1.1.0...1.0.0)
 
 **Requirements:**
 
-- As a user, I want to bypass uploading duplicate data products [\#92](https://github.com/NASA-PDS/data-upload-manager/issues/92)
+- As a user, I want an end summary report in logs to show statistics of files uploaded [\#98](https://github.com/NASA-PDS/data-upload-manager/issues/98)
+
+## [v1.1.0](https://github.com/NASA-PDS/data-upload-manager/tree/v1.1.0) (2024-04-25)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v1.0.0...v1.1.0)
+
+**Requirements:**
+
+- As a user, I want to skip upload of files already in S3 \(nucleus staging bucket\) [\#92](https://github.com/NASA-PDS/data-upload-manager/issues/92)
 - As a user, I want to include the modification datetime in the the user-defined object metadata being sent in the upload payload [\#87](https://github.com/NASA-PDS/data-upload-manager/issues/87)
 - As a user, I want to include a MD5 checksum in the the user-defined object metadata being sent in the upload payload [\#50](https://github.com/NASA-PDS/data-upload-manager/issues/50)
 - As a user, I want to upload only data products that have not been previously ingested [\#33](https://github.com/NASA-PDS/data-upload-manager/issues/33)
