@@ -10,6 +10,9 @@ import argparse
 import hashlib
 import json
 import os
+import time
+from datetime import datetime
+from datetime import timezone
 
 import backoff
 import pds.ingress.util.log_util as log_util
@@ -24,6 +27,16 @@ from pds.ingress.util.node_util import NodeUtil
 from pds.ingress.util.path_util import PathUtil
 
 PARALLEL = Parallel(require="sharedmem")
+
+SUMMARY_TABLE = {
+    "uploaded": set(),
+    "skipped": set(),
+    "failed": set(),
+    "transferred": 0,
+    "start_time": time.time(),
+    "end_time": None,
+}
+"""Stores the information for use with the Summary report"""
 
 
 def fatal_code(err: requests.exceptions.RequestException) -> bool:
@@ -80,11 +93,15 @@ def _perform_ingress(ingress_path, node_id, prefix, bearer_token, api_gateway_co
         )
 
         if s3_ingress_url:
-            ingress_file_to_s3(object_body, trimmed_path, s3_ingress_url)
+            ingress_file_to_s3(object_body, ingress_path, trimmed_path, s3_ingress_url)
+            SUMMARY_TABLE["uploaded"].add(trimmed_path)
+        else:
+            SUMMARY_TABLE["skipped"].add(trimmed_path)
     except Exception as err:
         # Only log the error as a warning, so we don't bring down the entire
         # transfer process
         logger.warning(f"{trimmed_path} : Ingress failed, reason: {str(err)}")
+        SUMMARY_TABLE["failed"].add(trimmed_path)
 
 
 @backoff.on_exception(
@@ -192,7 +209,7 @@ def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, a
     on_backoff=backoff_logger,
     interval=15,
 )
-def ingress_file_to_s3(object_body, trimmed_path, s3_ingress_url):
+def ingress_file_to_s3(object_body, ingress_path, trimmed_path, s3_ingress_url):
     """
     Copies the local file path to the S3 location returned from the Ingress App.
 
@@ -200,6 +217,8 @@ def ingress_file_to_s3(object_body, trimmed_path, s3_ingress_url):
     ----------
     object_body : bytes
         Contents of the file to be copied to S3.
+    ingress_path : str
+        Local path to the file to be ingressed.
     trimmed_path : str
         Trimmed version of the ingress file path. Used for logging purposes.
     s3_ingress_url : str
@@ -220,6 +239,69 @@ def ingress_file_to_s3(object_body, trimmed_path, s3_ingress_url):
     response.raise_for_status()
 
     logger.info(f"{trimmed_path} : Ingest complete")
+
+    # Update total number of bytes transferrred
+    SUMMARY_TABLE["transferred"] += os.stat(ingress_path).st_size
+
+
+def print_ingress_summary():
+    """Prints the summary report for last execution of the client script."""
+    logger = get_logger(__name__)
+
+    num_uploaded = len(SUMMARY_TABLE["uploaded"])
+    num_skipped = len(SUMMARY_TABLE["skipped"])
+    num_failed = len(SUMMARY_TABLE["failed"])
+    start_time = SUMMARY_TABLE["start_time"]
+    end_time = SUMMARY_TABLE["end_time"]
+    transferred = SUMMARY_TABLE["transferred"]
+
+    title = f"Ingress Summary Report for {str(datetime.now())}"
+
+    logger.info(title)
+    logger.info("-" * len(title))
+    logger.info("Uploaded: %d file(s)", num_uploaded)
+    logger.info("Skipped: %d file(s)", num_skipped)
+    logger.info("Failed: %d file(s)", num_failed)
+    logger.info("Total: %d files(s)", num_uploaded + num_skipped + num_failed)
+    logger.info("Time elapsed: %.2f seconds", end_time - start_time)
+    logger.info("Bytes tranferred: %d", transferred)
+
+
+def create_report_file(args):
+    """
+    Writes a detailed report for the last transfer in JSON format to disk.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        The parsed command-line arguments, including the path to write the
+        summary report to. A listing of all provided arguments is included in
+        the report file.
+
+    """
+    logger = get_logger(__name__)
+
+    report = {
+        "Arguments": str(args),
+        "Start Time": str(datetime.fromtimestamp(SUMMARY_TABLE["start_time"], tz=timezone.utc)),
+        "Finish Time": str(datetime.fromtimestamp(SUMMARY_TABLE["end_time"], tz=timezone.utc)),
+        "Uploaded": list(sorted(SUMMARY_TABLE["uploaded"])),
+        "Total Uploaded": len(SUMMARY_TABLE["uploaded"]),
+        "Skipped": list(sorted(SUMMARY_TABLE["skipped"])),
+        "Total Skipped": len(SUMMARY_TABLE["skipped"]),
+        "Failed": list(sorted(SUMMARY_TABLE["failed"])),
+        "Total Failed": len(SUMMARY_TABLE["failed"]),
+        "Bytes Transferred": SUMMARY_TABLE["transferred"],
+    }
+
+    report["Total Files"] = report["Total Uploaded"] + report["Total Skipped"] + report["Total Failed"]
+
+    try:
+        logger.info("Writing JSON summary report to %s", args.report_path)
+        with open(args.report_path, "w") as outfile:
+            json.dump(report, outfile, indent=4)
+    except OSError as err:
+        logger.warning("Failed to write summary report to %s, reason: %s", args.report_path, str(err))
 
 
 def setup_argparser():
@@ -280,9 +362,18 @@ def setup_argparser():
         "cores are used.",
     )
     parser.add_argument(
+        "--report-path",
+        "-r",
+        type=str,
+        default=None,
+        help="Specify a path to write a JSON summary report containing "
+        "the full listing of all files ingressed, skipped or failed. "
+        "By default, no report is created.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Derive the full set of ingress paths without " "performing any submission requests to the server.",
+        help="Derive the full set of ingress paths without performing any submission requests to the server.",
     )
     parser.add_argument(
         "--log-level",
@@ -358,6 +449,16 @@ def main():
             delayed(_perform_ingress)(resolved_ingress_path, node_id, args.prefix, bearer_token, config["API_GATEWAY"])
             for resolved_ingress_path in resolved_ingress_paths
         )
+
+        # Capture completion time of transfer
+        SUMMARY_TABLE["end_time"] = time.time()
+
+        # Print the summary table
+        print_ingress_summary()
+
+        # Create the JSON report file, if requested
+        if args.report_path:
+            create_report_file(args)
 
         # Flush all logged statements to CloudWatch Logs
         log_util.CLOUDWATCH_HANDLER.flush()
