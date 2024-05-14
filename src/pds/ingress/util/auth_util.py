@@ -91,3 +91,45 @@ class AuthUtil:
         bearer_token = f"Bearer {access_token}"
 
         return bearer_token
+
+    @staticmethod
+    def refresh_auth_token(cognito_config, refresh_token):
+        """
+        Performs a Cognito authentication token refresh request, returning a
+        new authentication token for use with the worker threads and CloudWatch
+        logger.
+
+        Parameters
+        ----------
+        cognito_config : dict
+            The Cognito configuration parameters as read from the INI config.
+        refresh_token : str
+            The refresh token provided by Cognito.
+
+        Returns
+        -------
+        authentication_result : dict
+            Dictionary containing the results of the authentication refresh.
+            This includes an updated authentication token and expiration time.
+
+        """
+        logger = get_logger(__name__)
+
+        client = boto3.client("cognito-idp", region_name=cognito_config["region"])
+
+        auth_params = {"REFRESH_TOKEN": refresh_token}
+
+        logger.info("Refreshing authentication token")
+
+        try:
+            response = client.initiate_auth(
+                AuthFlow="REFRESH_TOKEN_AUTH", AuthParameters=auth_params, ClientId=cognito_config["client_id"]
+            )
+        except Exception as err:
+            raise RuntimeError(f"Failed to refresh Cognito authentication token, reason: {str(err)}") from err
+
+        logger.info("Token refresh successful")
+
+        authentication_result = response["AuthenticationResult"]
+
+        return authentication_result
