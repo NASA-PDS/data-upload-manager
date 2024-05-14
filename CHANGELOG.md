@@ -1,13 +1,5 @@
 # Changelog
 
-## [1.2.0](https://github.com/NASA-PDS/data-upload-manager/tree/1.2.0) (2024-05-14)
-
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/release/1.2.0...1.2.0)
-
-**Other closed issues:**
-
-- Implement automatic refresh of Cognito authentication token [\#104](https://github.com/NASA-PDS/data-upload-manager/issues/104)
-
 ## [release/1.2.0](https://github.com/NASA-PDS/data-upload-manager/tree/release/1.2.0) (2024-05-14)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v1.1.0...release/1.2.0)
@@ -15,6 +7,10 @@
 **Requirements:**
 
 - As a user, I want an end summary report in logs to show statistics of files uploaded [\#98](https://github.com/NASA-PDS/data-upload-manager/issues/98)
+
+**Other closed issues:**
+
+- Implement automatic refresh of Cognito authentication token [\#104](https://github.com/NASA-PDS/data-upload-manager/issues/104)
 
 ## [v1.1.0](https://github.com/NASA-PDS/data-upload-manager/tree/v1.1.0) (2024-04-25)
 
