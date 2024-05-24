@@ -1,8 +1,17 @@
 # Changelog
 
-## [release/1.2.0](https://github.com/NASA-PDS/data-upload-manager/tree/release/1.2.0) (2024-05-14)
+## [1.1.0](https://github.com/NASA-PDS/data-upload-manager/tree/1.1.0) (2024-05-24)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v1.1.0...release/1.2.0)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v1.2.0...1.1.0)
+
+**Other closed issues:**
+
+- Deploy v1.2.0 DUM to Production [\#108](https://github.com/NASA-PDS/data-upload-manager/issues/108)
+- Upgrade SBN to latest and Rename Bucket Folder [\#97](https://github.com/NASA-PDS/data-upload-manager/issues/97)
+
+## [v1.2.0](https://github.com/NASA-PDS/data-upload-manager/tree/v1.2.0) (2024-05-14)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v1.1.0...v1.2.0)
 
 **Requirements:**
 
