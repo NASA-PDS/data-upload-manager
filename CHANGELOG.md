@@ -1,8 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2024-05-24)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2024-05-28)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v1.2.0...«unknown»)
+
+**Defects:**
+
+- DUM Client does not properly sanitize double-quotes from INI config [\#110](https://github.com/NASA-PDS/data-upload-manager/issues/110) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
 
 **Other closed issues:**
 
