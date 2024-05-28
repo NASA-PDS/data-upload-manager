@@ -15,6 +15,26 @@ from pkg_resources import resource_filename
 CONFIG = None
 
 
+class SanitizingConfigParser(configparser.RawConfigParser):
+    """
+    Customized implementation of a ConfigParser object which sanitizes undesireable
+    characters (such as double-quotes) from strings read from the INI config
+    before they are returned to the caller.
+
+    """
+
+    def get(self, section, option, *, raw=False, vars=None):
+        """Invokes the superclass implementation of get, sanitizing the result before it is returned"""
+        val = super().get(section, option, raw=raw, vars=vars)
+
+        # Remove any single or double-quotes surrounding the value, as these could complicate
+        # JSON-serillaziation of certain config values, such as log group name
+        val = val.strip('"')
+        val = val.strip("'")
+
+        return val
+
+
 class ConfigUtil:
     """
     Class used to read and parse the INI config file used with the Ingress
@@ -65,7 +85,7 @@ class ConfigUtil:
         if not os.path.exists(config_path):
             raise ValueError(f"Requested config {config_path} does not exist")
 
-        parser = configparser.RawConfigParser()
+        parser = SanitizingConfigParser()
 
         with open(config_path, "r") as infile:
             parser.read_file(infile, source=os.path.basename(config_path))
