@@ -109,6 +109,9 @@ def _perform_ingress(ingress_path, node_id, prefix, api_gateway_config):
         # transfer process
         logger.warning(f"{trimmed_path} : Ingress failed, reason: {str(err)}")
         SUMMARY_TABLE["failed"].add(trimmed_path)
+    finally:
+        logger.debug(f"Deallocating memory for {trimmed_path} ({len(object_body)} bytes)")
+        del object_body
 
 
 def _schedule_token_refresh(refresh_token, token_expiration, offset=60):
