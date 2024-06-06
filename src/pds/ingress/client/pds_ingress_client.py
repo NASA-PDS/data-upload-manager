@@ -49,7 +49,11 @@ SUMMARY_TABLE = {
 
 def fatal_code(err: requests.exceptions.RequestException) -> bool:
     """Only retry for common transient errors"""
-    return 400 <= err.response.status_code < 500
+    if err.response is not None:
+        return 400 <= err.response.status_code < 500
+    else:
+        # No response to interrogate, so default to no retry
+        return True
 
 
 def backoff_logger(details):
