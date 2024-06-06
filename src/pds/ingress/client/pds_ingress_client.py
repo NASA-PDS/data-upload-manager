@@ -107,7 +107,8 @@ def _perform_ingress(ingress_path, node_id, prefix, api_gateway_config):
     except Exception as err:
         # Only log the error as a warning, so we don't bring down the entire
         # transfer process
-        logger.warning(f"{trimmed_path} : Ingress failed, reason: {str(err)}")
+        reason = err.response.json() if isinstance(err, requests.exceptions.HTTPError) else str(err)
+        logger.warning(f"{trimmed_path} : Ingress failed, reason: {reason}")
         SUMMARY_TABLE["failed"].add(trimmed_path)
     finally:
         logger.debug(f"Deallocating memory for {trimmed_path} ({len(object_body)} bytes)")
