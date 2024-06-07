@@ -33,6 +33,8 @@ logger.setLevel(LEVEL_MAP.get(LOG_LEVEL.upper(), logging.INFO))
 
 logger.info("Loading function PDS Ingress Service")
 
+s3_client = boto3.client("s3")
+
 
 def initialize_bucket_map():
     """
@@ -80,6 +82,29 @@ def initialize_bucket_map():
     return bucket_map
 
 
+def bucket_exists(destination_bucket):
+    """
+    Checks if the destination bucket read from the bucket-map actually exists or not.
+
+    Parameters
+    ----------
+    destination_bucket : str
+        Name of the S3 bucket to check for.
+
+    Returns
+    -------
+    True if the bucket exists, False otherwise
+
+    """
+    try:
+        s3_client.head_bucket(Bucket=destination_bucket)
+    except botocore.exceptions.ClientError as e:
+        logger.warning(f'Check for bucket {destination_bucket} returned code {e.response["Error"]["Code"]}')
+        return False
+
+    return True
+
+
 def should_overwrite_file(destination_bucket, object_key, headers):
     """
     Determines if the file requested for ingress already exists in the S3
@@ -102,8 +127,6 @@ def should_overwrite_file(destination_bucket, object_key, headers):
     True if overwrite (or write) should occur, False otherwise.
 
     """
-    s3_client = boto3.client("s3")
-
     try:
         object_head = s3_client.head_object(Bucket=destination_bucket, Key=object_key)
     except botocore.exceptions.ClientError as e:
@@ -226,6 +249,12 @@ def lambda_handler(event, context):
         logger.warning(
             f"No bucket location configured for prefix {prefix_key}, using default bucket {destination_bucket}"
         )
+
+    if not bucket_exists(destination_bucket):
+        return {
+            "statusCode": 404,
+            "message": f"Bucket {destination_bucket} does not exist or has insufficient access permisisons",
+        }
 
     object_key = join(request_node.lower(), local_url)
 
