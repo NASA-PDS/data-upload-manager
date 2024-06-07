@@ -1,11 +1,13 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2024-05-28)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2024-06-07)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v1.2.0...«unknown»)
 
 **Defects:**
 
+- DUM Lambda Service can return pre-signed S3 URL's to non-existing buckets [\#116](https://github.com/NASA-PDS/data-upload-manager/issues/116) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
+- Backoff/Retry logic masks errors from urllib3 exceptions [\#115](https://github.com/NASA-PDS/data-upload-manager/issues/115) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 - DUM Client does not properly sanitize double-quotes from INI config [\#110](https://github.com/NASA-PDS/data-upload-manager/issues/110) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
 
 **Other closed issues:**
