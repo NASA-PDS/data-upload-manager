@@ -64,3 +64,11 @@ This requirement is not impacted by the current version
 
 
 This requirement is not impacted by the current version
+## As a user, I want timestamps to the ongoing logs that are printed to stdout while running the job ([#118](https://github.com/NASA-PDS/data-upload-manager/issues/118)) 
+
+
+This requirement is not impacted by the current version
+## As a user, I want status summary reports during a long running execution ([#119](https://github.com/NASA-PDS/data-upload-manager/issues/119)) 
+
+
+This requirement is not impacted by the current version
