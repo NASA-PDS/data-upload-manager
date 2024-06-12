@@ -36,6 +36,37 @@ logger.info("Loading function PDS Ingress Service")
 s3_client = boto3.client("s3")
 
 
+def get_dum_version():
+    """
+    Reads the DUM package version number from the VERSION.txt file bundled with
+    this Lambda function.
+
+    Returns
+    -------
+    version : str
+        The version string read from VERSION.txt
+
+    """
+    logger.info("Searching Lambda root for version file")
+
+    version_location = os.getenv("VERSION_LOCATION", "config")
+    version_file = os.getenv("VERSION_FILE", "VERSION.txt")
+
+    lambda_root = os.environ["LAMBDA_TASK_ROOT"]
+
+    version_path = join(lambda_root, version_location, version_file)
+
+    if not os.path.exists(version_path):
+        raise RuntimeError(f"No version file found at location {version_path}")
+
+    with open(version_path, "rb") as infile:
+        version = infile.read().decode("utf-8").strip()
+
+    logger.info("Read version %s from %s", version, version_path)
+
+    return version
+
+
 def initialize_bucket_map():
     """
     Parses the YAML bucket map file for use with the current service invocation.
@@ -80,6 +111,35 @@ def initialize_bucket_map():
     logger.debug(str(bucket_map))
 
     return bucket_map
+
+
+def check_client_version(client_version, service_version):
+    """
+    Compares the DUM version sent by the client script with the version number
+    bundled with this Lambda function. The results of the check do not affect
+    whether the request is processed or not, but are logged for troubleshooting
+    or debugging purposes.
+
+    Parameters
+    ----------
+    client_version : str
+        The client version parsed from the HTTP request header.
+    service_version : str
+        The lambda service function version parsed from the bundled version file.
+
+    """
+    # Check if the client version is in sync with what this function expects
+    # A mismatch might not necessarily imply the request cannot be serviced, but it needs to be logged
+    if not client_version:
+        logger.warning("No DUM version provided by client, cannot guarantee request compatibility")
+    elif client_version != service_version:
+        logger.warning(
+            "Version mismatch between client (%s) and service (%s), cannot guarantee request compatibility",
+            client_version,
+            service_version,
+        )
+    else:
+        logger.info("DUM client version (%s) matches ingress service", client_version)
 
 
 def bucket_exists(destination_bucket):
@@ -225,6 +285,9 @@ def lambda_handler(event, context):
         JSON-compliant dictionary containing the results of the request.
 
     """
+    # Read the version number assigned to this function
+    service_version = get_dum_version()
+
     # Read the bucket map configured for the service
     bucket_map = initialize_bucket_map()
 
@@ -233,6 +296,9 @@ def lambda_handler(event, context):
     headers = event["headers"]
     local_url = body.get("url")
     request_node = event["queryStringParameters"].get("node")
+    client_version = headers.get("ClientVersion", None)
+
+    check_client_version(client_version, service_version)
 
     if not local_url or not request_node:
         logger.exception("Both a local URL and request Node ID must be provided")
