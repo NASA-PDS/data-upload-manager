@@ -482,6 +482,12 @@ def setup_argparser():
         "is used instead.",
     )
     parser.add_argument(
+        "--version",
+        action="version",
+        version=f"Data Upload Manager v{__version__}",
+        help="Print the Data Upload Manager release version and exit.",
+    )
+    parser.add_argument(
         "ingress_paths",
         type=str,
         nargs="+",
