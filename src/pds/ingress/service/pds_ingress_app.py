@@ -107,7 +107,7 @@ def initialize_bucket_map():
         with open(bucket_map_path, "r") as infile:
             bucket_map = yaml.safe_load(infile)
 
-    logger.info(f"Bucket map {bucket_map_path} loaded")
+    logger.info("Bucket map %s loaded", bucket_map_path)
     logger.debug(str(bucket_map))
 
     return bucket_map
@@ -159,7 +159,7 @@ def bucket_exists(destination_bucket):
     try:
         s3_client.head_bucket(Bucket=destination_bucket)
     except botocore.exceptions.ClientError as e:
-        logger.warning(f'Check for bucket {destination_bucket} returned code {e.response["Error"]["Code"]}')
+        logger.warning("Check for bucket %s returned code %s", destination_bucket, e.response["Error"]["Code"])
         return False
 
     return True
@@ -208,17 +208,17 @@ def should_overwrite_file(destination_bucket, object_key, headers):
     object_last_modified = object_head["LastModified"]
     object_md5 = object_head["ETag"][1:-1]  # strip embedded quotes
 
-    logger.debug(f"{object_length=}")
-    logger.debug(f"{object_last_modified=}")
-    logger.debug(f"{object_md5=}")
+    logger.debug("object_length=%d", object_length)
+    logger.debug("object_last_modified=%s", object_last_modified)
+    logger.debug("object_md5=%s", object_md5)
 
     request_length = int(headers["ContentLength"])
     request_last_modified = datetime.fromtimestamp(float(headers["LastModified"]), tz=timezone.utc)
     request_md5 = headers["ContentMD5"]
 
-    logger.debug(f"{request_length=}")
-    logger.debug(f"{request_last_modified=}")
-    logger.debug(f"{request_md5=}")
+    logger.debug("request_length=%d", request_length)
+    logger.debug("request_last_modified=%s", request_last_modified)
+    logger.debug("request_md5=%s", request_md5)
 
     # If the request object differs from current version in S3 (newer, different contents),
     # then it should be overwritten
@@ -258,9 +258,9 @@ def generate_presigned_upload_url(bucket_name, object_key, expires_in=1000):
             ClientMethod=client_method, Params=method_parameters, ExpiresIn=expires_in
         )
 
-        logger.info(f"Generated presigned URL: {url}")
+        logger.info("Generated presigned URL: %s", url)
     except ClientError:
-        logger.exception(f"Failed to generate a presigned URL for {join(bucket_name, object_key)}")
+        logger.exception("Failed to generate a presigned URL for %s", join(bucket_name, object_key))
         raise
 
     return url
@@ -304,23 +304,23 @@ def lambda_handler(event, context):
         logger.exception("Both a local URL and request Node ID must be provided")
         raise RuntimeError
 
-    logger.info(f"Processing request from node {request_node} for local url {local_url}")
+    logger.info("Processing request from node %s for local url %s", request_node, local_url)
 
     node_bucket_map = bucket_map["MAP"]["NODES"].get(request_node.upper())
 
     if not node_bucket_map:
-        logger.exception(f"No bucket map entries configured for Node ID {request_node}")
+        logger.exception("No bucket map entries configured for Node ID %s", request_node)
         raise RuntimeError
 
     prefix_key = local_url.split(os.sep)[0]
 
     if prefix_key in node_bucket_map:
         destination_bucket = node_bucket_map[prefix_key]
-        logger.info(f"Resolved bucket location {destination_bucket} for prefix {prefix_key}")
+        logger.info("Resolved bucket location %s for prefix %s", destination_bucket, prefix_key)
     else:
         destination_bucket = node_bucket_map["default"]
         logger.warning(
-            f"No bucket location configured for prefix {prefix_key}, using default bucket {destination_bucket}"
+            "No bucket location configured for prefix %s, using default bucket %s", prefix_key, destination_bucket
         )
 
     if not bucket_exists(destination_bucket):
@@ -336,5 +336,5 @@ def lambda_handler(event, context):
 
         return {"statusCode": 200, "body": json.dumps(s3_url)}
     else:
-        logger.info(f"{object_key} already exists in bucket {destination_bucket} and should not be overwritten")
+        logger.info("%s already exists in bucket %s and should not be overwritten", object_key, destination_bucket)
         return {"statusCode": 204}

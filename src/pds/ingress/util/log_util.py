@@ -252,7 +252,7 @@ class CloudWatchHandler(BufferingHandler):
         except Exception as err:
             # Use the root logger since the console logger singleton may have been
             # closed by the time flush() is called
-            logging.warning(f"Unable to submit to CloudWatch Logs, reason: {str(err)}")
+            logging.warning("Unable to submit to CloudWatch Logs, reason: %s", str(err))
         finally:
             self.release()
 

@@ -45,15 +45,15 @@ class PathUtil:
             abs_user_path = os.path.abspath(user_path)
 
             if not os.path.exists(abs_user_path):
-                logger.warning(f"Encountered path ({abs_user_path}) that does not actually exist, skipping...")
+                logger.warning("Encountered path (%s) that does not actually exist, skipping...", abs_user_path)
                 continue
 
             if os.path.isfile(abs_user_path):
-                logger.debug(f"Resolved path {abs_user_path}")
+                logger.debug("Resolved path %s", abs_user_path)
 
                 resolved_paths.append(abs_user_path)
             elif os.path.isdir(abs_user_path):
-                logger.debug(f"Resolving directory {abs_user_path}")
+                logger.debug("Resolving directory %s", abs_user_path)
                 for grouping in os.walk(abs_user_path, topdown=True, followlinks=True):
                     dirpath, _, filenames = grouping
 
@@ -66,7 +66,7 @@ class PathUtil:
 
                     resolved_paths = PathUtil.resolve_ingress_paths(product_paths, resolved_paths)
             else:
-                logger.warning(f"Encountered path ({abs_user_path}) that is neither a file nor directory, skipping...")
+                logger.warning("Encountered path (%s) that is neither a file nor directory, skipping...", abs_user_path)
 
         return resolved_paths
 
@@ -104,6 +104,6 @@ class PathUtil:
             if trimmed_ingress_path.startswith("/"):
                 trimmed_ingress_path = trimmed_ingress_path[1:]
 
-            logger.debug(f"Removed prefix {prefix}, new path: {trimmed_ingress_path}")
+            logger.debug("Removed prefix %s, new path: %s", prefix, trimmed_ingress_path)
 
         return trimmed_ingress_path

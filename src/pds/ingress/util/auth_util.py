@@ -48,7 +48,7 @@ class AuthUtil:
 
         auth_params = {"USERNAME": cognito_config["username"], "PASSWORD": cognito_config["password"]}
 
-        logger.info(f"Performing Cognito authentication for user {cognito_config['username']}")
+        logger.info("Performing Cognito authentication for user %s", cognito_config["username"])
 
         try:
             response = client.initiate_auth(
