@@ -21,6 +21,7 @@ import pds.ingress.util.log_util as log_util
 import requests
 from joblib import delayed
 from joblib import Parallel
+from pds.ingress import __version__
 from pds.ingress.util.auth_util import AuthUtil
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.log_util import get_log_level
@@ -263,6 +264,7 @@ def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, f
         "ContentLength": str(file_size),
         "LastModified": str(last_modified_time),
         "ForceOverwrite": str(int(force_overwrite)),
+        "ClientVersion": __version__,
         "content-type": "application/json",
         "x-amz-docs-region": api_gateway_region,
     }
