@@ -177,14 +177,20 @@ class PDSIngressAppTest(unittest.TestCase):
 
     def test_should_overwrite_file(self):
         """Test check for overwrite of prexisting file in S3"""
+        # Test inclusion of ForceOverwrite flag
+        test_headers = {"ForceOverwrite": True}
+        bucket = "sample_bucket"
+        key = "path/to/sample_file"
+
+        self.assertTrue(should_overwrite_file(bucket, key, test_headers))
+
         # Create sample data sent by client script
         test_headers = {
             "ContentLength": os.stat(os.path.abspath(__file__)).st_size,
             "ContentMD5": "validhash",
             "LastModified": os.path.getmtime(os.path.abspath(__file__)),
+            "ForceOverwrite": False,
         }
-        bucket = "sample_bucket"
-        key = "path/to/sample_file"
 
         # Setup mock return values for head_object, one which matches the requested
         # file exactly, and one that does not

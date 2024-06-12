@@ -127,6 +127,13 @@ def should_overwrite_file(destination_bucket, object_key, headers):
     True if overwrite (or write) should occur, False otherwise.
 
     """
+    # First, check if the client has specified the "force overwite" option
+    if bool(int(headers.get("ForceOverwrite", False))):
+        logger.info("Client has specified force overwrite")
+        return True
+
+    # Next, check if the file already exists within the S3 bucket designated by
+    # the bucket map
     try:
         object_head = s3_client.head_object(Bucket=destination_bucket, Key=object_key)
     except botocore.exceptions.ClientError as e:
