@@ -326,7 +326,7 @@ def lambda_handler(event, context):
     if not bucket_exists(destination_bucket):
         return {
             "statusCode": 404,
-            "message": f"Bucket {destination_bucket} does not exist or has insufficient access permisisons",
+            "body": f"Bucket {destination_bucket} does not exist or has insufficient access permisisons",
         }
 
     object_key = join(request_node.lower(), local_url)

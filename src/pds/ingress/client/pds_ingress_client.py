@@ -269,7 +269,6 @@ def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, f
     }
 
     response = requests.post(api_gateway_url, params=params, data=json.dumps(payload), headers=headers)
-    response.raise_for_status()
 
     # Ingress request successful
     if response.status_code == 200:
@@ -283,8 +282,10 @@ def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, f
         logger.info("%s : File already exists unchanged on S3, skipping ingress", trimmed_path)
 
         return None
+    elif response.status_code == 404:
+        logger.warning('%s : Service returned 404 with message "%s"', trimmed_path, response.text)
     else:
-        raise RuntimeError(f"Unexpected status code ({response.status_code}) returned from ingress request")
+        response.raise_for_status()
 
 
 @backoff.on_exception(
