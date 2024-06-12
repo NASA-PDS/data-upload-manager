@@ -66,7 +66,7 @@ def backoff_logger(details):
     logger.warning(f"Total time elapsed: {details['elapsed']:0.1f} seconds.")
 
 
-def _perform_ingress(ingress_path, node_id, prefix, api_gateway_config):
+def _perform_ingress(ingress_path, node_id, prefix, force_overwrite, api_gateway_config):
     """
     Performs an ingress request and transfer to S3 using credentials obtained from
     Cognito. This helper function is intended for use with a Joblib parallelized
@@ -81,6 +81,9 @@ def _perform_ingress(ingress_path, node_id, prefix, api_gateway_config):
     prefix : str
         Global path prefix to trim from the ingress path before making the
         ingress request.
+    force_overwrite : bool
+        Determines whether pre-existing versions of files on S3 should be
+        overwritten or not.
     api_gateway_config : dict
         Dictionary containing configuration details for the API Gateway instance
         used to request ingress.
@@ -97,7 +100,9 @@ def _perform_ingress(ingress_path, node_id, prefix, api_gateway_config):
     trimmed_path = PathUtil.trim_ingress_path(ingress_path, prefix)
 
     try:
-        s3_ingress_url = request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, api_gateway_config)
+        s3_ingress_url = request_file_for_ingress(
+            object_body, ingress_path, trimmed_path, node_id, force_overwrite, api_gateway_config
+        )
 
         if s3_ingress_url:
             ingress_file_to_s3(object_body, ingress_path, trimmed_path, s3_ingress_url)
@@ -189,7 +194,7 @@ def _token_refresh_event(refresh_token):
     on_backoff=backoff_logger,
     interval=15,
 )
-def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, api_gateway_config):
+def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, force_overwrite, api_gateway_config):
     """
     Submits a request for file ingress to the PDS Ingress App API.
 
@@ -203,6 +208,9 @@ def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, a
         Ingress path with any user-configured prefix removed
     node_id : str
         PDS node identifier.
+    force_overwrite : bool
+        Determines whether pre-existing versions of files on S3 should be
+        overwritten or not.
     api_gateway_config : dict
         Dictionary or dictionary-like containing key/value pairs used to
         configure the API Gateway endpoint url.
@@ -254,6 +262,7 @@ def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, a
         "ContentMD5": md5_digest,
         "ContentLength": str(file_size),
         "LastModified": str(last_modified_time),
+        "ForceOverwrite": str(int(force_overwrite)),
         "content-type": "application/json",
         "x-amz-docs-region": api_gateway_region,
     }
@@ -429,6 +438,15 @@ def setup_argparser():
         "by the Ingress Service.",
     )
     parser.add_argument(
+        "--force-overwrite",
+        "-f",
+        action="store_true",
+        help="By default, the DUM service determines if a given file has already been "
+        "ingested to the PDS Cloud and has not changed. If so, ingress of the "
+        "file is skipped. Use this flag to override this behavior and forcefully "
+        "overwrite any existing versions of files within the PDS Cloud.",
+    )
+    parser.add_argument(
         "--num-threads",
         "-t",
         type=int,
@@ -536,7 +554,9 @@ def main():
         PARALLEL.n_jobs = args.num_threads
 
         PARALLEL(
-            delayed(_perform_ingress)(resolved_ingress_path, node_id, args.prefix, config["API_GATEWAY"])
+            delayed(_perform_ingress)(
+                resolved_ingress_path, node_id, args.prefix, args.force_overwrite, config["API_GATEWAY"]
+            )
             for resolved_ingress_path in resolved_ingress_paths
         )
 
