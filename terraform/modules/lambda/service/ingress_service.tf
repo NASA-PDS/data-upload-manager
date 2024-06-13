@@ -77,7 +77,7 @@ resource "aws_lambda_function" "lambda_ingress_service" {
       BUCKET_MAP_LOCATION = "config",
       LOG_LEVEL           = "INFO",
       VERSION_LOCATION    = "config",
-      VERSION_FILe        = "VERSION.txt"
+      VERSION_FILE        = "VERSION.txt"
     }
   }
 }
