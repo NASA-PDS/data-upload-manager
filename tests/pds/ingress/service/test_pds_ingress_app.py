@@ -13,8 +13,12 @@ from unittest.mock import patch
 import boto3
 import botocore.client
 import botocore.exceptions
+from pds.ingress import __version__
+from pds.ingress.service.pds_ingress_app import check_client_version
+from pds.ingress.service.pds_ingress_app import get_dum_version
 from pds.ingress.service.pds_ingress_app import initialize_bucket_map
 from pds.ingress.service.pds_ingress_app import lambda_handler
+from pds.ingress.service.pds_ingress_app import logger as service_logger
 from pds.ingress.service.pds_ingress_app import should_overwrite_file
 from pkg_resources import resource_filename
 
@@ -31,6 +35,16 @@ class PDSIngressAppTest(unittest.TestCase):
         )
         os.environ["BUCKET_MAP_LOCATION"] = "config"
         os.environ["BUCKET_MAP_FILE"] = "bucket-map.yaml"
+        os.environ["VERSION_LOCATION"] = "config"
+        os.environ["VERSION_FILE"] = "VERSION.txt"
+
+    def test_get_dum_version(self):
+        """Test parsing of the version number from the bundled VERSION.txt"""
+        version = get_dum_version()
+
+        # Version read from bundled file should always match what was parsed into
+        # the __init__.py module for the pds.ingress package
+        self.assertEqual(version, __version__)
 
     def test_default_bucket_map(self):
         """Test parsing of the default bucket map bundled with the Lambda function"""
@@ -73,6 +87,34 @@ class PDSIngressAppTest(unittest.TestCase):
             self.assertIn("ENG", bucket_map["MAP"]["NODES"])
             self.assertIn("default", bucket_map["MAP"]["NODES"]["ENG"])
             self.assertEqual(bucket_map["MAP"]["NODES"]["ENG"]["default"], "test-bucket-name")
+
+    def test_check_client_version(self):
+        """Test the logging that occurs during the client version check"""
+        # Check matching case
+        with self.assertLogs(logger=service_logger, level="INFO") as cm:
+            check_client_version(client_version=__version__, service_version=__version__)
+
+        # Make sure we get the expected number of log messages
+        self.assertEqual(len(cm.output), 1)
+
+        # Logger object used in a deployed Lambda function comes with its own
+        # built-in formatter, so we need to do a substring match here rather than
+        # a straight comparison
+        self.assertIn(f"DUM client version ({__version__}) matches ingress service", cm.output[0])
+
+        # Check missing version from client
+        with self.assertLogs(logger=service_logger, level="WARNING") as cm:
+            check_client_version(client_version=None, service_version=__version__)
+
+        self.assertEqual(len(cm.output), 1)
+        self.assertIn("No DUM version provided by client", cm.output[0])
+
+        # Check client/serivce mismatch
+        with self.assertLogs(logger=service_logger, level="WARNING") as cm:
+            check_client_version(client_version="0.0.0", service_version=__version__)
+
+        self.assertEqual(len(cm.output), 1)
+        self.assertIn(f"Version mismatch between client (0.0.0) and service ({__version__})", cm.output[0])
 
     # Hard-wire some fake credentials into the S3 client so botocore has something
     # to use in environments that have no credentials otherwise (such as GitHub Actions)
@@ -177,14 +219,20 @@ class PDSIngressAppTest(unittest.TestCase):
 
     def test_should_overwrite_file(self):
         """Test check for overwrite of prexisting file in S3"""
+        # Test inclusion of ForceOverwrite flag
+        test_headers = {"ForceOverwrite": True}
+        bucket = "sample_bucket"
+        key = "path/to/sample_file"
+
+        self.assertTrue(should_overwrite_file(bucket, key, test_headers))
+
         # Create sample data sent by client script
         test_headers = {
             "ContentLength": os.stat(os.path.abspath(__file__)).st_size,
             "ContentMD5": "validhash",
             "LastModified": os.path.getmtime(os.path.abspath(__file__)),
+            "ForceOverwrite": False,
         }
-        bucket = "sample_bucket"
-        key = "path/to/sample_file"
 
         # Setup mock return values for head_object, one which matches the requested
         # file exactly, and one that does not

@@ -74,8 +74,10 @@ resource "aws_lambda_function" "lambda_ingress_service" {
   environment {
     variables = {
       BUCKET_MAP_FILE     = "bucket-map.yaml",
-      BUCKET_MAP_LOCATION = "config"
-      LOG_LEVEL           = "INFO"
+      BUCKET_MAP_LOCATION = "config",
+      LOG_LEVEL           = "INFO",
+      VERSION_LOCATION    = "config",
+      VERSION_FILE        = "VERSION.txt"
     }
   }
 }

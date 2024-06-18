@@ -21,6 +21,7 @@ import pds.ingress.util.log_util as log_util
 import requests
 from joblib import delayed
 from joblib import Parallel
+from pds.ingress import __version__
 from pds.ingress.util.auth_util import AuthUtil
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.log_util import get_log_level
@@ -60,13 +61,12 @@ def backoff_logger(details):
     """Log details about the current backoff/retry"""
     logger = get_logger(__name__)
     logger.warning(
-        f"Backing off {details['target']} function for {details['wait']:0.1f} "
-        f"seconds after {details['tries']} tries."
+        "Backing off %s function for %.1f seconds after %d tries.", details["target"], details["wait"], details["tries"]
     )
-    logger.warning(f"Total time elapsed: {details['elapsed']:0.1f} seconds.")
+    logger.warning("Total time elapsed: %.1f seconds.", details["elapsed"])
 
 
-def _perform_ingress(ingress_path, node_id, prefix, api_gateway_config):
+def _perform_ingress(ingress_path, node_id, prefix, force_overwrite, api_gateway_config):
     """
     Performs an ingress request and transfer to S3 using credentials obtained from
     Cognito. This helper function is intended for use with a Joblib parallelized
@@ -81,6 +81,9 @@ def _perform_ingress(ingress_path, node_id, prefix, api_gateway_config):
     prefix : str
         Global path prefix to trim from the ingress path before making the
         ingress request.
+    force_overwrite : bool
+        Determines whether pre-existing versions of files on S3 should be
+        overwritten or not.
     api_gateway_config : dict
         Dictionary containing configuration details for the API Gateway instance
         used to request ingress.
@@ -97,7 +100,9 @@ def _perform_ingress(ingress_path, node_id, prefix, api_gateway_config):
     trimmed_path = PathUtil.trim_ingress_path(ingress_path, prefix)
 
     try:
-        s3_ingress_url = request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, api_gateway_config)
+        s3_ingress_url = request_file_for_ingress(
+            object_body, ingress_path, trimmed_path, node_id, force_overwrite, api_gateway_config
+        )
 
         if s3_ingress_url:
             ingress_file_to_s3(object_body, ingress_path, trimmed_path, s3_ingress_url)
@@ -108,10 +113,10 @@ def _perform_ingress(ingress_path, node_id, prefix, api_gateway_config):
         # Only log the error as a warning, so we don't bring down the entire
         # transfer process
         reason = err.response.json() if isinstance(err, requests.exceptions.HTTPError) else str(err)
-        logger.warning(f"{trimmed_path} : Ingress failed, reason: {reason}")
+        logger.warning("%s : Ingress failed, reason: %s", trimmed_path, reason)
         SUMMARY_TABLE["failed"].add(trimmed_path)
     finally:
-        logger.debug(f"Deallocating memory for {trimmed_path} ({len(object_body)} bytes)")
+        logger.debug("Deallocating memory for %s (%d bytes)", trimmed_path, len(object_body))
         del object_body
 
 
@@ -189,7 +194,7 @@ def _token_refresh_event(refresh_token):
     on_backoff=backoff_logger,
     interval=15,
 )
-def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, api_gateway_config):
+def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, force_overwrite, api_gateway_config):
     """
     Submits a request for file ingress to the PDS Ingress App API.
 
@@ -203,6 +208,9 @@ def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, a
         Ingress path with any user-configured prefix removed
     node_id : str
         PDS node identifier.
+    force_overwrite : bool
+        Determines whether pre-existing versions of files on S3 should be
+        overwritten or not.
     api_gateway_config : dict
         Dictionary or dictionary-like containing key/value pairs used to
         configure the API Gateway endpoint url.
@@ -226,7 +234,7 @@ def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, a
 
     logger = get_logger(__name__)
 
-    logger.info(f"{trimmed_path} : Requesting ingress for node ID {node_id}")
+    logger.info("%s : Requesting ingress for node ID %s", trimmed_path, node_id)
 
     # Extract the API Gateway configuration params
     api_gateway_template = api_gateway_config["url_template"]
@@ -254,27 +262,30 @@ def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, a
         "ContentMD5": md5_digest,
         "ContentLength": str(file_size),
         "LastModified": str(last_modified_time),
+        "ForceOverwrite": str(int(force_overwrite)),
+        "ClientVersion": __version__,
         "content-type": "application/json",
         "x-amz-docs-region": api_gateway_region,
     }
 
     response = requests.post(api_gateway_url, params=params, data=json.dumps(payload), headers=headers)
-    response.raise_for_status()
 
     # Ingress request successful
     if response.status_code == 200:
         s3_ingress_url = json.loads(response.text)
 
-        logger.debug(f"{trimmed_path} : Got URL for ingress path {s3_ingress_url.split('?')[0]}")
+        logger.debug("%s : Got URL for ingress path %s", trimmed_path, s3_ingress_url.split("?")[0])
 
         return s3_ingress_url
     # Ingress service indiciates file already exists in S3 and should not be overwritten
     elif response.status_code == 204:
-        logger.info(f"{trimmed_path} : File already exists unchanged on S3, skipping ingress")
+        logger.info("%s : File already exists unchanged on S3, skipping ingress", trimmed_path)
 
         return None
+    elif response.status_code == 404:
+        logger.warning('%s : Service returned 404 with message "%s"', trimmed_path, response.text)
     else:
-        raise RuntimeError(f"Unexpected status code ({response.status_code}) returned from ingress request")
+        response.raise_for_status()
 
 
 @backoff.on_exception(
@@ -309,12 +320,12 @@ def ingress_file_to_s3(object_body, ingress_path, trimmed_path, s3_ingress_url):
     """
     logger = get_logger(__name__)
 
-    logger.info(f"{trimmed_path} : Ingesting to {s3_ingress_url.split('?')[0]}")
+    logger.info("%s: Ingesting to %s", trimmed_path, s3_ingress_url.split("?")[0])
 
     response = requests.put(s3_ingress_url, data=object_body)
     response.raise_for_status()
 
-    logger.info(f"{trimmed_path} : Ingest complete")
+    logger.info("%s : Ingest complete", trimmed_path)
 
     # Update total number of bytes transferrred
     SUMMARY_TABLE["transferred"] += os.stat(ingress_path).st_size
@@ -429,6 +440,15 @@ def setup_argparser():
         "by the Ingress Service.",
     )
     parser.add_argument(
+        "--force-overwrite",
+        "-f",
+        action="store_true",
+        help="By default, the DUM service determines if a given file has already been "
+        "ingested to the PDS Cloud and has not changed. If so, ingress of the "
+        "file is skipped. Use this flag to override this behavior and forcefully "
+        "overwrite any existing versions of files within the PDS Cloud.",
+    )
+    parser.add_argument(
         "--num-threads",
         "-t",
         type=int,
@@ -460,6 +480,12 @@ def setup_argparser():
         help="Sets the Logging level for logged messages. If not "
         "provided, the logging level set in the INI config "
         "is used instead.",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"Data Upload Manager v{__version__}",
+        help="Print the Data Upload Manager release version and exit.",
     )
     parser.add_argument(
         "ingress_paths",
@@ -496,7 +522,7 @@ def main():
 
     logger = get_logger(__name__, log_level=get_log_level(args.log_level))
 
-    logger.info(f"Loaded config file {args.config_path}")
+    logger.info("Loaded config file %s", args.config_path)
 
     # Derive the full list of ingress paths based on the set of paths requested
     # by the user
@@ -536,7 +562,9 @@ def main():
         PARALLEL.n_jobs = args.num_threads
 
         PARALLEL(
-            delayed(_perform_ingress)(resolved_ingress_path, node_id, args.prefix, config["API_GATEWAY"])
+            delayed(_perform_ingress)(
+                resolved_ingress_path, node_id, args.prefix, args.force_overwrite, config["API_GATEWAY"]
+            )
             for resolved_ingress_path in resolved_ingress_paths
         )
 
