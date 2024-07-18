@@ -14,6 +14,7 @@ import sched
 import time
 from datetime import datetime
 from datetime import timezone
+from itertools import chain
 from threading import Thread
 
 import backoff
@@ -21,6 +22,7 @@ import pds.ingress.util.log_util as log_util
 import requests
 from joblib import delayed
 from joblib import Parallel
+from more_itertools import chunked as batched
 from pds.ingress import __version__
 from pds.ingress.util.auth_util import AuthUtil
 from pds.ingress.util.config_util import ConfigUtil
@@ -66,7 +68,7 @@ def backoff_logger(details):
     logger.warning("Total time elapsed: %.1f seconds.", details["elapsed"])
 
 
-def _perform_ingress(ingress_path, node_id, prefix, force_overwrite, api_gateway_config):
+def perform_ingress(batched_ingress_paths, node_id, prefix, force_overwrite, api_gateway_config):
     """
     Performs an ingress request and transfer to S3 using credentials obtained from
     Cognito. This helper function is intended for use with a Joblib parallelized
@@ -74,8 +76,9 @@ def _perform_ingress(ingress_path, node_id, prefix, force_overwrite, api_gateway
 
     Parameters
     ----------
-    ingress_path : str
-        Path to the file to request ingress for.
+    batched_ingress_paths : list of iterables
+        Paths to the files to request ingress for, divided into batches sized
+        based on the configured batch size.
     node_id : str
         The PDS Node Identifier to associate with the ingress request.
     prefix : str
@@ -91,33 +94,23 @@ def _perform_ingress(ingress_path, node_id, prefix, force_overwrite, api_gateway
     """
     logger = get_logger(__name__)
 
-    # TODO: slurping entire file could be problematic for large files,
-    #       investigate alternative if/when necessary
-    with open(ingress_path, "rb") as object_file:
-        object_body = object_file.read()
-
-    # Remove path prefix if one was configured
-    trimmed_path = PathUtil.trim_ingress_path(ingress_path, prefix)
-
     try:
-        s3_ingress_url = request_file_for_ingress(
-            object_body, ingress_path, trimmed_path, node_id, force_overwrite, api_gateway_config
+        # Perform batch requests in parallel based on number of batches
+        request_batches = PARALLEL(
+            delayed(prepare_batch_for_ingress)(ingress_path_batch, prefix, batch_index)
+            for batch_index, ingress_path_batch in enumerate(batched_ingress_paths)
         )
 
-        if s3_ingress_url:
-            ingress_file_to_s3(object_body, ingress_path, trimmed_path, s3_ingress_url)
-            SUMMARY_TABLE["uploaded"].add(trimmed_path)
-        else:
-            SUMMARY_TABLE["skipped"].add(trimmed_path)
+        response_batches = PARALLEL(
+            delayed(request_batch_for_ingress)(request_batch, batch_index, node_id, force_overwrite, api_gateway_config)
+            for batch_index, request_batch in enumerate(request_batches)
+        )
+
+        # Perform uploads to S3 in parallel based on number of files
+        PARALLEL(delayed(ingress_file_to_s3)(ingress_response) for ingress_response in chain(*response_batches))
     except Exception as err:
-        # Only log the error as a warning, so we don't bring down the entire
-        # transfer process
-        reason = err.response.json() if isinstance(err, requests.exceptions.HTTPError) else str(err)
-        logger.warning("%s : Ingress failed, reason: %s", trimmed_path, reason)
-        SUMMARY_TABLE["failed"].add(trimmed_path)
-    finally:
-        logger.debug("Deallocating memory for %s (%d bytes)", trimmed_path, len(object_body))
-        del object_body
+        logger.error("Ingress failed, reason: %s", str(err))
+        raise
 
 
 def _schedule_token_refresh(refresh_token, token_expiration, offset=60):
@@ -186,6 +179,63 @@ def _token_refresh_event(refresh_token):
     _schedule_token_refresh(refresh_token, expiration)
 
 
+def prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index):
+    """
+    Performs information gathering on each file contained within an ingress
+    request batch, including file size, last modified time, and MD5 hash.
+
+    Parameters
+    ----------
+    ingress_path_batch : list of str
+        List of the files to gather information on prior to ingress request.
+    prefix : str
+        Path prefix to remove from each path in the provided batch.
+    batch_index : int
+        Index of the current batch within the full list of batched paths.
+
+    Returns
+    -------
+    request_batch : list of dict
+        List of dictionaries, with one entry for each file path in the provided
+        request batch. Each dictionary contains the information gathered about
+        the file.
+
+    """
+    logger = get_logger(__name__)
+
+    logger.info("Batch %d : Preparing for ingress", batch_index)
+    start_time = time.time()
+
+    request_batch = []
+
+    for ingress_path in ingress_path_batch:
+        # Remove path prefix if one was configured
+        trimmed_path = PathUtil.trim_ingress_path(ingress_path, prefix)
+
+        # Calculate the MD5 checksum of the file payload
+        with open(ingress_path, "rb") as object_file:
+            md5_digest = hashlib.md5(object_file.read()).hexdigest()
+
+        # Get the size and last modified time of the file
+        file_size = os.stat(ingress_path).st_size
+        last_modified_time = os.path.getmtime(ingress_path)
+
+        request_batch.append(
+            {
+                "ingress_path": ingress_path,
+                "trimmed_path": trimmed_path,
+                "md5": md5_digest,
+                "size": file_size,
+                "last_modified": last_modified_time,
+            }
+        )
+
+    elapsed_time = time.time() - start_time
+    logger.info("Batch %d : Prep completed in %.2f seconds", batch_index, elapsed_time)
+
+    return request_batch
+
+
 @backoff.on_exception(
     backoff.constant,
     requests.exceptions.RequestException,
@@ -194,18 +244,17 @@ def _token_refresh_event(refresh_token):
     on_backoff=backoff_logger,
     interval=15,
 )
-def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, force_overwrite, api_gateway_config):
+def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwrite, api_gateway_config):
     """
-    Submits a request for file ingress to the PDS Ingress App API.
+    Submits a batch of ingress requests to the PDS Ingress App API.
 
     Parameters
     ----------
-    object_body : bytes
-        Contents of the file to be copied to S3.
-    ingress_path : str
-        Local path to the file to request ingress for.
-    trimmed_path : str
-        Ingress path with any user-configured prefix removed
+    request_batch : list of dict
+        List of dictionaries containing an entry for each file to request ingest for.
+        Each entry contains information about the file to be ingested.
+    batch_index : int
+        Index of the current batch within the full list of batched paths.
     node_id : str
         PDS node identifier.
     force_overwrite : bool
@@ -217,24 +266,16 @@ def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, f
 
     Returns
     -------
-    s3_ingress_url : str
-        The presigned S3 URL returned from the Ingress service lambda, which
-        identifies the location in S3 the client should upload the file to and
-        includes temporary credentials to allow the client to upload to
-        S3 via an HTTP PUT. If this file already exists in S3 and should not
-        be overwritten, this function will return None instead.
-
-    Raises
-    ------
-    RuntimeError
-        If the request to the Ingress Service fails.
+    response_batch : list of dict
+        The list of responses from the Ingress Lambda service.
 
     """
     global BEARER_TOKEN
 
     logger = get_logger(__name__)
 
-    logger.info("%s : Requesting ingress for node ID %s", trimmed_path, node_id)
+    logger.info("Batch %d : Requesting ingress on behalf of node ID %s", batch_index, node_id)
+    start_time = time.time()
 
     # Extract the API Gateway configuration params
     api_gateway_template = api_gateway_config["url_template"]
@@ -247,43 +288,28 @@ def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, f
         id=api_gateway_id, region=api_gateway_region, stage=api_gateway_stage, resource=api_gateway_resource
     )
 
-    # Calculate the MD5 checksum of the file payload
-    md5_digest = hashlib.md5(object_body).hexdigest()
-
-    # Get the size and last modified time of the file
-    file_size = os.stat(ingress_path).st_size
-    last_modified_time = os.path.getmtime(ingress_path)
-
     params = {"node": node_id, "node_name": NodeUtil.node_id_to_long_name[node_id]}
-    payload = {"url": trimmed_path}
     headers = {
         "Authorization": BEARER_TOKEN,
         "UserGroup": NodeUtil.node_id_to_group_name(node_id),
-        "ContentMD5": md5_digest,
-        "ContentLength": str(file_size),
-        "LastModified": str(last_modified_time),
         "ForceOverwrite": str(int(force_overwrite)),
         "ClientVersion": __version__,
         "content-type": "application/json",
         "x-amz-docs-region": api_gateway_region,
     }
 
-    response = requests.post(api_gateway_url, params=params, data=json.dumps(payload), headers=headers)
+    response = requests.post(
+        api_gateway_url, params=params, data=json.dumps(request_batch), headers=headers, timeout=600
+    )
+    elapsed_time = time.time() - start_time
 
     # Ingress request successful
     if response.status_code == 200:
-        s3_ingress_url = json.loads(response.text)
+        response_batch = response.json()
 
-        logger.debug("%s : Got URL for ingress path %s", trimmed_path, s3_ingress_url.split("?")[0])
+        logger.info("Batch %d : Ingress request completed in %.2f seconds", batch_index, elapsed_time)
 
-        return s3_ingress_url
-    # Ingress service indiciates file already exists in S3 and should not be overwritten
-    elif response.status_code == 204:
-        logger.info("%s : File already exists unchanged on S3, skipping ingress", trimmed_path)
-
-        return None
-    elif response.status_code == 404:
-        logger.warning('%s : Service returned 404 with message "%s"', trimmed_path, response.text)
+        return response_batch
     else:
         response.raise_for_status()
 
@@ -296,39 +322,54 @@ def request_file_for_ingress(object_body, ingress_path, trimmed_path, node_id, f
     on_backoff=backoff_logger,
     interval=15,
 )
-def ingress_file_to_s3(object_body, ingress_path, trimmed_path, s3_ingress_url):
+def ingress_file_to_s3(ingress_response):
     """
-    Copies the local file path to the S3 location returned from the Ingress App.
+    Copies the local file path using the pre-signed S3 URL returned from the
+    Ingress Lambda App.
 
     Parameters
     ----------
-    object_body : bytes
-        Contents of the file to be copied to S3.
-    ingress_path : str
-        Local path to the file to be ingressed.
-    trimmed_path : str
-        Trimmed version of the ingress file path. Used for logging purposes.
-    s3_ingress_url : str
-        The presigned S3 URL used for upload returned from the Ingress Service
-        Lambda function.
+    ingress_response : dict
+        Dictionary containing the information returned from the Ingress Lambda
+        App required to upload the local file to S3.
 
     Raises
     ------
     RuntimeError
-        If the S3 upload fails for any reason.
+        If an unexpected response is received from the Ingress Lambda app.
 
     """
     logger = get_logger(__name__)
 
-    logger.info("%s: Ingesting to %s", trimmed_path, s3_ingress_url.split("?")[0])
+    response_result = int(ingress_response.get("result", -1))
+    trimmed_path = ingress_response.get("trimmed_path")
 
-    response = requests.put(s3_ingress_url, data=object_body)
-    response.raise_for_status()
+    if response_result == 200:
+        s3_ingress_url = ingress_response.get("s3_url")
 
-    logger.info("%s : Ingest complete", trimmed_path)
+        logger.info("%s : Ingesting to %s", trimmed_path, s3_ingress_url.split("?")[0])
 
-    # Update total number of bytes transferrred
-    SUMMARY_TABLE["transferred"] += os.stat(ingress_path).st_size
+        ingress_path = ingress_response.get("ingress_path")
+
+        with open(ingress_path, "rb") as infile:
+            object_body = infile.read()
+            response = requests.put(s3_ingress_url, data=object_body)
+            response.raise_for_status()
+
+        logger.info("%s : Ingest complete", trimmed_path)
+        SUMMARY_TABLE["uploaded"].add(trimmed_path)
+
+        # Update total number of bytes transferrred
+        SUMMARY_TABLE["transferred"] += os.stat(ingress_path).st_size
+    elif response_result == 204:
+        logger.info("%s : Skipping ingress, reason %s", trimmed_path, ingress_response.get("message"))
+        SUMMARY_TABLE["skipped"].add(trimmed_path)
+    elif response_result == 404:
+        logger.warning("%s : Ingress failed, reason: %s", trimmed_path, ingress_response.get("message"))
+        SUMMARY_TABLE["failed"].add(trimmed_path)
+    else:
+        logger.error("Unexepected response code (%d) from Ingress service", response_result)
+        raise RuntimeError
 
 
 def print_ingress_summary():
@@ -530,7 +571,16 @@ def main():
 
     node_id = args.node
 
+    # Break the set of ingress paths into batches based on configured size
+    batch_size = int(config["OTHER"].get("batch_size", fallback=1))
+
+    batched_ingress_paths = list(batched(resolved_ingress_paths, batch_size))
+    logger.info("Using batch size of %d", batch_size)
+    logger.info("Request (%d files) split into %d batches", len(resolved_ingress_paths), len(batched_ingress_paths))
+
     if not args.dry_run:
+        PARALLEL.n_jobs = args.num_threads
+
         cognito_config = config["COGNITO"]
 
         # TODO: add support for command-line username/password?
@@ -558,15 +608,7 @@ def main():
         )
         refresh_thread.start()
 
-        # Perform uploads in parallel using the number of requested threads
-        PARALLEL.n_jobs = args.num_threads
-
-        PARALLEL(
-            delayed(_perform_ingress)(
-                resolved_ingress_path, node_id, args.prefix, args.force_overwrite, config["API_GATEWAY"]
-            )
-            for resolved_ingress_path in resolved_ingress_paths
-        )
+        perform_ingress(batched_ingress_paths, node_id, args.prefix, args.force_overwrite, config["API_GATEWAY"])
 
         # Capture completion time of transfer
         SUMMARY_TABLE["end_time"] = time.time()
