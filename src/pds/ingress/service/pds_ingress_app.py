@@ -18,6 +18,8 @@ import botocore
 import yaml
 from botocore.exceptions import ClientError
 
+s3_client = boto3.client("s3")
+
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 LEVEL_MAP = {
@@ -165,7 +167,7 @@ def bucket_exists(destination_bucket):
     return True
 
 
-def should_overwrite_file(destination_bucket, object_key, headers):
+def should_overwrite_file(destination_bucket, object_key, md5_digest, file_size, last_modifed, force_overwrite):
     """
     Determines if the file requested for ingress already exists in the S3
     location we plan to upload to, and whether it should be overwritten with a
@@ -177,10 +179,14 @@ def should_overwrite_file(destination_bucket, object_key, headers):
         Name of the S3 bucket to be uploaded to.
     object_key : str
         Object key location within the S3 bucket to be uploaded to.
-    headers : dict
-        Contains the headers of the ingress HTTP request from the client.
-        This includes information about the file that will be used to
-        determine if an overwrite on S3 should occur
+    md5_digest : str
+        MD5 hash digest of the incoming version of the file.
+    file_size : int
+        Size in bytes of the incoming version of the file.
+    last_modifed : float
+        Last modified time of the incoming version of the file as a Unix Epoch.
+    force_overwrite : bool
+        Flag indiciating whether to always overwrite with the incoming verisons of file.
 
     Returns
     -------
@@ -188,8 +194,8 @@ def should_overwrite_file(destination_bucket, object_key, headers):
 
     """
     # First, check if the client has specified the "force overwite" option
-    if bool(int(headers.get("ForceOverwrite", False))):
-        logger.info("Client has specified force overwrite")
+    if force_overwrite:
+        logger.debug("Client has specified force overwrite")
         return True
 
     # Next, check if the file already exists within the S3 bucket designated by
@@ -212,9 +218,9 @@ def should_overwrite_file(destination_bucket, object_key, headers):
     logger.debug("object_last_modified=%s", object_last_modified)
     logger.debug("object_md5=%s", object_md5)
 
-    request_length = int(headers["ContentLength"])
-    request_last_modified = datetime.fromtimestamp(float(headers["LastModified"]), tz=timezone.utc)
-    request_md5 = headers["ContentMD5"]
+    request_length = file_size
+    request_last_modified = datetime.fromtimestamp(last_modifed, tz=timezone.utc)
+    request_md5 = md5_digest
 
     logger.debug("request_length=%d", request_length)
     logger.debug("request_last_modified=%s", request_last_modified)
@@ -238,7 +244,7 @@ def generate_presigned_upload_url(bucket_name, object_key, expires_in=1000):
         Name of the S3 bucket to be uploaded to.
     object_key : str
         Object key location within the S3 bucket to be uploaded to.
-    expires_in : str
+    expires_in : int
         Expiration time of the generated URL in seconds. After this time,
         the URL should no longer be valid.
 
@@ -249,7 +255,6 @@ def generate_presigned_upload_url(bucket_name, object_key, expires_in=1000):
         location.
 
     """
-    s3_client = boto3.client("s3")
     client_method = "put_object"
     method_parameters = {"Bucket": bucket_name, "Key": object_key}
 
@@ -294,47 +299,83 @@ def lambda_handler(event, context):
     # Parse request details from event object
     body = json.loads(event["body"])
     headers = event["headers"]
-    local_url = body.get("url")
+    force_overwrite = bool(int(headers.get("ForceOverwrite", False)))
     request_node = event["queryStringParameters"].get("node")
+
+    if not request_node:
+        logger.error("No request node ID provided in queryStringParameters")
+        raise RuntimeError
+
     client_version = headers.get("ClientVersion", None)
 
     check_client_version(client_version, service_version)
 
-    if not local_url or not request_node:
-        logger.exception("Both a local URL and request Node ID must be provided")
-        raise RuntimeError
-
-    logger.info("Processing request from node %s for local url %s", request_node, local_url)
-
     node_bucket_map = bucket_map["MAP"]["NODES"].get(request_node.upper())
 
     if not node_bucket_map:
-        logger.exception("No bucket map entries configured for Node ID %s", request_node)
+        logger.exception("No bucket map entries configured for node ID %s", request_node)
         raise RuntimeError
 
-    prefix_key = local_url.split(os.sep)[0]
+    result = []
 
-    if prefix_key in node_bucket_map:
-        destination_bucket = node_bucket_map[prefix_key]
-        logger.info("Resolved bucket location %s for prefix %s", destination_bucket, prefix_key)
-    else:
-        destination_bucket = node_bucket_map["default"]
-        logger.warning(
-            "No bucket location configured for prefix %s, using default bucket %s", prefix_key, destination_bucket
-        )
+    # Iterate over all batched requests
+    for request_index, ingress_request in enumerate(body):
+        ingress_path = ingress_request.get("ingress_path")
+        trimmed_path = ingress_request.get("trimmed_path")
+        md5_digest = ingress_request.get("md5")
+        file_size = ingress_request.get("size")
+        last_modifed = ingress_request.get("last_modified")
 
-    if not bucket_exists(destination_bucket):
-        return {
-            "statusCode": 404,
-            "body": f"Bucket {destination_bucket} does not exist or has insufficient access permisisons",
-        }
+        if not all(field is not None for field in (ingress_path, trimmed_path, md5_digest, file_size, last_modifed)):
+            logger.error("One or more missing fields in request index %d", request_index)
+            raise RuntimeError
 
-    object_key = join(request_node.lower(), local_url)
+        logger.info("Processing request for %s (index %d)", trimmed_path, request_index)
 
-    if should_overwrite_file(destination_bucket, object_key, headers):
-        s3_url = generate_presigned_upload_url(destination_bucket, object_key)
+        prefix_key = trimmed_path.split(os.sep)[0]
 
-        return {"statusCode": 200, "body": json.dumps(s3_url)}
-    else:
-        logger.info("%s already exists in bucket %s and should not be overwritten", object_key, destination_bucket)
-        return {"statusCode": 204}
+        if prefix_key in node_bucket_map:
+            destination_bucket = node_bucket_map[prefix_key]
+            logger.info("Resolved bucket location %s for prefix %s", destination_bucket, prefix_key)
+        else:
+            destination_bucket = node_bucket_map["default"]
+            logger.warning(
+                "No bucket location configured for prefix %s, using default bucket %s", prefix_key, destination_bucket
+            )
+
+        if not bucket_exists(destination_bucket):
+            result.append(
+                {
+                    "result": 404,
+                    "local_url": trimmed_path,
+                    "s3_url": None,
+                    "message": f"Mapped bucket {destination_bucket} does not exist or has insufficient access permisisons",
+                }
+            )
+        else:
+            object_key = join(request_node.lower(), trimmed_path)
+
+            if should_overwrite_file(
+                destination_bucket, object_key, md5_digest, int(file_size), float(last_modifed), force_overwrite
+            ):
+                s3_url = generate_presigned_upload_url(destination_bucket, object_key)
+
+                result.append(
+                    {
+                        "result": 200,
+                        "trimmed_path": trimmed_path,
+                        "ingress_path": ingress_path,
+                        "s3_url": s3_url,
+                        "message": "Request success",
+                    }
+                )
+            else:
+                logger.info(
+                    "File %s already exists in bucket %s and should not be overwritten", object_key, destination_bucket
+                )
+
+                result.append(
+                    {"result": 204, "trimmed_path": trimmed_path, "s3_url": None, "message": "File already exists"}
+                )
+
+    return {"statusCode": 200, "body": json.dumps(result)}
