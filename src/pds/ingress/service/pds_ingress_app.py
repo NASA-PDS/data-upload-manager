@@ -35,8 +35,6 @@ logger.setLevel(LEVEL_MAP.get(LOG_LEVEL.upper(), logging.INFO))
 
 logger.info("Loading function PDS Ingress Service")
 
-s3_client = boto3.client("s3")
-
 
 def get_dum_version():
     """
@@ -159,6 +157,7 @@ def bucket_exists(destination_bucket):
 
     """
     try:
+        s3_client = boto3.client("s3")
         s3_client.head_bucket(Bucket=destination_bucket)
     except botocore.exceptions.ClientError as e:
         logger.warning("Check for bucket %s returned code %s", destination_bucket, e.response["Error"]["Code"])
@@ -201,6 +200,7 @@ def should_overwrite_file(destination_bucket, object_key, md5_digest, file_size,
     # Next, check if the file already exists within the S3 bucket designated by
     # the bucket map
     try:
+        s3_client = boto3.client("s3")
         object_head = s3_client.head_object(Bucket=destination_bucket, Key=object_key)
     except botocore.exceptions.ClientError as e:
         if e.response["Error"]["Code"] == "404":
@@ -259,6 +259,7 @@ def generate_presigned_upload_url(bucket_name, object_key, expires_in=1000):
     method_parameters = {"Bucket": bucket_name, "Key": object_key}
 
     try:
+        s3_client = boto3.client("s3")
         url = s3_client.generate_presigned_url(
             ClientMethod=client_method, Params=method_parameters, ExpiresIn=expires_in
         )
