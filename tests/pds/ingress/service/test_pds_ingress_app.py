@@ -4,13 +4,12 @@ import tempfile
 import unittest
 from datetime import datetime
 from datetime import timezone
-from functools import partial
 from os.path import abspath
 from os.path import join
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-import boto3
+import botocore.auth
 import botocore.client
 import botocore.exceptions
 from pds.ingress import __version__
@@ -116,130 +115,157 @@ class PDSIngressAppTest(unittest.TestCase):
         self.assertEqual(len(cm.output), 1)
         self.assertIn(f"Version mismatch between client (0.0.0) and service ({__version__})", cm.output[0])
 
-    # Hard-wire some fake credentials into the S3 client so botocore has something
-    # to use in environments that have no credentials otherwise (such as GitHub Actions)
-    boto3_client_w_creds = partial(
-        boto3.client,
-        aws_access_key_id="fake_access_key",
-        aws_secret_access_key="fake_secret_key",
-        aws_session_token="fake_session_token",
-    )
-
     def mock_make_api_call(self, operation_name, kwarg):
         return {"ContentLength": 2, "LastModified": datetime.now(), "ETag": "0hashfakehashfakehashfake0"}
 
-    @patch.object(boto3, "client", boto3_client_w_creds)
     @patch.object(botocore.client.BaseClient, "_make_api_call", mock_make_api_call)
     def test_lambda_handler(self):
         """Test the lambda_handler function with the default bucket map"""
         test_event = {
-            "body": json.dumps({"url": "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"}),
+            "body": json.dumps(
+                [
+                    {
+                        "ingress_path": "/home/user/data/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml",
+                        "trimmed_path": "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml",
+                        "md5": "fakehashfakehashfakehash",
+                        "size": 1,
+                        "last_modified": os.path.getmtime(os.path.abspath(__file__)),
+                    }
+                ]
+            ),
             "queryStringParameters": {"node": "sbn"},
-            "headers": {
-                "ContentLength": 1,
-                "LastModified": os.path.getmtime(os.path.abspath(__file__)),
-                "ContentMD5": "fakehashfakehashfakehash",
-            },
+            "headers": {"ClientVersion": __version__, "ForceOverwrite": False},
         }
 
         context = {}  # Unused by lambda_handler
 
-        response = lambda_handler(test_event, context)
+        with patch.object(botocore.auth.HmacV1QueryAuth, "add_auth", MagicMock):
+            response = lambda_handler(test_event, context)
 
-        self.assertIsInstance(response, dict)
         self.assertIn("statusCode", response)
         self.assertEqual(response["statusCode"], 200)
 
         self.assertIn("body", response)
+        self.assertIsInstance(response["body"], str)
 
-        response_body = json.loads(response["body"])
-        response_url, signature_params = response_body.split("?")
+        body = json.loads(response["body"])
+
+        self.assertIsInstance(body, list)
+        self.assertEqual(len(body), 1)
+
+        self.assertIsInstance(body[0], dict)
+        self.assertIn("result", body[0])
+        self.assertEqual(body[0]["result"], 200)
+
+        self.assertIn("trimmed_path", body[0])
+        self.assertEqual(body[0]["trimmed_path"], "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml")
+
+        self.assertIn("ingress_path", body[0])
+        self.assertEqual(
+            body[0]["ingress_path"], "/home/user/data/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"
+        )
+
+        self.assertIn("message", body[0])
+        self.assertEqual(body[0]["message"], "Request success")
+
+        self.assertIn("s3_url", body[0])
+        s3_url = body[0]["s3_url"]
 
         expected_url = "https://nucleus-pds-protected.s3.amazonaws.com/sbn/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"
-
-        self.assertEqual(response_url, expected_url)
-
-        # Ensure we got all the expected tokens in the security parameters (actual values don't matter)
-        self.assertIn("AWSAccessKeyId=", signature_params)
-        self.assertIn("Signature=", signature_params)
-        self.assertIn("x-amz-security-token=", signature_params)
-        self.assertIn("Expires=", signature_params)
+        self.assertTrue(s3_url.startswith(expected_url))
 
         test_event = {
-            "body": json.dumps({"url": "some.other.survey/bundle.some.other.survey_v1.0.xml"}),
+            "body": json.dumps(
+                [
+                    {
+                        "ingress_path": "/home/user/data/some.other.survey/bundle.some.other.survey_v1.0.xml",
+                        "trimmed_path": "some.other.survey/bundle.some.other.survey_v1.0.xml",
+                        "md5": "fakehashfakehashfakehash",
+                        "size": 1,
+                        "last_modified": os.path.getmtime(os.path.abspath(__file__)),
+                    }
+                ]
+            ),
             "queryStringParameters": {"node": "sbn"},
-            "headers": {
-                "ContentLength": 1,
-                "LastModified": os.path.getmtime(os.path.abspath(__file__)),
-                "ContentMD5": "fakehashfakehashfakehash",
-            },
+            "headers": {"ClientVersion": __version__, "ForceOverwrite": False},
         }
 
-        response = lambda_handler(test_event, context)
+        with patch.object(botocore.auth.HmacV1QueryAuth, "add_auth", MagicMock):
+            response = lambda_handler(test_event, context)
 
-        response_body = json.loads(response["body"])
-        response_url, signature_params = response_body.split("?")
+        self.assertIn("statusCode", response)
+        self.assertEqual(response["statusCode"], 200)
+
+        self.assertIn("body", response)
+        self.assertIsInstance(response["body"], str)
+
+        body = json.loads(response["body"])
+
+        self.assertEqual(len(body), 1)
+
+        s3_url = body[0]["s3_url"]
 
         expected_url = (
             "https://nucleus-pds-public.s3.amazonaws.com/sbn/some.other.survey/bundle.some.other.survey_v1.0.xml"
         )
 
-        self.assertEqual(response_url, expected_url)
-
-        self.assertIn("AWSAccessKeyId=", signature_params)
-        self.assertIn("Signature=", signature_params)
-        self.assertIn("x-amz-security-token=", signature_params)
-        self.assertIn("Expires=", signature_params)
+        self.assertTrue(s3_url.startswith(expected_url))
 
         test_event = {
-            "body": json.dumps({"url": "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"}),
+            "body": json.dumps(
+                [
+                    {
+                        "ingress_path": "/home/user/data/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml",
+                        "trimmed_path": "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml",
+                        "md5": "fakehashfakehashfakehash",
+                        "size": 1,
+                        "last_modified": os.path.getmtime(os.path.abspath(__file__)),
+                    }
+                ]
+            ),
             "queryStringParameters": {"node": "unk"},
-            "headers": {
-                "ContentLength": 1,
-                "LastModified": os.path.getmtime(os.path.abspath(__file__)),
-                "ContentMD5": "fakehashfakehashfakehash",
-            },
+            "headers": {"ClientVersion": __version__, "ForceOverwrite": False},
         }
 
         with self.assertRaises(RuntimeError, msg="No bucket map entries configured for Node ID unk"):
             lambda_handler(test_event, context)
 
         test_event = {
-            "body": json.dumps({}),
-            "queryStringParameters": {"node": "eng"},
-            "headers": {
-                "ContentLength": 1,
-                "LastModified": os.path.getmtime(os.path.abspath(__file__)),
-                "ContentMD5": "fakehashfakehashfakehash",
-            },
+            "body": json.dumps(
+                [
+                    {
+                        "ingress_path": "/home/user/data/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml",
+                        "trimmed_path": "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml",
+                        "md5": "fakehashfakehashfakehash",
+                        "size": 1,
+                        "last_modified": os.path.getmtime(os.path.abspath(__file__)),
+                    }
+                ]
+            ),
+            "queryStringParameters": {},
+            "headers": {"ClientVersion": __version__, "ForceOverwrite": False},
         }
 
-        with self.assertRaises(RuntimeError, msg="Both a local URL and request Node ID must be provided"):
+        with self.assertRaises(RuntimeError, msg="No request node ID provided in queryStringParameters"):
             lambda_handler(test_event, context)
 
     def test_should_overwrite_file(self):
         """Test check for overwrite of prexisting file in S3"""
         # Test inclusion of ForceOverwrite flag
-        test_headers = {"ForceOverwrite": True}
         bucket = "sample_bucket"
         key = "path/to/sample_file"
+        md5_digest = "validhash"
+        file_size = os.stat(os.path.abspath(__file__)).st_size
+        last_modified = os.path.getmtime(os.path.abspath(__file__))
 
-        self.assertTrue(should_overwrite_file(bucket, key, test_headers))
-
-        # Create sample data sent by client script
-        test_headers = {
-            "ContentLength": os.stat(os.path.abspath(__file__)).st_size,
-            "ContentMD5": "validhash",
-            "LastModified": os.path.getmtime(os.path.abspath(__file__)),
-            "ForceOverwrite": False,
-        }
+        self.assertTrue(should_overwrite_file(bucket, key, md5_digest, file_size, last_modified, force_overwrite=True))
 
         # Setup mock return values for head_object, one which matches the requested
         # file exactly, and one that does not
         match = {
-            "ContentLength": test_headers["ContentLength"],
+            "ContentLength": file_size,
             "ETag": "0validhash0",
-            "LastModified": datetime.fromtimestamp(test_headers["LastModified"], tz=timezone.utc),
+            "LastModified": datetime.fromtimestamp(last_modified, tz=timezone.utc),
         }
         mismatch = {"ContentLength": 2, "LastModified": datetime.now(tz=timezone.utc), "ETag": "0mismatchhash0"}
 
@@ -247,17 +273,23 @@ class PDSIngressAppTest(unittest.TestCase):
 
         with patch.object(botocore.client.BaseClient, "_make_api_call", mock_head_object):
             # First call should not match, meaning file should be overwritten
-            self.assertTrue(should_overwrite_file(bucket, key, test_headers))
+            self.assertTrue(
+                should_overwrite_file(bucket, key, md5_digest, file_size, last_modified, force_overwrite=False)
+            )
 
             # Second call should match, meaning file should not be overwritten
-            self.assertFalse(should_overwrite_file(bucket, key, test_headers))
+            self.assertFalse(
+                should_overwrite_file(bucket, key, md5_digest, file_size, last_modified, force_overwrite=False)
+            )
 
         err = {"Error": {"Code": "404"}}
         mock_head_object = MagicMock(side_effect=botocore.exceptions.ClientError(err, "head_object"))
 
         with patch.object(botocore.client.BaseClient, "_make_api_call", mock_head_object):
             # File not existing should always result in True
-            self.assertTrue(should_overwrite_file(bucket, key, test_headers))
+            self.assertTrue(
+                should_overwrite_file(bucket, key, md5_digest, file_size, last_modified, force_overwrite=False)
+            )
 
         err = {"Error": {"Code": "403"}}
         mock_head_object = MagicMock(side_effect=botocore.exceptions.ClientError(err, "head_object"))

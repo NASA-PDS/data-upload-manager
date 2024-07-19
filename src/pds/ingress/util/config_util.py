@@ -23,9 +23,9 @@ class SanitizingConfigParser(configparser.RawConfigParser):
 
     """
 
-    def get(self, section, option, *, raw=False, vars=None):
+    def get(self, section, option, *, raw=False, vars=None, fallback=None):
         """Invokes the superclass implementation of get, sanitizing the result before it is returned"""
-        val = super().get(section, option, raw=raw, vars=vars)
+        val = super().get(section, option, raw=raw, vars=vars, fallback=fallback)
 
         # Remove any single or double-quotes surrounding the value, as these could complicate
         # JSON-serillaziation of certain config values, such as log group name
