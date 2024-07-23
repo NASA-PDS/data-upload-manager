@@ -31,6 +31,7 @@ from pds.ingress.util.log_util import get_log_level
 from pds.ingress.util.log_util import get_logger
 from pds.ingress.util.node_util import NodeUtil
 from pds.ingress.util.path_util import PathUtil
+from requests.exceptions import RequestException
 
 BEARER_TOKEN = None
 """Placeholder for authentication bearer token used to authenticate to API gateway"""
@@ -110,7 +111,10 @@ def perform_ingress(batched_ingress_paths, node_id, prefix, force_overwrite, api
         # Perform uploads to S3 in parallel based on number of files
         PARALLEL(delayed(ingress_file_to_s3)(ingress_response) for ingress_response in chain(*response_batches))
     except Exception as err:
-        logger.error("Ingress failed, reason: %s", str(err))
+        if isinstance(err, RequestException):
+            logger.error("Ingress failed, HTTP response text:\n%s", err.response.text)
+        else:
+            logger.error("Ingress failed, reason: %s", str(err))
         raise
 
 
