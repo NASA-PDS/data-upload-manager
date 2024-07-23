@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2024-07-12)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2024-07-23)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v1.2.0...«unknown»)
 
@@ -35,7 +35,6 @@
 
 - As a user, I want to skip upload of files already in S3 \(nucleus staging bucket\) [\#92](https://github.com/NASA-PDS/data-upload-manager/issues/92)
 - As a user, I want to include the modification datetime in the the user-defined object metadata being sent in the upload payload [\#87](https://github.com/NASA-PDS/data-upload-manager/issues/87)
-- As a user, I want to include a MD5 checksum in the the user-defined object metadata being sent in the upload payload [\#50](https://github.com/NASA-PDS/data-upload-manager/issues/50)
 - As a user, I want to upload only data products that have not been previously ingested [\#33](https://github.com/NASA-PDS/data-upload-manager/issues/33)
 
 **Defects:**
