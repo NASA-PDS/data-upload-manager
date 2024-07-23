@@ -166,7 +166,7 @@ def bucket_exists(destination_bucket):
     return True
 
 
-def should_overwrite_file(destination_bucket, object_key, md5_digest, file_size, last_modifed, force_overwrite):
+def should_overwrite_file(destination_bucket, object_key, md5_digest, file_size, last_modified, force_overwrite):
     """
     Determines if the file requested for ingress already exists in the S3
     location we plan to upload to, and whether it should be overwritten with a
@@ -182,7 +182,7 @@ def should_overwrite_file(destination_bucket, object_key, md5_digest, file_size,
         MD5 hash digest of the incoming version of the file.
     file_size : int
         Size in bytes of the incoming version of the file.
-    last_modifed : float
+    last_modified : float
         Last modified time of the incoming version of the file as a Unix Epoch.
     force_overwrite : bool
         Flag indiciating whether to always overwrite with the incoming verisons of file.
@@ -219,7 +219,7 @@ def should_overwrite_file(destination_bucket, object_key, md5_digest, file_size,
     logger.debug("object_md5=%s", object_md5)
 
     request_length = file_size
-    request_last_modified = datetime.fromtimestamp(last_modifed, tz=timezone.utc)
+    request_last_modified = datetime.fromtimestamp(last_modified, tz=timezone.utc)
     request_md5 = md5_digest
 
     logger.debug("request_length=%d", request_length)
@@ -233,7 +233,16 @@ def should_overwrite_file(destination_bucket, object_key, md5_digest, file_size,
     )
 
 
-def generate_presigned_upload_url(bucket_name, object_key, expires_in=1000):
+def generate_presigned_upload_url(
+    bucket_name,
+    object_key,
+    md5_digest,
+    base64_md5_digest,
+    last_modified,
+    client_version,
+    service_version,
+    expires_in=1000,
+):
     """
     Generates a presigned URL suitable for uploading to the S3 location
     corresponding to the provided bucket name and object key.
@@ -244,6 +253,17 @@ def generate_presigned_upload_url(bucket_name, object_key, expires_in=1000):
         Name of the S3 bucket to be uploaded to.
     object_key : str
         Object key location within the S3 bucket to be uploaded to.
+    md5_digest : str
+        MD5 hash digest corresponding to the file to generate a URL for.
+    base64_md5_digest : str
+        Base64 encoded version of the MD5 hash digest corresponding to the file
+        to generate a URL for.
+    last_modified : float
+        Last modified time of the incoming version of the file as a Unix Epoch.
+    client_version : str
+        Version of the DUM client used to initiate the ingress reqeust.
+    service_version : str
+        Version of the DUM lambda service used to process this ingress request.
     expires_in : int
         Expiration time of the generated URL in seconds. After this time,
         the URL should no longer be valid.
@@ -256,7 +276,17 @@ def generate_presigned_upload_url(bucket_name, object_key, expires_in=1000):
 
     """
     client_method = "put_object"
-    method_parameters = {"Bucket": bucket_name, "Key": object_key}
+    method_parameters = {
+        "Bucket": bucket_name,
+        "Key": object_key,
+        "ContentMD5": base64_md5_digest,
+        "Metadata": {
+            "md5": md5_digest,
+            "last_modified": datetime.fromtimestamp(last_modified, tz=timezone.utc).isoformat(),
+            "dum_client_version": client_version,
+            "dum_service_version": service_version,
+        },
+    }
 
     try:
         s3_client = boto3.client("s3")
@@ -324,6 +354,7 @@ def lambda_handler(event, context):
         ingress_path = ingress_request.get("ingress_path")
         trimmed_path = ingress_request.get("trimmed_path")
         md5_digest = ingress_request.get("md5")
+        base64_md5_digest = ingress_request.get("base64_md5")
         file_size = ingress_request.get("size")
         last_modifed = ingress_request.get("last_modified")
 
@@ -359,13 +390,23 @@ def lambda_handler(event, context):
             if should_overwrite_file(
                 destination_bucket, object_key, md5_digest, int(file_size), float(last_modifed), force_overwrite
             ):
-                s3_url = generate_presigned_upload_url(destination_bucket, object_key)
+                s3_url = generate_presigned_upload_url(
+                    destination_bucket,
+                    object_key,
+                    md5_digest,
+                    base64_md5_digest,
+                    float(last_modifed),
+                    client_version,
+                    service_version,
+                )
 
                 result.append(
                     {
                         "result": 200,
                         "trimmed_path": trimmed_path,
                         "ingress_path": ingress_path,
+                        "md5": md5_digest,
+                        "base64_md5": base64_md5_digest,
                         "s3_url": s3_url,
                         "message": "Request success",
                     }

@@ -7,6 +7,7 @@ pds_ingress_client
 Client side script used to perform ingress request to the DUM service in AWS.
 """
 import argparse
+import base64
 import hashlib
 import json
 import os
@@ -214,7 +215,9 @@ def prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index):
 
         # Calculate the MD5 checksum of the file payload
         with open(ingress_path, "rb") as object_file:
-            md5_digest = hashlib.md5(object_file.read()).hexdigest()
+            md5_hash = hashlib.md5(object_file.read())
+            md5_digest = md5_hash.hexdigest()
+            base64_md5_digest = base64.b64encode(md5_hash.digest()).decode()
 
         # Get the size and last modified time of the file
         file_size = os.stat(ingress_path).st_size
@@ -225,6 +228,7 @@ def prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index):
                 "ingress_path": ingress_path,
                 "trimmed_path": trimmed_path,
                 "md5": md5_digest,
+                "base64_md5": base64_md5_digest,
                 "size": file_size,
                 "last_modified": last_modified_time,
             }
@@ -351,9 +355,17 @@ def ingress_file_to_s3(ingress_response):
 
         ingress_path = ingress_response.get("ingress_path")
 
+        if not ingress_path:
+            raise ValueError("No ingress path provided with response for %s", trimmed_path)
+
         with open(ingress_path, "rb") as infile:
             object_body = infile.read()
-            response = requests.put(s3_ingress_url, data=object_body)
+
+            # Include the original base64-encoded MD5 hash so AWS can perform
+            # an integrity check on the uploaded file
+            headers = {"Content-MD5": ingress_response.get("base64_md5")}
+
+            response = requests.put(s3_ingress_url, data=object_body, headers=headers)
             response.raise_for_status()
 
         logger.info("%s : Ingest complete", trimmed_path)
