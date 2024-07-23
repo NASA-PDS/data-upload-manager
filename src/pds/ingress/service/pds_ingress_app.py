@@ -157,7 +157,6 @@ def bucket_exists(destination_bucket):
 
     """
     try:
-        s3_client = boto3.client("s3")
         s3_client.head_bucket(Bucket=destination_bucket)
     except botocore.exceptions.ClientError as e:
         logger.warning("Check for bucket %s returned code %s", destination_bucket, e.response["Error"]["Code"])
@@ -200,7 +199,6 @@ def should_overwrite_file(destination_bucket, object_key, md5_digest, file_size,
     # Next, check if the file already exists within the S3 bucket designated by
     # the bucket map
     try:
-        s3_client = boto3.client("s3")
         object_head = s3_client.head_object(Bucket=destination_bucket, Key=object_key)
     except botocore.exceptions.ClientError as e:
         if e.response["Error"]["Code"] == "404":
@@ -289,7 +287,6 @@ def generate_presigned_upload_url(
     }
 
     try:
-        s3_client = boto3.client("s3")
         url = s3_client.generate_presigned_url(
             ClientMethod=client_method, Params=method_parameters, ExpiresIn=expires_in
         )
