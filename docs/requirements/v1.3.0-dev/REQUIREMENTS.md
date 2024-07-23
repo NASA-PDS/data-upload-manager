@@ -68,7 +68,11 @@ This requirement is not impacted by the current version
 
 
 This requirement is not impacted by the current version
-## As a user, I want status summary reports during a long running execution ([#119](https://github.com/NASA-PDS/data-upload-manager/issues/119)) 
+## As a user, I want status summary reports during a long running execution (batching functionality) ([#119](https://github.com/NASA-PDS/data-upload-manager/issues/119)) 
+
+
+This requirement is not impacted by the current version
+## As a user, I want to monitor the progress of Data Upload Manager in a visual dashboard in AWS ([#129](https://github.com/NASA-PDS/data-upload-manager/issues/129)) 
 
 
 This requirement is not impacted by the current version
