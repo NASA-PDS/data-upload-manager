@@ -110,11 +110,11 @@ def perform_ingress(batched_ingress_paths, node_id, prefix, force_overwrite, api
 
         # Perform uploads to S3 in parallel based on number of files
         PARALLEL(delayed(ingress_file_to_s3)(ingress_response) for ingress_response in chain(*response_batches))
+    except RequestException as err:
+        logger.error("Ingress failed, HTTP response text:\n%s", err.response.text)
+        raise
     except Exception as err:
-        if isinstance(err, RequestException):
-            logger.error("Ingress failed, HTTP response text:\n%s", err.response.text)
-        else:
-            logger.error("Ingress failed, reason: %s", str(err))
+        logger.error("Ingress failed, reason: %s", str(err))
         raise
 
 
@@ -218,10 +218,13 @@ def prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index):
         trimmed_path = PathUtil.trim_ingress_path(ingress_path, prefix)
 
         # Calculate the MD5 checksum of the file payload
+        md5 = hashlib.md5()
         with open(ingress_path, "rb") as object_file:
-            md5_hash = hashlib.md5(object_file.read())
-            md5_digest = md5_hash.hexdigest()
-            base64_md5_digest = base64.b64encode(md5_hash.digest()).decode()
+            while chunk := object_file.read(4096):
+                md5.update(chunk)
+
+        md5_digest = md5.hexdigest()
+        base64_md5_digest = base64.b64encode(md5.digest()).decode()
 
         # Get the size and last modified time of the file
         file_size = os.stat(ingress_path).st_size
