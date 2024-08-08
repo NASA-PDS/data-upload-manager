@@ -15,6 +15,7 @@ import sched
 import time
 from datetime import datetime
 from datetime import timezone
+from http import HTTPStatus
 from itertools import chain
 from threading import Thread
 
@@ -298,7 +299,7 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
     elapsed_time = time.time() - start_time
 
     # Ingress request successful
-    if response.status_code == 200:
+    if response.status_code == HTTPStatus.OK:
         response_batch = response.json()
 
         logger.info("Batch %d : Ingress request completed in %.2f seconds", batch_index, elapsed_time)
@@ -338,7 +339,7 @@ def ingress_file_to_s3(ingress_response):
     response_result = int(ingress_response.get("result", -1))
     trimmed_path = ingress_response.get("trimmed_path")
 
-    if response_result == 200:
+    if response_result == HTTPStatus.OK:
         s3_ingress_url = ingress_response.get("s3_url")
 
         logger.info("%s : Ingesting to %s", trimmed_path, s3_ingress_url.split("?")[0])
@@ -363,10 +364,10 @@ def ingress_file_to_s3(ingress_response):
 
         # Update total number of bytes transferrred
         SUMMARY_TABLE["transferred"] += os.stat(ingress_path).st_size
-    elif response_result == 204:
+    elif response_result == HTTPStatus.NO_CONTENT:
         logger.info("%s : Skipping ingress, reason %s", trimmed_path, ingress_response.get("message"))
         SUMMARY_TABLE["skipped"].add(trimmed_path)
-    elif response_result == 404:
+    elif response_result == HTTPStatus.NOT_FOUND:
         logger.warning("%s : Ingress failed, reason: %s", trimmed_path, ingress_response.get("message"))
         SUMMARY_TABLE["failed"].add(trimmed_path)
     else:

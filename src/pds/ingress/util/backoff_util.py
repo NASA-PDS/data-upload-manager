@@ -7,6 +7,8 @@ Module containing functions related to utilization of the backoff module for
 automatic backoff/retry of HTTP requests.
 
 """
+from http import HTTPStatus
+
 import requests
 
 
@@ -21,7 +23,16 @@ def fatal_code(err: requests.exceptions.RequestException) -> bool:
     if err.response is not None:
         # HTTP codes indicating a transient error (including throttling) which
         # are worth retrying after a backoff
-        transient_codes = [408, 425, 429, 500, 502, 503, 504, 509]
+        transient_codes = [
+            HTTPStatus.REQUEST_TIMEOUT,
+            HTTPStatus.TOO_EARLY,
+            HTTPStatus.TOO_MANY_REQUESTS,
+            HTTPStatus.INTERNAL_SERVER_ERROR,
+            HTTPStatus.BAD_GATEWAY,
+            HTTPStatus.SERVICE_UNAVAILABLE,
+            HTTPStatus.GATEWAY_TIMEOUT,
+            509,  # Bandwidth Limit Exceeded (non-standard code used by AWS)
+        ]
 
         return err.response.status_code not in transient_codes
     else:

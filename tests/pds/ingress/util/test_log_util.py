@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json as json_module
 import unittest
+from http import HTTPStatus
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -114,7 +115,7 @@ class LogUtilTest(unittest.TestCase):
             self.assertEqual(headers["UserGroup"], NodeUtil.node_id_to_group_name("eng"))
 
             response = requests.Response()
-            response.status_code = 200
+            response.status_code = HTTPStatus.OK
 
             return response
 
@@ -135,21 +136,32 @@ class LogUtilTest(unittest.TestCase):
 
         # Set up some canned HTTP responses for the transient error codes we retry for
         response_408 = Response()
-        response_408.status_code = 408
+        response_408.status_code = HTTPStatus.REQUEST_TIMEOUT
         response_425 = Response()
-        response_425.status_code = 425
+        response_425.status_code = HTTPStatus.TOO_EARLY
         response_429 = Response()
-        response_429.status_code = 429
+        response_429.status_code = HTTPStatus.TOO_MANY_REQUESTS
         response_500 = Response()
-        response_500.status_code = 500
+        response_500.status_code = HTTPStatus.INTERNAL_SERVER_ERROR
         response_502 = Response()
-        response_502.status_code = 502
+        response_502.status_code = HTTPStatus.BAD_GATEWAY
         response_503 = Response()
-        response_503.status_code = 503
+        response_503.status_code = HTTPStatus.SERVICE_UNAVAILABLE
         response_504 = Response()
-        response_504.status_code = 504
+        response_504.status_code = HTTPStatus.GATEWAY_TIMEOUT
+        response_509 = Response()
+        response_509.status_code = 509  # Bandwidth Limit Exceeded (non-standard code used by AWS)
 
-        responses = [response_408, response_425, response_429, response_500, response_502, response_503, response_504]
+        responses = [
+            response_408,
+            response_425,
+            response_429,
+            response_500,
+            response_502,
+            response_503,
+            response_504,
+            response_509,
+        ]
 
         # Set up a Mock function for session.get which will cycle through all
         # transient error codes before finally returning success (200)
