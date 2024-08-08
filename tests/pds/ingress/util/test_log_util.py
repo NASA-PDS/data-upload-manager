@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 import json as json_module
 import unittest
+from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pds.ingress.util.log_util as log_util
 import requests
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.node_util import NodeUtil
+from requests import Response
 
 
 class LogUtilTest(unittest.TestCase):
@@ -118,3 +120,44 @@ class LogUtilTest(unittest.TestCase):
 
         with patch.object(log_util.requests, "post", requests_post_patch):
             log_util.CLOUDWATCH_HANDLER.flush()
+
+    def test_send_log_events_to_cloud_watch_w_backoff_retry(self):
+        """Test use of the backoff/retry decorator on send_log_events_to_cloud_watch"""
+        logger = log_util.get_logger("test_send_log_events_to_cloud_watch_w_backoff_retry")
+
+        logger.handlers.remove(log_util.CONSOLE_HANDLER)
+
+        logger.info("Test message")
+
+        # Set dummy Cognito authentication values on handler
+        log_util.CLOUDWATCH_HANDLER.bearer_token = "Bearer faketoken"
+        log_util.CLOUDWATCH_HANDLER.node_id = "eng"
+
+        # Set up some canned HTTP responses for the transient error codes we retry for
+        response_408 = Response()
+        response_408.status_code = 408
+        response_425 = Response()
+        response_425.status_code = 425
+        response_429 = Response()
+        response_429.status_code = 429
+        response_500 = Response()
+        response_500.status_code = 500
+        response_502 = Response()
+        response_502.status_code = 502
+        response_503 = Response()
+        response_503.status_code = 503
+        response_504 = Response()
+        response_504.status_code = 504
+
+        responses = [response_408, response_425, response_429, response_500, response_502, response_503, response_504]
+
+        # Set up a Mock function for session.get which will cycle through all
+        # transient error codes before finally returning success (200)
+        mock_requests_post = MagicMock(side_effect=responses)
+
+        with patch.object(log_util.requests, "post", mock_requests_post):
+            log_util.CLOUDWATCH_HANDLER.flush()
+
+        # Ensure we retired for each of the failed responses, plus
+        # the two "successful" post calls that send_log_events_to_cloud_watch makes
+        self.assertEqual(mock_requests_post.call_count, len(responses) + 1)
