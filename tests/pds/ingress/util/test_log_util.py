@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import json as json_module
-import logging
 import unittest
 from unittest.mock import patch
 
@@ -11,9 +10,14 @@ from pds.ingress.util.node_util import NodeUtil
 
 
 class LogUtilTest(unittest.TestCase):
+    def setUp(self):
+        if log_util.CLOUDWATCH_HANDLER:
+            log_util.CLOUDWATCH_HANDLER.bearer_token = None
+            log_util.CLOUDWATCH_HANDLER.node_id = None
+
     def test_setup_logging(self):
         """Tests for log_util.setup_logging()"""
-        logger = log_util.get_logger("test1")
+        logger = log_util.get_logger("test_setup_logging")
         config = ConfigUtil.get_config()
 
         logger = log_util.setup_logging(logger, config)
@@ -52,10 +56,7 @@ class LogUtilTest(unittest.TestCase):
 
     def test_send_log_events_to_cloud_watch(self):
         """Tests for CloudWatchHandler.send_log_events_to_cloud_watch()"""
-        logger = logging.getLogger(__name__)
-        config = ConfigUtil.get_config()
-
-        logger = log_util.setup_logging(logger, config)
+        logger = log_util.get_logger("test_send_log_events_to_cloud_watch")
 
         logger.handlers.remove(log_util.CONSOLE_HANDLER)
 
@@ -66,7 +67,7 @@ class LogUtilTest(unittest.TestCase):
         with self.assertLogs(level="WARNING") as cm:
             log_util.CLOUDWATCH_HANDLER.flush()
             self.assertIn(
-                "WARNING:root:Unable to submit to CloudWatch Logs, reason: "
+                "WARNING:pds.ingress.util.log_util:Unable to submit to CloudWatch Logs, reason: "
                 "Bearer token and/or Node ID was never set on CloudWatchHandler, "
                 "unable to communicate with API Gateway endpoint for CloudWatch Logs.",
                 cm.output,
@@ -78,6 +79,8 @@ class LogUtilTest(unittest.TestCase):
 
         def requests_post_patch(url, data=None, json=None, **kwargs):
             """Mock implementation for requests.post()"""
+            config = ConfigUtil.get_config()
+
             # Test that the API gateway URL was formatted as expected
             self.assertIn(config["API_GATEWAY"]["id"], url)
             self.assertIn(config["API_GATEWAY"]["region"], url)
@@ -96,7 +99,10 @@ class LogUtilTest(unittest.TestCase):
             # If log events were included, ensure test log message was captured
             if "logEvents" in payload:
                 self.assertEqual(len(payload["logEvents"]), 1)
-                self.assertEqual(payload["logEvents"][0]["message"], "INFO Test message")
+                self.assertEqual(
+                    payload["logEvents"][0]["message"],
+                    "INFO MainThread test_send_log_events_to_cloud_watch:test_send_log_events_to_cloud_watch Test message",
+                )
 
             # Ensure the authentication headers were set as expected
             headers = kwargs["headers"]
@@ -110,9 +116,5 @@ class LogUtilTest(unittest.TestCase):
 
             return response
 
-        try:
-            with patch.object(log_util.requests, "post", requests_post_patch):
-                log_util.CLOUDWATCH_HANDLER.flush()
-        finally:
-            log_util.CLOUDWATCH_HANDLER.bearer_token = None
-            log_util.CLOUDWATCH_HANDLER.node_id = None
+        with patch.object(log_util.requests, "post", requests_post_patch):
+            log_util.CLOUDWATCH_HANDLER.flush()
