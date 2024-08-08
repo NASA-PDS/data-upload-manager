@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2024-07-25)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2024-08-08)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v1.2.0...«unknown»)
 
@@ -8,9 +8,12 @@
 
 - As a user, I want to include the modification datetime in the the user-defined object metadata being sent in the upload payload [\#87](https://github.com/NASA-PDS/data-upload-manager/issues/87)
 - As a user, I want to include a MD5 checksum in the the user-defined object metadata being sent in the upload payload [\#50](https://github.com/NASA-PDS/data-upload-manager/issues/50)
+- Add argument to client script to follow symlinks [\#44](https://github.com/NASA-PDS/data-upload-manager/issues/44)
 
 **Defects:**
 
+- Backoff/Retry logic not firing for certain error codes [\#136](https://github.com/NASA-PDS/data-upload-manager/issues/136) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
+- DUM Client script does not respect configured logging level after a transfer failure/retry [\#135](https://github.com/NASA-PDS/data-upload-manager/issues/135) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 - DUM Lambda Service can return pre-signed S3 URL's to non-existing buckets [\#116](https://github.com/NASA-PDS/data-upload-manager/issues/116) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
 - Backoff/Retry logic masks errors from urllib3 exceptions [\#115](https://github.com/NASA-PDS/data-upload-manager/issues/115) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 - DUM Client does not properly sanitize double-quotes from INI config [\#110](https://github.com/NASA-PDS/data-upload-manager/issues/110) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
