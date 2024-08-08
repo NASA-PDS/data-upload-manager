@@ -12,8 +12,10 @@ import logging
 from datetime import datetime
 from logging.handlers import BufferingHandler
 
+import backoff
 import requests
 
+from .backoff_util import fatal_code
 from .config_util import ConfigUtil
 from .node_util import NodeUtil
 
@@ -272,7 +274,10 @@ class CloudWatchHandler(BufferingHandler):
             # CloudWatch Logs wants all records sorted by ascending timestamp
             log_events = list(sorted(log_events, key=lambda event: event["timestamp"]))
 
-            self.send_log_events_to_cloud_watch(log_events)
+            try:
+                self.send_log_events_to_cloud_watch(log_events)
+            except requests.exceptions.HTTPError as err:
+                raise RuntimeError(f"{str(err)} : {err.response.text}") from err
 
             self.buffer.clear()
         except Exception as err:
@@ -288,6 +293,14 @@ class CloudWatchHandler(BufferingHandler):
         finally:
             self.release()
 
+    @backoff.on_exception(
+        backoff.constant,
+        requests.exceptions.RequestException,
+        max_time=60,
+        giveup=fatal_code,
+        logger=__name__,
+        interval=5,
+    )
     def send_log_events_to_cloud_watch(self, log_events):
         """
         Bundles the provided log events into a JSON payload and submits it
@@ -337,11 +350,8 @@ class CloudWatchHandler(BufferingHandler):
             "x-amz-docs-region": api_gateway_region,
         }
 
-        try:
-            response = requests.post(api_gateway_url, data=json.dumps(payload), headers=headers)
-            response.raise_for_status()
-        except requests.exceptions.HTTPError as err:
-            raise RuntimeError(f"Failed to create CloudWatch Log Stream {log_stream_name}, reason: {str(err)}") from err
+        response = requests.post(api_gateway_url, data=json.dumps(payload), headers=headers)
+        response.raise_for_status()
 
         # Now submit logged content to the newly created log stream
         api_gateway_resource = "log"
@@ -358,8 +368,5 @@ class CloudWatchHandler(BufferingHandler):
             "x-amz-docs-region": api_gateway_region,
         }
 
-        try:
-            response = requests.post(api_gateway_url, data=json.dumps(payload), headers=headers)
-            response.raise_for_status()
-        except requests.exceptions.HTTPError as err:
-            raise RuntimeError(f"Submission to CloudWatch Logs failed, reason: {str(err)}") from err
+        response = requests.post(api_gateway_url, data=json.dumps(payload), headers=headers)
+        response.raise_for_status()
