@@ -15,6 +15,7 @@ import sched
 import time
 from datetime import datetime
 from datetime import timezone
+from http import HTTPStatus
 from itertools import chain
 from threading import Thread
 
@@ -26,6 +27,7 @@ from joblib import Parallel
 from more_itertools import chunked as batched
 from pds.ingress import __version__
 from pds.ingress.util.auth_util import AuthUtil
+from pds.ingress.util.backoff_util import fatal_code
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.log_util import get_log_level
 from pds.ingress.util.log_util import get_logger
@@ -50,24 +52,6 @@ SUMMARY_TABLE = {
     "end_time": None,
 }
 """Stores the information for use with the Summary report"""
-
-
-def fatal_code(err: requests.exceptions.RequestException) -> bool:
-    """Only retry for common transient errors"""
-    if err.response is not None:
-        return 400 <= err.response.status_code < 500
-    else:
-        # No response to interrogate, so default to no retry
-        return True
-
-
-def backoff_logger(details):
-    """Log details about the current backoff/retry"""
-    logger = get_logger(__name__)
-    logger.warning(
-        "Backing off %s function for %.1f seconds after %d tries.", details["target"], details["wait"], details["tries"]
-    )
-    logger.warning("Total time elapsed: %.1f seconds.", details["elapsed"])
 
 
 def perform_ingress(batched_ingress_paths, node_id, prefix, force_overwrite, api_gateway_config):
@@ -250,9 +234,9 @@ def prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index):
 @backoff.on_exception(
     backoff.constant,
     requests.exceptions.RequestException,
-    max_time=300,
+    max_time=60,
     giveup=fatal_code,
-    on_backoff=backoff_logger,
+    logger="request_batch_for_ingress",
     interval=15,
 )
 def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwrite, api_gateway_config):
@@ -315,7 +299,7 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
     elapsed_time = time.time() - start_time
 
     # Ingress request successful
-    if response.status_code == 200:
+    if response.status_code == HTTPStatus.OK:
         response_batch = response.json()
 
         logger.info("Batch %d : Ingress request completed in %.2f seconds", batch_index, elapsed_time)
@@ -328,9 +312,9 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
 @backoff.on_exception(
     backoff.constant,
     requests.exceptions.RequestException,
-    max_time=300,
+    max_time=60,
     giveup=fatal_code,
-    on_backoff=backoff_logger,
+    logger="ingress_file_to_s3",
     interval=15,
 )
 def ingress_file_to_s3(ingress_response):
@@ -355,7 +339,7 @@ def ingress_file_to_s3(ingress_response):
     response_result = int(ingress_response.get("result", -1))
     trimmed_path = ingress_response.get("trimmed_path")
 
-    if response_result == 200:
+    if response_result == HTTPStatus.OK:
         s3_ingress_url = ingress_response.get("s3_url")
 
         logger.info("%s : Ingesting to %s", trimmed_path, s3_ingress_url.split("?")[0])
@@ -380,10 +364,10 @@ def ingress_file_to_s3(ingress_response):
 
         # Update total number of bytes transferrred
         SUMMARY_TABLE["transferred"] += os.stat(ingress_path).st_size
-    elif response_result == 204:
+    elif response_result == HTTPStatus.NO_CONTENT:
         logger.info("%s : Skipping ingress, reason %s", trimmed_path, ingress_response.get("message"))
         SUMMARY_TABLE["skipped"].add(trimmed_path)
-    elif response_result == 404:
+    elif response_result == HTTPStatus.NOT_FOUND:
         logger.warning("%s : Ingress failed, reason: %s", trimmed_path, ingress_response.get("message"))
         SUMMARY_TABLE["failed"].add(trimmed_path)
     else:

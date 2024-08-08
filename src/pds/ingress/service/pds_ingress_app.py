@@ -11,6 +11,7 @@ import logging
 import os
 from datetime import datetime
 from datetime import timezone
+from http import HTTPStatus
 from os.path import join
 
 import boto3
@@ -375,7 +376,7 @@ def lambda_handler(event, context):
         if not bucket_exists(destination_bucket):
             result.append(
                 {
-                    "result": 404,
+                    "result": HTTPStatus.NOT_FOUND,
                     "local_url": trimmed_path,
                     "s3_url": None,
                     "message": f"Mapped bucket {destination_bucket} does not exist or has insufficient access permisisons",
@@ -399,7 +400,7 @@ def lambda_handler(event, context):
 
                 result.append(
                     {
-                        "result": 200,
+                        "result": HTTPStatus.OK,
                         "trimmed_path": trimmed_path,
                         "ingress_path": ingress_path,
                         "md5": md5_digest,
@@ -414,7 +415,12 @@ def lambda_handler(event, context):
                 )
 
                 result.append(
-                    {"result": 204, "trimmed_path": trimmed_path, "s3_url": None, "message": "File already exists"}
+                    {
+                        "result": HTTPStatus.NO_CONTENT,
+                        "trimmed_path": trimmed_path,
+                        "s3_url": None,
+                        "message": "File already exists",
+                    }
                 )
 
-    return {"statusCode": 200, "body": json.dumps(result)}
+    return {"statusCode": HTTPStatus.OK, "body": json.dumps(result)}

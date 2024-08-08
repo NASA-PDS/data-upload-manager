@@ -12,8 +12,10 @@ import logging
 from datetime import datetime
 from logging.handlers import BufferingHandler
 
+import backoff
 import requests
 
+from .backoff_util import fatal_code
 from .config_util import ConfigUtil
 from .node_util import NodeUtil
 
@@ -61,6 +63,32 @@ def get_logger(name, log_level=None):
     _logger.setLevel(logging.DEBUG)
 
     return setup_logging(_logger, ConfigUtil.get_config(), log_level)
+
+
+def get_console_only_logger(name, log_level=None):
+    """
+    Returns an instance of a "console only" logger, i.e. configured with the global
+    Console Handler, but not the CloudWatch Handler. This logger should be used
+    in places where CloudWatch logging cannot (such as within the CloudWatchHandler
+    class itself).
+
+    Parameters
+    ----------
+    name : str
+        Name of the module to get a logger for.
+    log_level : int, optional
+        The logging level to use. If not provided, the level will be determined
+        from the INI config.
+
+    Returns
+    -------
+    console_logger : logging.logger
+        The "console-only" logger instance.
+
+    """
+    console_logger = logging.getLogger(name)
+
+    return setup_console_log(console_logger, ConfigUtil.get_config(), log_level)
 
 
 def setup_logging(logger, config, log_level=None):
@@ -246,16 +274,33 @@ class CloudWatchHandler(BufferingHandler):
             # CloudWatch Logs wants all records sorted by ascending timestamp
             log_events = list(sorted(log_events, key=lambda event: event["timestamp"]))
 
-            self.send_log_events_to_cloud_watch(log_events)
+            try:
+                self.send_log_events_to_cloud_watch(log_events)
+            except requests.exceptions.HTTPError as err:
+                raise RuntimeError(f"{str(err)} : {err.response.text}") from err
 
             self.buffer.clear()
         except Exception as err:
-            # Use the root logger since the console logger singleton may have been
-            # closed by the time flush() is called
-            logging.warning("Unable to submit to CloudWatch Logs, reason: %s", str(err))
+            # Use a "console-only" logger since the console logger, since attempting
+            # to log to CloudWatch from within this class could cause infinite recursion
+            console_logger = get_console_only_logger(__name__)
+
+            # Check if the underlying StreamHandler has been closed already,
+            # since the logging module attempts to flush all handlers at exit
+            # whether they've been closed or not
+            if CONSOLE_HANDLER and not CONSOLE_HANDLER.stream.closed:
+                console_logger.warning("Unable to submit to CloudWatch Logs, reason: %s", str(err))
         finally:
             self.release()
 
+    @backoff.on_exception(
+        backoff.constant,
+        requests.exceptions.RequestException,
+        max_time=60,
+        giveup=fatal_code,
+        logger=__name__,
+        interval=5,
+    )
     def send_log_events_to_cloud_watch(self, log_events):
         """
         Bundles the provided log events into a JSON payload and submits it
@@ -305,11 +350,8 @@ class CloudWatchHandler(BufferingHandler):
             "x-amz-docs-region": api_gateway_region,
         }
 
-        try:
-            response = requests.post(api_gateway_url, data=json.dumps(payload), headers=headers)
-            response.raise_for_status()
-        except requests.exceptions.HTTPError as err:
-            raise RuntimeError(f"Failed to create CloudWatch Log Stream {log_stream_name}, reason: {str(err)}") from err
+        response = requests.post(api_gateway_url, data=json.dumps(payload), headers=headers)
+        response.raise_for_status()
 
         # Now submit logged content to the newly created log stream
         api_gateway_resource = "log"
@@ -326,8 +368,5 @@ class CloudWatchHandler(BufferingHandler):
             "x-amz-docs-region": api_gateway_region,
         }
 
-        try:
-            response = requests.post(api_gateway_url, data=json.dumps(payload), headers=headers)
-            response.raise_for_status()
-        except requests.exceptions.HTTPError as err:
-            raise RuntimeError(f"Submission to CloudWatch Logs failed, reason: {str(err)}") from err
+        response = requests.post(api_gateway_url, data=json.dumps(payload), headers=headers)
+        response.raise_for_status()

@@ -1,19 +1,26 @@
 #!/usr/bin/env python3
 import json as json_module
-import logging
 import unittest
+from http import HTTPStatus
+from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pds.ingress.util.log_util as log_util
 import requests
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.node_util import NodeUtil
+from requests import Response
 
 
 class LogUtilTest(unittest.TestCase):
+    def setUp(self):
+        if log_util.CLOUDWATCH_HANDLER:
+            log_util.CLOUDWATCH_HANDLER.bearer_token = None
+            log_util.CLOUDWATCH_HANDLER.node_id = None
+
     def test_setup_logging(self):
         """Tests for log_util.setup_logging()"""
-        logger = log_util.get_logger("test1")
+        logger = log_util.get_logger("test_setup_logging")
         config = ConfigUtil.get_config()
 
         logger = log_util.setup_logging(logger, config)
@@ -52,10 +59,7 @@ class LogUtilTest(unittest.TestCase):
 
     def test_send_log_events_to_cloud_watch(self):
         """Tests for CloudWatchHandler.send_log_events_to_cloud_watch()"""
-        logger = logging.getLogger(__name__)
-        config = ConfigUtil.get_config()
-
-        logger = log_util.setup_logging(logger, config)
+        logger = log_util.get_logger("test_send_log_events_to_cloud_watch")
 
         logger.handlers.remove(log_util.CONSOLE_HANDLER)
 
@@ -66,7 +70,7 @@ class LogUtilTest(unittest.TestCase):
         with self.assertLogs(level="WARNING") as cm:
             log_util.CLOUDWATCH_HANDLER.flush()
             self.assertIn(
-                "WARNING:root:Unable to submit to CloudWatch Logs, reason: "
+                "WARNING:pds.ingress.util.log_util:Unable to submit to CloudWatch Logs, reason: "
                 "Bearer token and/or Node ID was never set on CloudWatchHandler, "
                 "unable to communicate with API Gateway endpoint for CloudWatch Logs.",
                 cm.output,
@@ -78,6 +82,8 @@ class LogUtilTest(unittest.TestCase):
 
         def requests_post_patch(url, data=None, json=None, **kwargs):
             """Mock implementation for requests.post()"""
+            config = ConfigUtil.get_config()
+
             # Test that the API gateway URL was formatted as expected
             self.assertIn(config["API_GATEWAY"]["id"], url)
             self.assertIn(config["API_GATEWAY"]["region"], url)
@@ -96,7 +102,10 @@ class LogUtilTest(unittest.TestCase):
             # If log events were included, ensure test log message was captured
             if "logEvents" in payload:
                 self.assertEqual(len(payload["logEvents"]), 1)
-                self.assertEqual(payload["logEvents"][0]["message"], "INFO Test message")
+                self.assertEqual(
+                    payload["logEvents"][0]["message"],
+                    "INFO MainThread test_send_log_events_to_cloud_watch:test_send_log_events_to_cloud_watch Test message",
+                )
 
             # Ensure the authentication headers were set as expected
             headers = kwargs["headers"]
@@ -106,13 +115,61 @@ class LogUtilTest(unittest.TestCase):
             self.assertEqual(headers["UserGroup"], NodeUtil.node_id_to_group_name("eng"))
 
             response = requests.Response()
-            response.status_code = 200
+            response.status_code = HTTPStatus.OK
 
             return response
 
-        try:
-            with patch.object(log_util.requests, "post", requests_post_patch):
-                log_util.CLOUDWATCH_HANDLER.flush()
-        finally:
-            log_util.CLOUDWATCH_HANDLER.bearer_token = None
-            log_util.CLOUDWATCH_HANDLER.node_id = None
+        with patch.object(log_util.requests, "post", requests_post_patch):
+            log_util.CLOUDWATCH_HANDLER.flush()
+
+    def test_send_log_events_to_cloud_watch_w_backoff_retry(self):
+        """Test use of the backoff/retry decorator on send_log_events_to_cloud_watch"""
+        logger = log_util.get_logger("test_send_log_events_to_cloud_watch_w_backoff_retry")
+
+        logger.handlers.remove(log_util.CONSOLE_HANDLER)
+
+        logger.info("Test message")
+
+        # Set dummy Cognito authentication values on handler
+        log_util.CLOUDWATCH_HANDLER.bearer_token = "Bearer faketoken"
+        log_util.CLOUDWATCH_HANDLER.node_id = "eng"
+
+        # Set up some canned HTTP responses for the transient error codes we retry for
+        response_408 = Response()
+        response_408.status_code = HTTPStatus.REQUEST_TIMEOUT
+        response_425 = Response()
+        response_425.status_code = HTTPStatus.TOO_EARLY
+        response_429 = Response()
+        response_429.status_code = HTTPStatus.TOO_MANY_REQUESTS
+        response_500 = Response()
+        response_500.status_code = HTTPStatus.INTERNAL_SERVER_ERROR
+        response_502 = Response()
+        response_502.status_code = HTTPStatus.BAD_GATEWAY
+        response_503 = Response()
+        response_503.status_code = HTTPStatus.SERVICE_UNAVAILABLE
+        response_504 = Response()
+        response_504.status_code = HTTPStatus.GATEWAY_TIMEOUT
+        response_509 = Response()
+        response_509.status_code = 509  # Bandwidth Limit Exceeded (non-standard code used by AWS)
+
+        responses = [
+            response_408,
+            response_425,
+            response_429,
+            response_500,
+            response_502,
+            response_503,
+            response_504,
+            response_509,
+        ]
+
+        # Set up a Mock function for session.get which will cycle through all
+        # transient error codes before finally returning success (200)
+        mock_requests_post = MagicMock(side_effect=responses)
+
+        with patch.object(log_util.requests, "post", mock_requests_post):
+            log_util.CLOUDWATCH_HANDLER.flush()
+
+        # Ensure we retired for each of the failed responses, plus
+        # the two "successful" post calls that send_log_events_to_cloud_watch makes
+        self.assertEqual(mock_requests_post.call_count, len(responses) + 1)
