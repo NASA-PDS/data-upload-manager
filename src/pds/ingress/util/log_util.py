@@ -63,6 +63,32 @@ def get_logger(name, log_level=None):
     return setup_logging(_logger, ConfigUtil.get_config(), log_level)
 
 
+def get_console_only_logger(name, log_level=None):
+    """
+    Returns an instance of a "console only" logger, i.e. configured with the global
+    Console Handler, but not the CloudWatch Handler. This logger should be used
+    in places where CloudWatch logging cannot (such as within the CloudWatchHandler
+    class itself).
+
+    Parameters
+    ----------
+    name : str
+        Name of the module to get a logger for.
+    log_level : int, optional
+        The logging level to use. If not provided, the level will be determined
+        from the INI config.
+
+    Returns
+    -------
+    console_logger : logging.logger
+        The "console-only" logger instance.
+
+    """
+    console_logger = logging.getLogger(name)
+
+    return setup_console_log(console_logger, ConfigUtil.get_config(), log_level)
+
+
 def setup_logging(logger, config, log_level=None):
     """
     Sets up a logger object with handler objects for logging to the console,
@@ -250,9 +276,15 @@ class CloudWatchHandler(BufferingHandler):
 
             self.buffer.clear()
         except Exception as err:
-            # Use the root logger since the console logger singleton may have been
-            # closed by the time flush() is called
-            logging.warning("Unable to submit to CloudWatch Logs, reason: %s", str(err))
+            # Use a "console-only" logger since the console logger, since attempting
+            # to log to CloudWatch from within this class could cause infinite recursion
+            console_logger = get_console_only_logger(__name__)
+
+            # Check if the underlying StreamHandler has been closed already,
+            # since the logging module attempts to flush all handlers at exit
+            # whether they've been closed or not
+            if CONSOLE_HANDLER and not CONSOLE_HANDLER.stream.closed:
+                console_logger.warning("Unable to submit to CloudWatch Logs, reason: %s", str(err))
         finally:
             self.release()
 
