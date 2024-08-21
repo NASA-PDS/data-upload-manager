@@ -24,6 +24,7 @@ def fatal_code(err: requests.exceptions.RequestException) -> bool:
         # HTTP codes indicating a transient error (including throttling) which
         # are worth retrying after a backoff
         transient_codes = [
+            HTTPStatus.BAD_REQUEST,
             HTTPStatus.REQUEST_TIMEOUT,
             HTTPStatus.TOO_EARLY,
             HTTPStatus.TOO_MANY_REQUESTS,
