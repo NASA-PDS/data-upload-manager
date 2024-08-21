@@ -95,7 +95,9 @@ def perform_ingress(batched_ingress_paths, node_id, prefix, force_overwrite, api
         # Perform uploads to S3 in parallel based on number of files
         PARALLEL(delayed(ingress_file_to_s3)(ingress_response) for ingress_response in chain(*response_batches))
     except RequestException as err:
-        logger.error("Ingress failed, HTTP response text:\n%s", err.response.text)
+        logger.error(
+            "Ingress failed, HTTP code: %d\n HTTP response text:\n%s", err.response.status_code, err.response.text
+        )
         raise
     except Exception as err:
         logger.error("Ingress failed, reason: %s", str(err))
