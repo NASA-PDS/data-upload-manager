@@ -10,6 +10,7 @@ automatic backoff/retry of HTTP requests.
 from http import HTTPStatus
 
 import requests
+from requests.exceptions import SSLError
 
 
 def fatal_code(err: requests.exceptions.RequestException) -> bool:
@@ -36,6 +37,11 @@ def fatal_code(err: requests.exceptions.RequestException) -> bool:
         ]
 
         return err.response.status_code not in transient_codes
+    elif isinstance(err, SSLError):
+        # Some errors returned from AWS manifest as SSLErrors when AWS terminates
+        # the connection on their end. This makes it hard to tell if
+        # the error is recoverable, so just default to retrying
+        return False
     else:
         # No response to interrogate, so default to no retry
         return True
