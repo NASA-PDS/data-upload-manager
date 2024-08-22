@@ -377,7 +377,7 @@ def lambda_handler(event, context):
             result.append(
                 {
                     "result": HTTPStatus.NOT_FOUND,
-                    "local_url": trimmed_path,
+                    "trimmed_path": trimmed_path,
                     "s3_url": None,
                     "message": f"Mapped bucket {destination_bucket} does not exist or has insufficient access permisisons",
                 }
