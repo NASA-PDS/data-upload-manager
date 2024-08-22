@@ -240,7 +240,7 @@ def generate_presigned_upload_url(
     last_modified,
     client_version,
     service_version,
-    expires_in=1000,
+    expires_in=3000,
 ):
     """
     Generates a presigned URL suitable for uploading to the S3 location
@@ -263,9 +263,9 @@ def generate_presigned_upload_url(
         Version of the DUM client used to initiate the ingress reqeust.
     service_version : str
         Version of the DUM lambda service used to process this ingress request.
-    expires_in : int
+    expires_in : int, optional
         Expiration time of the generated URL in seconds. After this time,
-        the URL should no longer be valid.
+        the URL should no longer be valid. Defaults to 3000 seconds.
 
     Returns
     -------
