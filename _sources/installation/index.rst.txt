@@ -51,11 +51,11 @@ To do so::
 
     mkdir -p $HOME/.venv
     python3 -m venv $HOME/.venv/pds-data-upload-manager
-    source $HOME/.venv/pds-data-upload-manager/activate
+    source $HOME/.venv/pds-data-upload-manager/bin/activate
     pip3 install pds-data-upload-manager
 
 At this point, the PDS DUM client script is available under
-``$HOME/.venv/pds-doi-service/bin/pds-ingress-client``.
+``$HOME/.venv/pds-data-upload-manager/bin/pds-ingress-client``.
 
 Client Configuration
 ^^^^^^^^^^^^^^^^^^^^
