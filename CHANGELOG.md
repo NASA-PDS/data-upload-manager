@@ -1,8 +1,17 @@
 # Changelog
 
-## [release/2.0.0](https://github.com/NASA-PDS/data-upload-manager/tree/release/2.0.0) (2024-08-29)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2024-10-03)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v1.2.0...release/2.0.0)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.0.0...«unknown»)
+
+**Other closed issues:**
+
+- Deploy v2.0.0 DUM to Production [\#161](https://github.com/NASA-PDS/data-upload-manager/issues/161)
+- Investigate usage of localstack for use with DUM local integration testing [\#134](https://github.com/NASA-PDS/data-upload-manager/issues/134)
+
+## [v2.0.0](https://github.com/NASA-PDS/data-upload-manager/tree/v2.0.0) (2024-08-29)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v1.2.0...v2.0.0)
 
 **Requirements:**
 
