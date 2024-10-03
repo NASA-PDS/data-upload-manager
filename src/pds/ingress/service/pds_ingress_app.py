@@ -19,8 +19,6 @@ import botocore
 import yaml
 from botocore.exceptions import ClientError
 
-s3_client = boto3.client("s3")
-
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 LEVEL_MAP = {
@@ -35,6 +33,12 @@ logger = logging.getLogger()
 logger.setLevel(LEVEL_MAP.get(LOG_LEVEL.upper(), logging.INFO))
 
 logger.info("Loading function PDS Ingress Service")
+
+if os.getenv("ENDPOINT_URL", None):
+    logger.info("Using S3 endpoint URL from envvar: %s", os.environ["ENDPOINT_URL"])
+    s3_client = boto3.client("s3", endpoint_url=os.environ["ENDPOINT_URL"])
+else:
+    s3_client = boto3.client("s3")
 
 
 def get_dum_version():
