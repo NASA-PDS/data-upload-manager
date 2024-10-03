@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 import unittest
+from os.path import join
+from unittest.mock import patch
 
+import pds.ingress.util.config_util
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.config_util import SanitizingConfigParser
+from pkg_resources import resource_filename
 
 
 class ConfigUtilTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.test_dir = resource_filename(__name__, "")
+
     def test_default_config(self):
         """Test with the default configuration file"""
         parser = ConfigUtil.get_config()
@@ -40,6 +48,26 @@ class ConfigUtilTest(unittest.TestCase):
 
         self.assertFalse(parser["OTHER"]["log_group_name"].startswith('"'))
         self.assertFalse(parser["OTHER"]["log_group_name"].endswith('"'))
+
+    def mock_default_config_path(self):
+        return join(self.test_dir, "data", "mock.localstack.config.ini")
+
+    def test_is_localstack_context(self):
+        """Tests for the ConfigUtil.is_localstack_context() function"""
+        # Test with default config, which is not tailored for localstack
+        self.assertFalse(ConfigUtil.is_localstack_context())
+
+        # Reset cached config
+        pds.ingress.util.config_util.CONFIG = None
+
+        # Retest using the mock localstack config in place of the default
+        with patch.object(
+            pds.ingress.util.config_util.ConfigUtil, "default_config_path", self.mock_default_config_path
+        ):
+            self.assertTrue(ConfigUtil.is_localstack_context())
+
+        # Reset cached config
+        pds.ingress.util.config_util.CONFIG = None
 
 
 if __name__ == "__main__":
