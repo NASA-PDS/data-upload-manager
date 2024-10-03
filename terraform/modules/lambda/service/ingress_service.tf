@@ -87,6 +87,7 @@ resource "aws_lambda_function" "lambda_ingress_service" {
       LOG_LEVEL           = "INFO",
       VERSION_LOCATION    = "config",
       VERSION_FILE        = "VERSION.txt"
+      ENDPOINT_URL        = var.lambda_ingress_localstack_context ? "http://localhost.localstack.cloud:4566" : ""
     }
   }
 }

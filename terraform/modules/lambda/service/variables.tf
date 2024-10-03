@@ -9,6 +9,11 @@ variable "lambda_s3_bucket_name" {
   description = "Name of the S3 bucket to upload Lambda artifacts to"
 }
 
+variable "lambda_ingress_localstack_context" {
+    type        = bool
+    description = "Flag indicating whether the ingress service will execute in a localstack context or not"
+}
+
 variable "lambda_ingress_service_function_name" {
   type        = string
   default     = "nucleus-dum-ingress-service"
