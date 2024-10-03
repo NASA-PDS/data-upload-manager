@@ -31,6 +31,7 @@ exports.handler = async(event, _context, callback) => {
     } else {
         console.log("Token not valid! Does not start with Bearer.");
         callback("Unauthorized");
+        return;
     }
 
     // Use the aws-jwt-verify
@@ -62,6 +63,7 @@ exports.handler = async(event, _context, callback) => {
     } catch (error) {
         console.log(error);
         callback("Unauthorized");
+        return;
     }
 
     let groups = decoded['cognito:groups'];
