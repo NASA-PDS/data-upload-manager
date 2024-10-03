@@ -30,3 +30,8 @@ variable "lambda_authorizer_cognito_client_id" {
   type        = string
   description = "Cognito App Client ID to assign to the Lambda Authorizer as an environment variable"
 }
+
+variable "lambda_authorizer_localstack_context" {
+    type        = bool
+    description = "Flag indicating whether the authorizer will execute in a localstack context or not"
+}
