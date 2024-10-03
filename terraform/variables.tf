@@ -15,6 +15,11 @@ variable "credential_file" {
   description = "Path to an AWS credentials file on the local machine"
 }
 
+variable "venue" {
+    type        = string
+    description = "Name of the venue to be deployed to. Should be one of [dev,test,prod]"
+}
+
 variable "lambda_s3_bucket_name" {
   type        = string
   description = "Name of the S3 bucket to upload Lambda artifacts to"
@@ -50,6 +55,11 @@ variable "lambda_ingress_service_iam_role_arn" {
 variable "lambda_authorizer_iam_role_arn" {
   type        = string
   description = "IAM role ARN to allocate to the Lambda Authorizer function"
+}
+
+variable "localstack_context" {
+    type        = bool
+    description = "Flag indicating whether DUM is to be deployed to a Localstack instance"
 }
 
 variable "nucleus_dum_cognito_initial_users" {
