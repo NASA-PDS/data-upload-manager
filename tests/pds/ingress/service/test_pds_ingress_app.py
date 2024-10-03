@@ -4,8 +4,6 @@ import tempfile
 import unittest
 from datetime import datetime
 from datetime import timezone
-from os.path import abspath
-from os.path import join
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -29,9 +27,8 @@ class PDSIngressAppTest(unittest.TestCase):
 
     def setUp(self) -> None:
         # Set up environment variables to mock a default Lambda setup
-        os.environ["LAMBDA_TASK_ROOT"] = abspath(
-            join(self.test_dir, os.pardir, os.pardir, os.pardir, os.pardir, "src", "pds", "ingress", "service")
-        )
+        os.environ["LAMBDA_TASK_ROOT"] = self.test_dir
+
         os.environ["BUCKET_MAP_LOCATION"] = "config"
         os.environ["BUCKET_MAP_FILE"] = "bucket-map.yaml"
         os.environ["VERSION_LOCATION"] = "config"
@@ -55,7 +52,7 @@ class PDSIngressAppTest(unittest.TestCase):
         self.assertIn("NODES", bucket_map["MAP"])
         self.assertIn("SBN", bucket_map["MAP"]["NODES"])
         self.assertIn("default", bucket_map["MAP"]["NODES"]["SBN"])
-        self.assertEqual(bucket_map["MAP"]["NODES"]["SBN"]["default"], "nucleus-pds-public")
+        self.assertEqual(bucket_map["MAP"]["NODES"]["SBN"]["default"], "pds-sbn-staging-test")
 
     def test_custom_bucket_map_from_file(self):
         """Test parsing of a non-default bucket map bundled with the Lambda function"""
@@ -172,7 +169,7 @@ class PDSIngressAppTest(unittest.TestCase):
         self.assertIn("s3_url", body[0])
         s3_url = body[0]["s3_url"]
 
-        expected_url = "https://nucleus-pds-protected.s3.amazonaws.com/sbn/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"
+        expected_url = "https://pds-sbn-staging-test.s3.amazonaws.com/sbn/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"
         self.assertTrue(s3_url.startswith(expected_url))
 
         test_event = {
@@ -208,7 +205,7 @@ class PDSIngressAppTest(unittest.TestCase):
         s3_url = body[0]["s3_url"]
 
         expected_url = (
-            "https://nucleus-pds-public.s3.amazonaws.com/sbn/some.other.survey/bundle.some.other.survey_v1.0.xml"
+            "https://pds-sbn-staging-test.s3.amazonaws.com/sbn/some.other.survey/bundle.some.other.survey_v1.0.xml"
         )
 
         self.assertTrue(s3_url.startswith(expected_url))
