@@ -262,6 +262,10 @@ class CloudWatchHandler(BufferingHandler):
         """
         self.acquire()
 
+        # Use a "console-only" logger since the console logger, since attempting
+        # to log to CloudWatch from within this class could cause infinite recursion
+        console_logger = get_console_only_logger(__name__)
+
         try:
             log_events = [
                 {
@@ -275,16 +279,17 @@ class CloudWatchHandler(BufferingHandler):
             log_events = list(sorted(log_events, key=lambda event: event["timestamp"]))
 
             try:
-                self.send_log_events_to_cloud_watch(log_events)
+                if not ConfigUtil.is_localstack_context():
+                    self.send_log_events_to_cloud_watch(log_events)
+                else:
+                    console_logger.warning(
+                        "Localstack context detected, skipping submission of logs to CloudWatch since it is not yet supported"
+                    )
             except requests.exceptions.HTTPError as err:
                 raise RuntimeError(f"{str(err)} : {err.response.text}") from err
 
             self.buffer.clear()
         except Exception as err:
-            # Use a "console-only" logger since the console logger, since attempting
-            # to log to CloudWatch from within this class could cause infinite recursion
-            console_logger = get_console_only_logger(__name__)
-
             # Check if the underlying StreamHandler has been closed already,
             # since the logging module attempts to flush all handlers at exit
             # whether they've been closed or not

@@ -93,3 +93,24 @@ class ConfigUtil:
         CONFIG = parser
 
         return CONFIG
+
+    @staticmethod
+    def is_localstack_context():
+        """
+        Examines the DUM client config to determine if the target endpoint is
+        a localstack instance or not.
+
+        Returns
+        -------
+        True if the config indicates that the DUM client will communicate with localstack,
+        False otherwise.
+
+        """
+        config = ConfigUtil.get_config()
+
+        # If either region is set to localhost for the API Gateway and Cognito
+        # configurations, then assume we're targeting localstack
+        return any(
+            region == "localhost"
+            for region in [config["API_GATEWAY"]["region"].lower(), config["COGNITO"]["region"].lower()]
+        )

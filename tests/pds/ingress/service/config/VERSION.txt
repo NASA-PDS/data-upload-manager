@@ -1,0 +1,1 @@
+../../../../../src/pds/ingress/service/config/VERSION.txt

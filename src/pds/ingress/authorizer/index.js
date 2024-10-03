@@ -31,6 +31,7 @@ exports.handler = async(event, _context, callback) => {
     } else {
         console.log("Token not valid! Does not start with Bearer.");
         callback("Unauthorized");
+        return;
     }
 
     // Use the aws-jwt-verify
@@ -43,14 +44,23 @@ exports.handler = async(event, _context, callback) => {
         clientId: process.env.COGNITO_CLIENT_ID_LIST.split(',').map(item=>item.trim()),
     });
 
-    // Conduct verification
-    try {
-        const payload = await verifier.verify(accessToken);
-        console.log("Token is valid. Payload:", payload);
-    } catch (error) {
-        console.log("Token not valid!");
-        console.log(error);
-        callback("Unauthorized");
+    // Conduct verification (skip for localstack installations)
+    // TODO: the next release of aws-jwt-verify should support a verify object that
+    //       can define a different "issuer" endpoint, at which point this
+    //       check should not be necessary
+    if(!(process.env.LOCALSTACK_CONTEXT == "true"))
+    {
+        try {
+            const payload = await verifier.verify(accessToken);
+            console.log("Token is valid. Payload:", payload);
+        } catch (error) {
+            console.log("Token not valid!");
+            console.log(error);
+            callback("Unauthorized");
+            return;
+        }
+    } else {
+        console.log("Localstack context is enabled, skipping aws-jwt-verify usage")
     }
 
     // Check user groups
@@ -62,6 +72,7 @@ exports.handler = async(event, _context, callback) => {
     } catch (error) {
         console.log(error);
         callback("Unauthorized");
+        return;
     }
 
     let groups = decoded['cognito:groups'];

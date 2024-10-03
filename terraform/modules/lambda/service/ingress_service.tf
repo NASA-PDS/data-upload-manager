@@ -1,10 +1,19 @@
 # Terraform module for the Data Upload Manager (DUM) Lambda Ingress Service
 
+# Instantiate bucket-map.yaml based on the selected venue
+resource "local_file" "bucket_map" {
+    content  = templatefile("${path.root}/../src/pds/ingress/service/config/bucket-map.yaml.tmpl", { venue = var.venue })
+    filename = "${path.root}/../src/pds/ingress/service/config/bucket-map.yaml"
+}
+
 # Zip the lambda function contents
 data "archive_file" "lambda_ingress_service" {
   type        = "zip"
   source_dir  = "${path.root}/../src/pds/ingress/service"
   output_path = "${path.module}/files/dum-lambda-service.zip"
+  excludes    = ["${path.root}/../src/pds/ingress/service/config/bucket-map.yaml.tmpl"]
+
+  depends_on = [local_file.bucket_map]
 }
 
 # Deploy the zip to S3
@@ -51,7 +60,7 @@ resource "aws_lambda_layer_version" "lambda_ingress_service_pyyaml_layer" {
   s3_bucket           = aws_s3_bucket.lambda_bucket.id
   s3_key              = aws_s3_object.lambda_ingress_service_pyyaml_layer.key
   layer_name          = "PyYAML"
-  compatible_runtimes = ["python3.6","python3.7","python3.8","python3.9"]
+  compatible_runtimes = ["python3.8","python3.9"]
 }
 
 # Create the Ingress Service Lambda function using the zip uploaded to S3
@@ -78,6 +87,7 @@ resource "aws_lambda_function" "lambda_ingress_service" {
       LOG_LEVEL           = "INFO",
       VERSION_LOCATION    = "config",
       VERSION_FILE        = "VERSION.txt"
+      ENDPOINT_URL        = var.lambda_ingress_localstack_context ? "http://localhost.localstack.cloud:4566" : ""
     }
   }
 }
@@ -86,4 +96,10 @@ resource "aws_cloudwatch_log_group" "lambda_ingress_service" {
   name = "/aws/lambda/${aws_lambda_function.lambda_ingress_service.function_name}"
 
   retention_in_days = 30
+}
+
+# Create the default staging buckets referenced by the bucket-map
+resource "aws_s3_bucket" "staging_buckets" {
+    count      = length(var.lambda_ingress_service_default_buckets)
+    bucket     = "${var.lambda_ingress_service_default_buckets[count.index].name}-${var.venue}"
 }
