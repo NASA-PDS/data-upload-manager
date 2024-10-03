@@ -9,6 +9,7 @@ Ingress Service Lambda.
 """
 import boto3  # type: ignore
 
+from .config_util import ConfigUtil
 from .log_util import get_logger
 
 
@@ -44,7 +45,10 @@ class AuthUtil:
         """
         logger = get_logger(__name__)
 
-        client = boto3.client("cognito-idp", region_name=cognito_config["region"])
+        if ConfigUtil.is_localstack_context():
+            client = boto3.client("cognito-idp", endpoint_url="http://localhost.localstack.cloud:4566")
+        else:
+            client = boto3.client("cognito-idp", region_name=cognito_config["region"])
 
         auth_params = {"USERNAME": cognito_config["username"], "PASSWORD": cognito_config["password"]}
 
