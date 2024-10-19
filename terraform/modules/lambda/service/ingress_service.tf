@@ -90,6 +90,9 @@ resource "aws_lambda_function" "lambda_ingress_service" {
       ENDPOINT_URL        = var.lambda_ingress_localstack_context ? "http://localhost.localstack.cloud:4566" : ""
     }
   }
+
+  # Timeout value set to match current upper limit of API Gateway integration response timeout
+  timeout = 60
 }
 
 resource "aws_cloudwatch_log_group" "lambda_ingress_service" {
