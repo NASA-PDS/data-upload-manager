@@ -44,17 +44,24 @@ PARALLEL = Parallel(require="sharedmem")
 REFRESH_SCHEDULER = sched.scheduler(time.time, time.sleep)
 """Scheduler object used to periodically refresh the Cognito authentication token"""
 
-SUMMARY_TABLE = {
-    "uploaded": defaultdict(set),
-    "skipped": defaultdict(set),
-    "failed": defaultdict(set),
-    "transferred": 0,
-    "start_time": time.time(),
-    "end_time": None,
-    "batch_size": 0,
-    "num_batches": 0,
-}
+SUMMARY_TABLE = dict()
 """Stores the information for use with the Summary report"""
+
+
+def initialize_summary_table():
+    """Initialzes the global summary table to its default state."""
+    global SUMMARY_TABLE
+
+    SUMMARY_TABLE = {
+        "uploaded": defaultdict(set),
+        "skipped": defaultdict(set),
+        "failed": defaultdict(set),
+        "transferred": 0,
+        "start_time": time.time(),
+        "end_time": None,
+        "batch_size": 0,
+        "num_batches": 0,
+    }
 
 
 def perform_ingress(batched_ingress_paths, node_id, prefix, force_overwrite, api_gateway_config):
@@ -638,6 +645,8 @@ def main():
     logger.info("Request (%d files) split into %d batches", len(resolved_ingress_paths), len(batched_ingress_paths))
 
     if not args.dry_run:
+        initialize_summary_table()
+
         PARALLEL.n_jobs = args.num_threads
 
         cognito_config = config["COGNITO"]
