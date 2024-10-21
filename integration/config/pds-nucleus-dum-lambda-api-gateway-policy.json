@@ -1,0 +1,110 @@
+{
+    "Statement": [
+        {
+            "Action": [
+                "logs:PutLogEvents",
+                "logs:DescribeLogStreams",
+                "logs:CreateLogStream",
+                "logs:CreateLogGroup"
+            ],
+            "Effect": "Allow",
+            "Resource": "*",
+            "Sid": ""
+        },
+        {
+            "Action": "dynamodb:ListTables",
+            "Effect": "Allow",
+            "Resource": "*",
+            "Sid": ""
+        },
+        {
+            "Action": [
+                "s3:PutObject",
+                "s3:PutObjectTagging",
+                "s3:PutObjectVersion",
+                "s3:PutObjectVersionTagging",
+                "s3:ListMultipartUploadParts",
+                "s3:GetObject*",
+                "s3:DeleteObjectVersion",
+                "s3:DeleteObject",
+                "s3:ListBucket"
+            ],
+            "Effect": "Allow",
+            "Resource": [
+                "arn:aws:s3:::pds-prod-nucleus-dum",
+                "arn:aws:s3:::pds-prod-nucleus-dum/*",
+                "arn:aws:s3:::pds-eng-staging-prod",
+                "arn:aws:s3:::pds-eng-staging-prod/*",
+                "arn:aws:s3:::pds-geo-staging-prod",
+                "arn:aws:s3:::pds-geo-staging-prod/*",
+                "arn:aws:s3:::pds-img-staging-prod",
+                "arn:aws:s3:::pds-img-staging-prod/*",
+                "arn:aws:s3:::pds-naif-staging-prod",
+                "arn:aws:s3:::pds-naif-staging-prod/*",
+                "arn:aws:s3:::pds-ppi-staging-prod",
+                "arn:aws:s3:::pds-ppi-staging-prod/*",
+                "arn:aws:s3:::pds-rms-staging-prod",
+                "arn:aws:s3:::pds-rms-staging-prod/*",
+                "arn:aws:s3:::pds-rs-staging-prod",
+                "arn:aws:s3:::pds-rs-staging-prod/*",
+                "arn:aws:s3:::pds-sbn-staging-prod",
+                "arn:aws:s3:::pds-sbn-staging-prod/*"
+            ],
+            "Sid": ""
+        },
+        {
+            "Action": "s3:ListAllMyBuckets",
+            "Effect": "Allow",
+            "Resource": "*",
+            "Sid": ""
+        },
+        {
+            "Action": [
+                "sns:publish",
+                "sns:Unsubscribe",
+                "sns:Subscribe",
+                "sns:List*"
+            ],
+            "Effect": "Allow",
+            "Resource": "*",
+            "Sid": ""
+        },
+        {
+            "Action": [
+                "cloudwatch:List*",
+                "cloudwatch:Get*",
+                "cloudwatch:Describe*"
+            ],
+            "Effect": "Allow",
+            "Resource": "*",
+            "Sid": ""
+        },
+        {
+            "Action": "apigateway:GET",
+            "Effect": "Allow",
+            "Resource": "arn:aws:apigateway:us-west-2::/restapis/*/stages",
+            "Sid": ""
+        },
+        {
+            "Action": [
+                "states:GetExecutionHistory",
+                "states:DescribeStateMachine",
+                "states:DescribeExecution"
+            ],
+            "Effect": "Allow",
+            "Resource": "*",
+            "Sid": ""
+        },
+        {
+            "Action": [
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DeleteNetworkInterface",
+                "ec2:CreateNetworkInterface"
+            ],
+            "Effect": "Allow",
+            "Resource": "*",
+            "Sid": ""
+        }
+    ],
+    "Version": "2012-10-17"
+}

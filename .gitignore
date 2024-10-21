@@ -31,6 +31,7 @@
 # Items for Git to ignore
 
 # Package specific
+integration/config/localstack.ingress.config.ini
 src/pds/ingress/service/config/bucket-map.yaml
 src/pds/ingress/authorizer/node_modules
 src/pds/ingress/authorizer/*.zip

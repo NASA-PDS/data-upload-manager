@@ -608,9 +608,14 @@ def setup_argparser():
     return parser
 
 
-def main():
+def main(args):
     """
     Main entry point for the pds-ingress-client script.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        The parsed command-line arguments.
 
     Raises
     ------
@@ -620,10 +625,6 @@ def main():
 
     """
     global BEARER_TOKEN
-
-    parser = setup_argparser()
-
-    args = parser.parse_args()
 
     config = ConfigUtil.get_config(args.config_path)
 
@@ -698,4 +699,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = setup_argparser()
+    args = parser.parse_args()
+    main(args)

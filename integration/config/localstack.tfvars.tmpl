@@ -1,0 +1,26 @@
+# Terraform override variables for use with the localstack AWS environment
+localstack_context = true
+venue = "test"
+
+profile         = "default"
+credential_file = "/Users/__USERNAME__/.aws/credentials"
+
+lambda_s3_bucket_name = "pds-nucleus-dum-lambda"
+
+api_gateway_policy_source_vpc = "vpc-1234567890987654321"  # pragma: allowlist secret
+api_gateway_endpoint_type     = "REGIONAL"
+
+cloudwatch_iam_role_name = "pds-nucleus-dum-lambda-api-gateway"
+
+api_gateway_lambda_role_arn         = "arn:aws:iam::000000000000:role/pds-nucleus-dum-lambda-api-gateway"  # pragma: allowlist secret
+lambda_ingress_service_iam_role_arn = "arn:aws:iam::000000000000:role/pds-nucleus-dum-lambda-ingress"  # pragma: allowlist secret
+lambda_authorizer_iam_role_arn      = "arn:aws:iam::000000000000:role/pds-nucleus-dum-lambda-authorizer"  # pragma: allowlist secret
+
+nucleus_dum_cognito_initial_users = [
+  {
+    "username": "__USERNAME__",
+    "password": "@Pa55w0rd@",  # pragma: allowlist secret
+    "group": "PDS_ENG_USERS"
+    "email": "pds-user@jpl.nasa.gov"  # pragma: allowlist secret
+  }
+]
