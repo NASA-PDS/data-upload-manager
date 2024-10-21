@@ -8,7 +8,6 @@ Client side script used to perform ingress request to the DUM service in AWS.
 """
 import argparse
 import base64
-import hashlib
 import json
 import os
 import sched
@@ -30,6 +29,7 @@ from pds.ingress import __version__
 from pds.ingress.util.auth_util import AuthUtil
 from pds.ingress.util.backoff_util import fatal_code
 from pds.ingress.util.config_util import ConfigUtil
+from pds.ingress.util.hash_util import md5_for_path
 from pds.ingress.util.log_util import get_log_level
 from pds.ingress.util.log_util import get_logger
 from pds.ingress.util.node_util import NodeUtil
@@ -248,10 +248,7 @@ def prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index):
         trimmed_path = PathUtil.trim_ingress_path(ingress_path, prefix)
 
         # Calculate the MD5 checksum of the file payload
-        md5 = hashlib.md5()
-        with open(ingress_path, "rb") as object_file:
-            while chunk := object_file.read(4096):
-                md5.update(chunk)
+        md5 = md5_for_path(ingress_path)
 
         md5_digest = md5.hexdigest()
         base64_md5_digest = base64.b64encode(md5.digest()).decode()
