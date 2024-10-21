@@ -282,9 +282,10 @@ class CloudWatchHandler(BufferingHandler):
                 if not ConfigUtil.is_localstack_context():
                     self.send_log_events_to_cloud_watch(log_events)
                 else:
-                    console_logger.warning(
-                        "Localstack context detected, skipping submission of logs to CloudWatch since it is not yet supported"
-                    )
+                    if CONSOLE_HANDLER and not CONSOLE_HANDLER.stream.closed:
+                        console_logger.warning(
+                            "Localstack context detected, skipping submission of logs to CloudWatch since it is not yet supported"
+                        )
             except requests.exceptions.HTTPError as err:
                 raise RuntimeError(f"{str(err)} : {err.response.text}") from err
 
