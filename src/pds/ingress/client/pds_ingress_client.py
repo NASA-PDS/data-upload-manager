@@ -8,7 +8,6 @@ Client side script used to perform ingress request to the DUM service in AWS.
 """
 import argparse
 import base64
-import hashlib
 import json
 import os
 import sched
@@ -30,6 +29,7 @@ from pds.ingress import __version__
 from pds.ingress.util.auth_util import AuthUtil
 from pds.ingress.util.backoff_util import fatal_code
 from pds.ingress.util.config_util import ConfigUtil
+from pds.ingress.util.hash_util import md5_for_path
 from pds.ingress.util.log_util import get_log_level
 from pds.ingress.util.log_util import get_logger
 from pds.ingress.util.node_util import NodeUtil
@@ -44,17 +44,24 @@ PARALLEL = Parallel(require="sharedmem")
 REFRESH_SCHEDULER = sched.scheduler(time.time, time.sleep)
 """Scheduler object used to periodically refresh the Cognito authentication token"""
 
-SUMMARY_TABLE = {
-    "uploaded": defaultdict(set),
-    "skipped": defaultdict(set),
-    "failed": defaultdict(set),
-    "transferred": 0,
-    "start_time": time.time(),
-    "end_time": None,
-    "batch_size": 0,
-    "num_batches": 0,
-}
+SUMMARY_TABLE = dict()
 """Stores the information for use with the Summary report"""
+
+
+def initialize_summary_table():
+    """Initialzes the global summary table to its default state."""
+    global SUMMARY_TABLE
+
+    SUMMARY_TABLE = {
+        "uploaded": defaultdict(set),
+        "skipped": defaultdict(set),
+        "failed": defaultdict(set),
+        "transferred": 0,
+        "start_time": time.time(),
+        "end_time": None,
+        "batch_size": 0,
+        "num_batches": 0,
+    }
 
 
 def perform_ingress(batched_ingress_paths, node_id, prefix, force_overwrite, api_gateway_config):
@@ -248,10 +255,7 @@ def prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index):
         trimmed_path = PathUtil.trim_ingress_path(ingress_path, prefix)
 
         # Calculate the MD5 checksum of the file payload
-        md5 = hashlib.md5()
-        with open(ingress_path, "rb") as object_file:
-            while chunk := object_file.read(4096):
-                md5.update(chunk)
+        md5 = md5_for_path(ingress_path)
 
         md5_digest = md5.hexdigest()
         base64_md5_digest = base64.b64encode(md5.digest()).decode()
@@ -604,9 +608,14 @@ def setup_argparser():
     return parser
 
 
-def main():
+def main(args):
     """
     Main entry point for the pds-ingress-client script.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        The parsed command-line arguments.
 
     Raises
     ------
@@ -616,10 +625,6 @@ def main():
 
     """
     global BEARER_TOKEN
-
-    parser = setup_argparser()
-
-    args = parser.parse_args()
 
     config = ConfigUtil.get_config(args.config_path)
 
@@ -641,6 +646,8 @@ def main():
     logger.info("Request (%d files) split into %d batches", len(resolved_ingress_paths), len(batched_ingress_paths))
 
     if not args.dry_run:
+        initialize_summary_table()
+
         PARALLEL.n_jobs = args.num_threads
 
         cognito_config = config["COGNITO"]
@@ -692,4 +699,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = setup_argparser()
+    args = parser.parse_args()
+    main(args)

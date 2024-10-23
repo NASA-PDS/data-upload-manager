@@ -1,0 +1,17 @@
+{
+    "Statement": [
+        {
+            "Action": [
+                "s3:ListAllMyBuckets",
+                "logs:PutLogEvents",
+                "logs:DescribeLogStreams",
+                "logs:CreateLogStream",
+                "logs:CreateLogGroup"
+            ],
+            "Effect": "Allow",
+            "Resource": "*",
+            "Sid": ""
+        }
+    ],
+    "Version": "2012-10-17"
+}

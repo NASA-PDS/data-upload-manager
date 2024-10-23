@@ -1,0 +1,22 @@
+# Configuration file for the PDS Ingress Client script to be used with localstack deployments
+[AWS]
+profile = default
+
+[API_GATEWAY]
+url_template = https://{id}.execute-api.{region}.localstack.cloud:4566/{stage}/{resource}
+id           = __API_GATEWAY_ID__
+region       = localhost
+stage        = test
+resource     = request
+
+[COGNITO]
+client_id    = __COGNITO_CLIENT_ID__
+username     = __USERNAME__
+password     = @Pa55w0rd@
+region       = localhost
+
+[OTHER]
+log_level = INFO
+log_format = %(levelname)s %(threadName)s %(name)s:%(funcName)s %(message)s
+log_group_name = /pds/nucleus/dum/client-log-group
+batch_size = 25
