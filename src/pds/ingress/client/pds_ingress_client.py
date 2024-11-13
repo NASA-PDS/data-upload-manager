@@ -634,7 +634,9 @@ def main(args):
 
     # Derive the full list of ingress paths based on the set of paths requested
     # by the user
-    resolved_ingress_paths = PathUtil.resolve_ingress_paths(args.ingress_paths)
+    logger.info("Determining paths for ingress...")
+    with PathUtil.init_path_progress_bar(args.ingress_paths) as pbar:
+        resolved_ingress_paths = PathUtil.resolve_ingress_paths(args.ingress_paths, pbar)
 
     node_id = args.node
 
