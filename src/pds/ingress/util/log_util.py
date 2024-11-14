@@ -212,7 +212,7 @@ class CloudWatchHandler(BufferingHandler):
 
     """
 
-    def __init__(self, log_group_name, api_gateway_config, capacity=1024):
+    def __init__(self, log_group_name, api_gateway_config, capacity=512):
         super().__init__(capacity)
 
         self.log_group_name = log_group_name
