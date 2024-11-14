@@ -6,7 +6,11 @@ path_util.py
 Module containing functions for working with local file system paths.
 
 """
+import logging
 import os
+
+from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 from .log_util import get_logger
 
@@ -15,7 +19,21 @@ class PathUtil:
     """Provides methods for working with local file system paths."""
 
     @staticmethod
-    def resolve_ingress_paths(user_paths, resolved_paths=None):
+    def init_path_progress_bar(user_paths):
+        """Initializes and returns tqdm progress bar based on the number of files to be resolved for ingress"""
+        total_files = 0
+
+        for user_path in user_paths:
+            abs_user_path = os.path.abspath(user_path)
+            for _, _, files in os.walk(abs_user_path):
+                total_files += len(files)
+
+        pbar = tqdm(total=total_files, position=0, leave=True, desc="Resolving ingress paths")
+
+        return pbar
+
+    @staticmethod
+    def resolve_ingress_paths(user_paths, pbar, resolved_paths=None):
         """
         Iterates over the list of user-provided paths to derive the final
         set of file paths to request ingress for.
@@ -36,7 +54,8 @@ class PathUtil:
             paths.
 
         """
-        logger = get_logger(__name__)
+        # Use a vanilla logger here for use with the tqdm redirection
+        logger = logging.getLogger(__name__)
 
         # Initialize the list of resolved paths if necessary
         resolved_paths = resolved_paths or list()
@@ -45,15 +64,15 @@ class PathUtil:
             abs_user_path = os.path.abspath(user_path)
 
             if not os.path.exists(abs_user_path):
-                logger.warning("Encountered path (%s) that does not actually exist, skipping...", abs_user_path)
-                continue
+                pbar.update()
+                with logging_redirect_tqdm():
+                    logger.warning("Encountered path (%s) that does not actually exist, skipping...", abs_user_path)
+                    continue
 
             if os.path.isfile(abs_user_path):
-                logger.debug("Resolved path %s", abs_user_path)
-
                 resolved_paths.append(abs_user_path)
+                pbar.update()
             elif os.path.isdir(abs_user_path):
-                logger.debug("Resolving directory %s", abs_user_path)
                 for grouping in os.walk(abs_user_path, topdown=True, followlinks=True):
                     dirpath, _, filenames = grouping
 
@@ -64,9 +83,13 @@ class PathUtil:
                         for filename in filter(lambda name: not name.startswith("."), filenames)
                     ]
 
-                    resolved_paths = PathUtil.resolve_ingress_paths(product_paths, resolved_paths)
+                    resolved_paths = PathUtil.resolve_ingress_paths(product_paths, pbar, resolved_paths)
             else:
-                logger.warning("Encountered path (%s) that is neither a file nor directory, skipping...", abs_user_path)
+                with logging_redirect_tqdm():
+                    logger.warning(
+                        "Encountered path (%s) that is neither a file nor directory, skipping...", abs_user_path
+                    )
+                pbar.update()
 
         return resolved_paths
 
