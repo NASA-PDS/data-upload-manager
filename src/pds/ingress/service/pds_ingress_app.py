@@ -6,6 +6,7 @@ pds_ingress_app.py
 Lambda function which acts as the PDS Ingress Service, mapping local file paths
 to their destinations in S3.
 """
+import base64
 import json
 import logging
 import os
@@ -356,9 +357,11 @@ def lambda_handler(event, context):
         ingress_path = ingress_request.get("ingress_path")
         trimmed_path = ingress_request.get("trimmed_path")
         md5_digest = ingress_request.get("md5")
-        base64_md5_digest = ingress_request.get("base64_md5")
         file_size = ingress_request.get("size")
         last_modifed = ingress_request.get("last_modified")
+
+        # Convert MD5 from hex to base64, since this is how AWS represents it
+        base64_md5_digest = base64.b64encode(bytes.fromhex(md5_digest)).decode()
 
         if not all(field is not None for field in (ingress_path, trimmed_path, md5_digest, file_size, last_modifed)):
             logger.error("One or more missing fields in request index %d", request_index)
