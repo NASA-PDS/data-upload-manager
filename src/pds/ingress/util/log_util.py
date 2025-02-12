@@ -9,6 +9,8 @@ with the ingress client.
 """
 import json
 import logging
+import sys
+import tempfile
 from datetime import datetime
 from logging.handlers import BufferingHandler
 
@@ -24,11 +26,17 @@ MILLI_PER_SEC = 1000
 LOG_LEVELS = {"warn": logging.WARNING, "warning": logging.WARNING, "info": logging.INFO, "debug": logging.DEBUG}
 """Constant to help evaluate what level to do logging at."""
 
+FILE_HANDLER = None
+"""Handle to the StreamHandler singleton used to log to a file on disk"""
+
 CONSOLE_HANDLER = None
-"""Handle to the StreamHandler singleton to be allocated to all logger objects"""
+"""Handle to the StreamHandler singleton used to log to the console (stdout)"""
 
 CLOUDWATCH_HANDLER = None
 """Handle to the CloudWatchHandler singleton to be allocated to all logger objects"""
+
+DEFAULT_FORMAT = "%(levelname)s %(threadName)s %(name)s:%(funcName)s %(message)s"
+"""Default log format to fall back to if not defined by the INI config."""
 
 
 def get_log_level(log_level):
@@ -37,7 +45,7 @@ def get_log_level(log_level):
         return LOG_LEVELS.get(log_level.lower())
 
 
-def get_logger(name, log_level=None):
+def get_logger(name, log_level=None, cloudwatch=True, console=True, file=True):
     """
     Returns the logging object for the provided module name.
 
@@ -48,6 +56,15 @@ def get_logger(name, log_level=None):
     log_level : int, optional
         The logging level to use. If not provided, the level will be determined
         from the INI config.
+    cloudwatch : bool, optional
+        If true, include the CloudWatch Handler in the returned logger.
+        Defaults to true.
+    console : bool, optional
+        If true, include the Console Handler in the returned logger.
+        Defaults to true.
+    file : bool, optional
+        If true, include the File Handler in the returned logger.
+        Defaults to true.
 
     Returns
     -------
@@ -62,49 +79,35 @@ def get_logger(name, log_level=None):
     # (info, warning, etc..)
     _logger.setLevel(logging.DEBUG)
 
-    return setup_logging(_logger, ConfigUtil.get_config(), log_level)
+    _logger.handlers.clear()
+
+    config = ConfigUtil.get_config()
+
+    # Assign appropriate handlers to this logger based on what was requested
+    if cloudwatch:
+        _logger = setup_cloudwatch_log(_logger, config)
+
+    if console:
+        _logger = setup_console_log(_logger, config, log_level)
+
+    if file:
+        _logger = setup_file_log(_logger, config, log_level)
+
+    return _logger
 
 
-def get_console_only_logger(name, log_level=None):
+def setup_file_log(logger, config, log_level):
     """
-    Returns an instance of a "console only" logger, i.e. configured with the global
-    Console Handler, but not the CloudWatch Handler. This logger should be used
-    in places where CloudWatch logging cannot (such as within the CloudWatchHandler
-    class itself).
-
-    Parameters
-    ----------
-    name : str
-        Name of the module to get a logger for.
-    log_level : int, optional
-        The logging level to use. If not provided, the level will be determined
-        from the INI config.
-
-    Returns
-    -------
-    console_logger : logging.logger
-        The "console-only" logger instance.
-
-    """
-    console_logger = logging.getLogger(name)
-
-    return setup_console_log(console_logger, ConfigUtil.get_config(), log_level)
-
-
-def setup_logging(logger, config, log_level=None):
-    """
-    Sets up a logger object with handler objects for logging to the console,
-    as well as the buffer that submits logs to CloudWatch.
+    Sets up the handler used to log to a file.
 
     Parameters
     ----------
     logger : logging.logger
         The logger object to set up.
     config : ConfigParser
-        The parsed config used to initialize the log handlers.
-    log_level : int, optional
-        The logging level to use. If not provided, the level will be determined
-        from the INI config.
+        The parsed config used to initialize the file log handler.
+    log_level : int
+        The logging level to use.
 
     Returns
     -------
@@ -112,7 +115,35 @@ def setup_logging(logger, config, log_level=None):
         The setup logger object.
 
     """
-    return setup_console_log(setup_cloudwatch_log(logger, config), config, log_level)
+    global FILE_HANDLER
+
+    # Prioritize the provided log level. If it is None, use the value from the INI
+    log_level = log_level or get_log_level(config["OTHER"]["log_level"])
+
+    # Set the format based on the setting in the INI config
+    log_format = logging.Formatter(config["OTHER"].get("file_format", DEFAULT_FORMAT))
+
+    if FILE_HANDLER is None:
+        # Use the log file path specified in the config (which may have
+        # originated from the command-line)
+        if config["OTHER"].get("log_file_path"):
+            log_file_path = config["OTHER"]["log_file_path"]
+        # Otherwise, create a timestamped temporary file to capture logging to
+        else:
+            temp_file = tempfile.NamedTemporaryFile(
+                prefix=f"dum_{datetime.now().isoformat()}_", suffix=".log", delete=False
+            )
+            log_file_path = temp_file.name
+            temp_file.close()
+
+        FILE_HANDLER = logging.FileHandler(log_file_path, mode="w")
+        FILE_HANDLER.setLevel(log_level)
+        FILE_HANDLER.setFormatter(log_format)
+
+    if FILE_HANDLER not in logger.handlers:
+        logger.addHandler(FILE_HANDLER)
+
+    return logger
 
 
 def setup_console_log(logger, config, log_level):
@@ -140,10 +171,10 @@ def setup_console_log(logger, config, log_level):
     log_level = log_level or get_log_level(config["OTHER"]["log_level"])
 
     # Set the format based on the setting in the INI config
-    log_format = logging.Formatter(config["OTHER"]["log_format"])
+    log_format = logging.Formatter(config["OTHER"].get("console_format", DEFAULT_FORMAT))
 
     if CONSOLE_HANDLER is None:
-        CONSOLE_HANDLER = logging.StreamHandler()
+        CONSOLE_HANDLER = logging.StreamHandler(stream=sys.stdout)
         CONSOLE_HANDLER.setLevel(log_level)
         CONSOLE_HANDLER.setFormatter(log_format)
 
@@ -184,7 +215,7 @@ def setup_cloudwatch_log(logger, config):
     # level configured for the console logger
     log_level = get_log_level(config["OTHER"]["log_level"])
 
-    log_format = logging.Formatter(config["OTHER"]["log_format"])
+    log_format = logging.Formatter(config["OTHER"].get("cloudwatch_format", DEFAULT_FORMAT))
 
     log_group_name = config["OTHER"]["log_group_name"]
 
@@ -265,7 +296,7 @@ class CloudWatchHandler(BufferingHandler):
 
         # Use a "console-only" logger since the console logger, since attempting
         # to log to CloudWatch from within this class could cause infinite recursion
-        console_logger = get_console_only_logger(__name__)
+        console_logger = get_logger(__name__, cloudwatch=False, file=False)
 
         try:
             log_events = [

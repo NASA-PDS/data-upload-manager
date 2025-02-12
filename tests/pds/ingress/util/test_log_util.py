@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json as json_module
+import os
 import unittest
 from http import HTTPStatus
 from unittest.mock import MagicMock
@@ -18,25 +19,35 @@ class LogUtilTest(unittest.TestCase):
             log_util.CLOUDWATCH_HANDLER.bearer_token = None
             log_util.CLOUDWATCH_HANDLER.node_id = None
 
+    def tearDown(self):
+        if log_util.FILE_HANDLER:
+            if os.path.exists(log_util.FILE_HANDLER.baseFilename):
+                os.unlink(log_util.FILE_HANDLER.baseFilename)
+
     def test_setup_logging(self):
         """Tests for log_util.setup_logging()"""
-        logger = log_util.get_logger("test_setup_logging")
         config = ConfigUtil.get_config()
 
-        logger = log_util.setup_logging(logger, config)
+        logger = log_util.get_logger("test_setup_logging")
 
         self.assertEqual(logger.level, log_util.get_log_level("debug"))
-        self.assertEqual(len(logger.handlers), 2)
+        self.assertEqual(len(logger.handlers), 3)
+
+        self.assertIn(log_util.FILE_HANDLER, logger.handlers)
+        self.assertEqual(log_util.FILE_HANDLER.level, log_util.get_log_level(config["OTHER"]["log_level"]))
+        self.assertIsNotNone(log_util.FILE_HANDLER.formatter)
+        self.assertEqual(log_util.FILE_HANDLER.formatter._fmt, config["OTHER"]["file_format"])
+        self.assertIsNotNone(log_util.FILE_HANDLER.baseFilename)
 
         self.assertIn(log_util.CONSOLE_HANDLER, logger.handlers)
         self.assertEqual(log_util.CONSOLE_HANDLER.level, log_util.get_log_level(config["OTHER"]["log_level"]))
         self.assertIsNotNone(log_util.CONSOLE_HANDLER.formatter)
-        self.assertEqual(log_util.CONSOLE_HANDLER.formatter._fmt, config["OTHER"]["log_format"])
+        self.assertEqual(log_util.CONSOLE_HANDLER.formatter._fmt, config["OTHER"]["console_format"])
 
         self.assertIn(log_util.CLOUDWATCH_HANDLER, logger.handlers)
         self.assertEqual(log_util.CLOUDWATCH_HANDLER.level, log_util.get_log_level(config["OTHER"]["log_level"]))
         self.assertIsNotNone(log_util.CLOUDWATCH_HANDLER.formatter)
-        self.assertEqual(log_util.CLOUDWATCH_HANDLER.formatter._fmt, config["OTHER"]["log_format"])
+        self.assertEqual(log_util.CLOUDWATCH_HANDLER.formatter._fmt, config["OTHER"]["cloudwatch_format"])
         self.assertEqual(log_util.CLOUDWATCH_HANDLER.log_group_name, config["OTHER"]["log_group_name"])
 
         self.assertIsNone(log_util.CLOUDWATCH_HANDLER.bearer_token)
@@ -45,7 +56,7 @@ class LogUtilTest(unittest.TestCase):
         # Test with log level override
         log_util.CONSOLE_HANDLER = None
         log_util.CLOUDWATCH_HANDLER = None
-        logger = log_util.get_logger("test2", log_util.get_log_level("warning"))
+        logger = log_util.get_logger("test2", log_util.get_log_level("warning"), file=False)
 
         self.assertEqual(len(logger.handlers), 2)
         self.assertIsNotNone(log_util.CONSOLE_HANDLER)
@@ -59,9 +70,7 @@ class LogUtilTest(unittest.TestCase):
 
     def test_send_log_events_to_cloud_watch(self):
         """Tests for CloudWatchHandler.send_log_events_to_cloud_watch()"""
-        logger = log_util.get_logger("test_send_log_events_to_cloud_watch")
-
-        logger.handlers.remove(log_util.CONSOLE_HANDLER)
+        logger = log_util.get_logger("test_send_log_events_to_cloud_watch", console=False, file=False)
 
         logger.info("Test message")
 
@@ -124,9 +133,7 @@ class LogUtilTest(unittest.TestCase):
 
     def test_send_log_events_to_cloud_watch_w_backoff_retry(self):
         """Test use of the backoff/retry decorator on send_log_events_to_cloud_watch"""
-        logger = log_util.get_logger("test_send_log_events_to_cloud_watch_w_backoff_retry")
-
-        logger.handlers.remove(log_util.CONSOLE_HANDLER)
+        logger = log_util.get_logger("test_send_log_events_to_cloud_watch_w_backoff_retry", console=False, file=False)
 
         logger.info("Test message")
 
