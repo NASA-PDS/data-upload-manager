@@ -10,6 +10,7 @@ import argparse
 import json
 import os
 import sched
+import sys
 import time
 from collections import defaultdict
 from datetime import datetime
@@ -33,7 +34,16 @@ from pds.ingress.util.log_util import get_log_level
 from pds.ingress.util.log_util import get_logger
 from pds.ingress.util.node_util import NodeUtil
 from pds.ingress.util.path_util import PathUtil
+from pds.ingress.util.progress_util import close_batch_progress_bars
+from pds.ingress.util.progress_util import get_available_batch_progress_bar
+from pds.ingress.util.progress_util import get_ingress_total_progress_bar
+from pds.ingress.util.progress_util import get_manifest_progress_bar
+from pds.ingress.util.progress_util import get_path_progress_bar
+from pds.ingress.util.progress_util import get_upload_progress_bar_for_batch
+from pds.ingress.util.progress_util import init_batch_progress_bars
+from pds.ingress.util.progress_util import release_batch_progress_bar
 from requests.exceptions import RequestException
+from tqdm.utils import CallbackIOWrapper
 
 BEARER_TOKEN = None
 """Placeholder for authentication bearer token used to authenticate to API gateway"""
@@ -45,6 +55,9 @@ REFRESH_SCHEDULER = sched.scheduler(time.time, time.sleep)
 
 SUMMARY_TABLE = dict()
 """Stores the information for use with the Summary report"""
+
+MANIFEST = dict()
+"""Stores the file ingress manifest within memory"""
 
 
 def initialize_summary_table():
@@ -63,21 +76,54 @@ def initialize_summary_table():
     }
 
 
-def perform_ingress(batched_ingress_paths, node_id, prefix, force_overwrite, api_gateway_config):
+def prepare_batches(batched_ingress_paths, prefix):
+    """
+    Prepares each batch of files for ingress in parallel via the joblib library.
+
+    Parameters
+    ----------
+    batched_ingress_paths : list of lists
+        List containing all ingress file requests separated into equal batches.
+    prefix : str
+        Path prefix value to trim from each ingress path to derive the path
+        structure to be used in S3.
+
+    Returns
+    -------
+    request_batches : list of list
+        The provided request batches, augmented with information required to
+        perform each batch ingress request.
+
+    """
+    logger = get_logger("prepare_batches")
+
+    try:
+        with get_manifest_progress_bar(total=len(batched_ingress_paths)) as pbar:
+            request_batches = PARALLEL(
+                (
+                    delayed(_prepare_batch_for_ingress)(ingress_path_batch, prefix, batch_index, pbar)
+                    for batch_index, ingress_path_batch in enumerate(batched_ingress_paths)
+                ),
+            )
+    except KeyboardInterrupt:
+        logger.warning("Keyboard interrupt received, halting ingress...")
+        sys.exit(1)  # Give up any further processing, including generation of report file
+
+    return request_batches
+
+
+def perform_ingress(request_batches, node_id, force_overwrite, api_gateway_config):
     """
     Performs an ingress request and transfer to S3 using credentials obtained
     from Cognito.
 
     Parameters
     ----------
-    batched_ingress_paths : list of iterables
+    request_batches : list of iterables
         Paths to the files to request ingress for, divided into batches sized
         based on the configured batch size.
     node_id : str
         The PDS Node Identifier to associate with the ingress request.
-    prefix : str
-        Global path prefix to trim from the ingress path before making the
-        ingress request.
     force_overwrite : bool
         Determines whether pre-existing versions of files on S3 should be
         overwritten or not.
@@ -86,21 +132,24 @@ def perform_ingress(batched_ingress_paths, node_id, prefix, force_overwrite, api
         used to request ingress.
 
     """
-    logger = get_logger(__name__)
+    logger = get_logger("perform_ingress")
 
     try:
-        PARALLEL(
-            delayed(_process_batch)(
-                batch_index, ingress_path_batch, node_id, prefix, force_overwrite, api_gateway_config
+        with get_ingress_total_progress_bar(total=len(request_batches)) as pbar:
+            PARALLEL(
+                (
+                    delayed(_process_batch)(
+                        batch_index, request_batch, node_id, force_overwrite, api_gateway_config, pbar
+                    )
+                    for batch_index, request_batch in enumerate(request_batches)
+                ),
             )
-            for batch_index, ingress_path_batch in enumerate(batched_ingress_paths)
-        )
     except KeyboardInterrupt:
         logger.warning("Keyboard interrupt received, halting ingress...")
-        return
+        return  # return so we can still output a report file
 
 
-def _process_batch(batch_index, ingress_path_batch, node_id, prefix, force_overwrite, api_gateway_config):
+def _process_batch(batch_index, request_batch, node_id, force_overwrite, api_gateway_config, total_pbar):
     """
     Performs the steps to process a single batch of ingress requests.
     This helper function is intended for use with a Joblib parallelized loop.
@@ -109,13 +158,11 @@ def _process_batch(batch_index, ingress_path_batch, node_id, prefix, force_overw
     ----------
     batch_index : int
         Index of the batch to be processed within the full list of batches.
-    ingress_path_batch : list
+    request_batch : list
         Single batch of to the files to request ingress for, sized based on the
         configured batch size.
     node_id : str
         The PDS Node Identifier to associate with the ingress request.
-    prefix : str
-        Global path prefix to trim from the ingress path before making the
         ingress request.
     force_overwrite : bool
         Determines whether pre-existing versions of files on S3 should be
@@ -123,11 +170,16 @@ def _process_batch(batch_index, ingress_path_batch, node_id, prefix, force_overw
     api_gateway_config : dict
         Dictionary containing configuration details for the API Gateway instance
         used to request ingress.
+    total_pbar : tqdm.tqdm_asyncio
+        Total Ingress progress bar to update once the current batch has been
+        fully processed.
 
     """
-    logger = get_logger(__name__)
+    logger = get_logger("_process_batch", console=False)
 
-    request_batch = prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index)
+    # Get an avaialble Batch progress bar to update while iterating through this
+    # current batch
+    batch_pbar = get_available_batch_progress_bar(total=len(request_batch), desc=f"Batch index {batch_index}")
 
     try:
         response_batch = request_batch_for_ingress(
@@ -136,7 +188,8 @@ def _process_batch(batch_index, ingress_path_batch, node_id, prefix, force_overw
 
         for ingress_response in response_batch:
             try:
-                ingress_file_to_s3(ingress_response, batch_index)
+                ingress_file_to_s3(ingress_response, batch_index, batch_pbar)
+                batch_pbar.update()
             except RequestException as err:
                 # If here, the HTTP request error was unrecoverable by a backoff/retry
                 trimmed_path = ingress_response.get("trimmed_path")
@@ -152,6 +205,9 @@ def _process_batch(batch_index, ingress_path_batch, node_id, prefix, force_overw
     except Exception as err:
         logger.error("Ingress failed, reason: %s", str(err))
         raise
+    finally:
+        total_pbar.update()
+        release_batch_progress_bar(batch_pbar)
 
 
 def _schedule_token_refresh(refresh_token, token_expiration, offset=60):
@@ -198,7 +254,7 @@ def _token_refresh_event(refresh_token):
     """
     global BEARER_TOKEN
 
-    logger = get_logger(__name__)
+    logger = get_logger("_token_refresh_event", console=False, cloudwatch=False)
 
     logger.debug("_token_refresh_event fired")
 
@@ -220,7 +276,7 @@ def _token_refresh_event(refresh_token):
     _schedule_token_refresh(refresh_token, expiration)
 
 
-def prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index):
+def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pbar):
     """
     Performs information gathering on each file contained within an ingress
     request batch, including file size, last modified time, and MD5 hash.
@@ -233,6 +289,8 @@ def prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index):
         Path prefix to remove from each path in the provided batch.
     batch_index : int
         Index of the current batch within the full list of batched paths.
+    batch_pbar : tqdm.tqdm_asyncio
+        Batch progress bar associated to the batch to be ingressed.
 
     Returns
     -------
@@ -242,7 +300,9 @@ def prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index):
         the file.
 
     """
-    logger = get_logger(__name__)
+    global MANIFEST
+
+    logger = get_logger("_prepare_batch_for_ingress", console=False)
 
     logger.info("Batch %d : Preparing for ingress", batch_index)
     start_time = time.time()
@@ -265,12 +325,14 @@ def prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index):
                 "ingress_path": ingress_path,
                 "trimmed_path": trimmed_path,
                 "md5": md5_digest,
-                "base64_md5": base64_md5_digest,
                 "size": file_size,
                 "last_modified": last_modified_time,
             }
         )
 
+        MANIFEST[trimmed_path] = {"ingress_path": ingress_path, "md5": md5_digest, "size": file_size}
+
+    batch_pbar.update()
     elapsed_time = time.time() - start_time
     logger.info("Batch %d : Prep completed in %.2f seconds", batch_index, elapsed_time)
 
@@ -313,9 +375,9 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
     """
     global BEARER_TOKEN
 
-    logger = get_logger(__name__)
+    logger = get_logger("request_batch_for_ingress", console=False)
 
-    logger.info("Batch %d : Requesting ingress on behalf of node ID %s", batch_index, node_id)
+    logger.info("Batch %d : Requesting ingress", batch_index)
     start_time = time.time()
 
     # Extract the API Gateway configuration params
@@ -363,7 +425,7 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
     logger="ingress_file_to_s3",
     interval=15,
 )
-def ingress_file_to_s3(ingress_response, batch_index):
+def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
     """
     Copies the local file path using the pre-signed S3 URL returned from the
     Ingress Lambda App.
@@ -376,6 +438,9 @@ def ingress_file_to_s3(ingress_response, batch_index):
     batch_index : int
         Index of the batch that the ingressed file was assigned to. Used for
         tracking within the summary table.
+    batch_pbar : tqdm.tqdm_asyncio
+        The Batch progress bar instance used to obtain the corresponding File
+        Upload progress sub-bar.
 
     Raises
     ------
@@ -383,7 +448,7 @@ def ingress_file_to_s3(ingress_response, batch_index):
         If an unexpected response is received from the Ingress Lambda app.
 
     """
-    logger = get_logger(__name__)
+    logger = get_logger("ingress_file_to_s3", console=False)
 
     response_result = int(ingress_response.get("result", -1))
     trimmed_path = ingress_response.get("trimmed_path")
@@ -398,14 +463,19 @@ def ingress_file_to_s3(ingress_response, batch_index):
         if not ingress_path:
             raise ValueError("No ingress path provided with response for %s", trimmed_path)
 
+        # Include the base64-encoded MD5 hash so AWS can perform its own
+        # integrity check on the uploaded file
+        headers = {"Content-MD5": ingress_response.get("base64_md5")}
+
+        # Initialize the file upload progress subbar attached to the batch progress bar
+        upload_pbar = get_upload_progress_bar_for_batch(
+            batch_pbar, total=os.stat(ingress_path).st_size, filename=os.path.basename(ingress_path)
+        )
+
         with open(ingress_path, "rb") as infile:
-            object_body = infile.read()
-
-            # Include the original base64-encoded MD5 hash so AWS can perform
-            # an integrity check on the uploaded file
-            headers = {"Content-MD5": ingress_response.get("base64_md5")}
-
-            response = requests.put(s3_ingress_url, data=object_body, headers=headers)
+            # Wrap file I/O with our upload bar to automatically track file upload progress
+            wrapped_file = CallbackIOWrapper(upload_pbar.update, infile, "read")
+            response = requests.put(s3_ingress_url, data=wrapped_file, headers=headers)
             response.raise_for_status()
 
         logger.info("Batch %d : %s Ingest complete", batch_index, trimmed_path)
@@ -430,7 +500,7 @@ def ingress_file_to_s3(ingress_response, batch_index):
 
 def print_ingress_summary():
     """Prints the summary report for last execution of the client script."""
-    logger = get_logger(__name__)
+    logger = get_logger("print_ingress_summary")
 
     num_uploaded = sum(len(batch) for batch in SUMMARY_TABLE["uploaded"].values())
     num_skipped = sum(len(batch) for batch in SUMMARY_TABLE["skipped"].values())
@@ -441,6 +511,7 @@ def print_ingress_summary():
 
     title = f"Ingress Summary Report for {str(datetime.now())}"
 
+    logger.info("")  # Blank line to distance report from any progress bar cleanup
     logger.info(title)
     logger.info("-" * len(title))
     logger.info("Uploaded: %d file(s)", num_uploaded)
@@ -449,6 +520,34 @@ def print_ingress_summary():
     logger.info("Total: %d files(s)", num_uploaded + num_skipped + num_failed)
     logger.info("Time elapsed: %.2f seconds", end_time - start_time)
     logger.info("Bytes tranferred: %d", transferred)
+
+
+def create_manifest_file(manifest_path):
+    """
+    Commits the contents of the Ingress Manifest to the provided path on disk
+    in JSON format.
+
+    This function performs some manual whitespace formatting to promote
+    readability of the output JSON file.
+
+    Parameters
+    ----------
+    manifest_path : str
+        Path on disk to commit the Ingress Manifest file to.
+
+    """
+    with open(manifest_path, "w") as outfile:
+        outfile.write("{\n")
+
+        for index, (k, v) in enumerate(MANIFEST.items()):
+            outfile.write(f'"{k}": {json.dumps(v)}')
+
+            # Can't have a trailing comma on last dictionary entry in JSON
+            if index < len(MANIFEST) - 1:
+                outfile.write(",")
+
+            outfile.write("\n")
+        outfile.write("}")
 
 
 def create_report_file(args):
@@ -463,7 +562,7 @@ def create_report_file(args):
         the report file.
 
     """
-    logger = get_logger(__name__)
+    logger = get_logger("create_report_file")
 
     uploaded = list(sorted(chain(*SUMMARY_TABLE["uploaded"].values())))
     skipped = list(sorted(chain(*SUMMARY_TABLE["skipped"].values())))
@@ -561,6 +660,25 @@ def setup_argparser():
         "cores are used.",
     )
     parser.add_argument(
+        "--log-path",
+        type=str,
+        default=None,
+        help="Specify a file path to write logging statements to. These will include "
+        "some of the messages logged to the console, as well as additional "
+        "messages about the status of each file/batch transfer. By default, "
+        "the log file is created in a temporary location if this parameter "
+        "is not provided. If provided, this argument takes precedence over "
+        "what is provided for OTHER.log_file_path in the INI config.",
+    )
+    parser.add_argument(
+        "--manifest-path",
+        type=str,
+        default=None,
+        help="Specify a file path to write a JSON manifiest of all files indexed "
+        "for inclusion in the current ingress request. Be default, no "
+        "manifiest is created.",
+    )
+    parser.add_argument(
         "--report-path",
         "-r",
         type=str,
@@ -622,19 +740,29 @@ def main(args):
     """
     global BEARER_TOKEN
 
+    # Note: this should always get called first to ensure the Config singleton is
+    #       fully initialized before used in any calls to get_logger
     config = ConfigUtil.get_config(args.config_path)
 
-    logger = get_logger(__name__, log_level=get_log_level(args.log_level))
+    if args.log_path:
+        config["OTHER"]["log_file_path"] = os.path.abspath(args.log_path)
 
+    logger = get_logger("main", log_level=get_log_level(args.log_level))
+
+    logger.info("Starting PDS Data Upload Manager Client v%s", __version__)
     logger.info("Loaded config file %s", args.config_path)
+    logger.info("Logging to file %s", log_util.FILE_HANDLER.baseFilename)
 
     # Derive the full list of ingress paths based on the set of paths requested
     # by the user
     logger.info("Determining paths for ingress...")
-    with PathUtil.init_path_progress_bar(args.ingress_paths) as pbar:
+    with get_path_progress_bar(args.ingress_paths) as pbar:
         resolved_ingress_paths = PathUtil.resolve_ingress_paths(args.ingress_paths, pbar)
 
     node_id = args.node
+
+    # Set the joblib pool size based on the number of "threads" requested
+    PARALLEL.n_jobs = args.num_threads
 
     # Break the set of ingress paths into batches based on configured size
     batch_size = int(config["OTHER"].get("batch_size", fallback=1))
@@ -643,10 +771,15 @@ def main(args):
     logger.info("Using batch size of %d", batch_size)
     logger.info("Request (%d files) split into %d batches", len(resolved_ingress_paths), len(batched_ingress_paths))
 
+    logger.info("Preparing batches for ingress...")
+    request_batchs = prepare_batches(batched_ingress_paths, args.prefix)
+
+    if args.manifest_path:
+        logger.info("Writing manifest file to %s...", os.path.abspath(args.manifest_path))
+        create_manifest_file(os.path.abspath(args.manifest_path))
+
     if not args.dry_run:
         initialize_summary_table()
-
-        PARALLEL.n_jobs = args.num_threads
 
         cognito_config = config["COGNITO"]
 
@@ -676,8 +809,11 @@ def main(args):
         refresh_thread.start()
 
         try:
-            perform_ingress(batched_ingress_paths, node_id, args.prefix, args.force_overwrite, config["API_GATEWAY"])
+            init_batch_progress_bars(args.num_threads)
+            perform_ingress(request_batchs, node_id, args.force_overwrite, config["API_GATEWAY"])
         finally:
+            close_batch_progress_bars()
+
             # Capture completion time of transfer and batch configuration
             SUMMARY_TABLE["end_time"] = time.time()
             SUMMARY_TABLE["batch_size"] = batch_size
