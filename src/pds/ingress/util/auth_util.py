@@ -43,7 +43,7 @@ class AuthUtil:
             If authentication fails for any reason.
 
         """
-        logger = get_logger(__name__)
+        logger = get_logger("perform_cognito_authentication")
 
         if ConfigUtil.is_localstack_context():
             client = boto3.client("cognito-idp", endpoint_url="http://localhost.localstack.cloud:4566")
@@ -86,10 +86,6 @@ class AuthUtil:
             an HTTP request.
 
         """
-        logger = get_logger(__name__)
-
-        logger.info("Creating Bearer token")
-
         access_token = authentication_result["AccessToken"]
 
         bearer_token = f"Bearer {access_token}"
@@ -117,7 +113,7 @@ class AuthUtil:
             This includes an updated authentication token and expiration time.
 
         """
-        logger = get_logger(__name__)
+        logger = get_logger("refresh_auth_token", console=False)
 
         client = boto3.client("cognito-idp", region_name=cognito_config["region"])
 
