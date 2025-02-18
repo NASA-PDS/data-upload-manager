@@ -15,7 +15,7 @@ class PathUtil:
     """Provides methods for working with local file system paths."""
 
     @staticmethod
-    def resolve_ingress_paths(user_paths, resolved_paths=None):
+    def resolve_ingress_paths(user_paths, pbar, resolved_paths=None):
         """
         Iterates over the list of user-provided paths to derive the final
         set of file paths to request ingress for.
@@ -25,6 +25,8 @@ class PathUtil:
         user_paths : list of str
             The collection of user-requested paths to include with the ingress
             request. Can be any combination of file and directory paths.
+        pbar : tqdm.tqdm
+            Progress bar instance used to track path resolution.
         resolved_paths : list of str, optional
             The list of paths resolved so far. For top-level callers, this should
             be left as None.
@@ -36,7 +38,8 @@ class PathUtil:
             paths.
 
         """
-        logger = get_logger(__name__)
+        # Use a logger with no console output to avoid interfering with tqdm output
+        logger = get_logger("resove_ingress_paths", console=False)
 
         # Initialize the list of resolved paths if necessary
         resolved_paths = resolved_paths or list()
@@ -45,15 +48,14 @@ class PathUtil:
             abs_user_path = os.path.abspath(user_path)
 
             if not os.path.exists(abs_user_path):
+                pbar.update()
                 logger.warning("Encountered path (%s) that does not actually exist, skipping...", abs_user_path)
                 continue
 
             if os.path.isfile(abs_user_path):
-                logger.debug("Resolved path %s", abs_user_path)
-
                 resolved_paths.append(abs_user_path)
+                pbar.update()
             elif os.path.isdir(abs_user_path):
-                logger.debug("Resolving directory %s", abs_user_path)
                 for grouping in os.walk(abs_user_path, topdown=True, followlinks=True):
                     dirpath, _, filenames = grouping
 
@@ -64,9 +66,10 @@ class PathUtil:
                         for filename in filter(lambda name: not name.startswith("."), filenames)
                     ]
 
-                    resolved_paths = PathUtil.resolve_ingress_paths(product_paths, resolved_paths)
+                    resolved_paths = PathUtil.resolve_ingress_paths(product_paths, pbar, resolved_paths)
             else:
                 logger.warning("Encountered path (%s) that is neither a file nor directory, skipping...", abs_user_path)
+                pbar.update()
 
         return resolved_paths
 
@@ -92,7 +95,8 @@ class PathUtil:
             is provided, the untrimmed path is returned.
 
         """
-        logger = get_logger(__name__)
+        # Only log any debug trace messages here to file
+        logger = get_logger("trim_ingress_path", console=False, cloudwatch=False)
 
         trimmed_ingress_path = ingress_path
 

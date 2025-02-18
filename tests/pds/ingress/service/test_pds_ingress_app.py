@@ -124,8 +124,7 @@ class PDSIngressAppTest(unittest.TestCase):
                     {
                         "ingress_path": "/home/user/data/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml",
                         "trimmed_path": "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml",
-                        "md5": "fakehashfakehashfakehash",
-                        "base64_md5": "fakehashfakehash==",
+                        "md5": "deadbeefdeadbeefdeadbeef",
                         "size": 1,
                         "last_modified": os.path.getmtime(os.path.abspath(__file__)),
                     }
@@ -178,8 +177,7 @@ class PDSIngressAppTest(unittest.TestCase):
                     {
                         "ingress_path": "/home/user/data/some.other.survey/bundle.some.other.survey_v1.0.xml",
                         "trimmed_path": "some.other.survey/bundle.some.other.survey_v1.0.xml",
-                        "md5": "fakehashfakehashfakehash",
-                        "base64_md5": "fakehashfakehash==",
+                        "md5": "deadbeefdeadbeefdeadbeef",
                         "size": 1,
                         "last_modified": os.path.getmtime(os.path.abspath(__file__)),
                     }
@@ -216,8 +214,7 @@ class PDSIngressAppTest(unittest.TestCase):
                     {
                         "ingress_path": "/home/user/data/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml",
                         "trimmed_path": "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml",
-                        "md5": "fakehashfakehashfakehash",
-                        "base64_md5": "fakehashfakehash==",
+                        "md5": "deadbeefdeadbeefdeadbeef",
                         "size": 1,
                         "last_modified": os.path.getmtime(os.path.abspath(__file__)),
                     }
@@ -236,8 +233,7 @@ class PDSIngressAppTest(unittest.TestCase):
                     {
                         "ingress_path": "/home/user/data/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml",
                         "trimmed_path": "gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml",
-                        "md5": "fakehashfakehashfakehash",
-                        "base64_md5": "fakehashfakehash==",
+                        "md5": "deadbeefdeadbeefdeadbeef",
                         "size": 1,
                         "last_modified": os.path.getmtime(os.path.abspath(__file__)),
                     }

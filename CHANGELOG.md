@@ -1,11 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2024-10-03)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-02-18)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.0.0...«unknown»)
 
 **Other closed issues:**
 
+- Use the s3 terraform module in mcp-pds-infra [\#181](https://github.com/NASA-PDS/data-upload-manager/issues/181)
 - Deploy v2.0.0 DUM to Production [\#161](https://github.com/NASA-PDS/data-upload-manager/issues/161)
 - Investigate usage of localstack for use with DUM local integration testing [\#134](https://github.com/NASA-PDS/data-upload-manager/issues/134)
 

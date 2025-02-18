@@ -6,6 +6,7 @@ from os.path import abspath
 from os.path import join
 
 from pds.ingress.util.path_util import PathUtil
+from pds.ingress.util.progress_util import get_path_progress_bar
 from pkg_resources import resource_filename
 
 
@@ -42,7 +43,8 @@ class PathUtilTest(unittest.TestCase):
         os.system(f"touch {join(self.working_dir.name, 'dir_one', 'dir_two', 'low_level_file.txt')}")
 
         # Test with fully resolved paths
-        resolved_ingress_paths = PathUtil.resolve_ingress_paths([self.working_dir.name])
+        with get_path_progress_bar([self.working_dir.name]) as pbar:
+            resolved_ingress_paths = PathUtil.resolve_ingress_paths([self.working_dir.name], pbar)
 
         self.assertIsInstance(resolved_ingress_paths, list)
         self.assertGreater(len(resolved_ingress_paths), 0)
@@ -55,7 +57,8 @@ class PathUtilTest(unittest.TestCase):
         )
 
         # Test with a non-existent path
-        resolved_ingress_paths = PathUtil.resolve_ingress_paths(["/fake/path"])
+        with get_path_progress_bar(["/fake/path"]) as pbar:
+            resolved_ingress_paths = PathUtil.resolve_ingress_paths(["/fake/path"], pbar)
 
         self.assertIsInstance(resolved_ingress_paths, list)
         self.assertEqual(len(resolved_ingress_paths), 0)

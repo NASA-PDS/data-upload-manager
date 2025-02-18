@@ -29,8 +29,9 @@ class SanitizingConfigParser(configparser.RawConfigParser):
 
         # Remove any single or double-quotes surrounding the value, as these could complicate
         # JSON-serillaziation of certain config values, such as log group name
-        val = val.strip('"')
-        val = val.strip("'")
+        if val:
+            val = val.strip('"')
+            val = val.strip("'")
 
         return val
 
