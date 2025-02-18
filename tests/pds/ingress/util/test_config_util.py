@@ -37,14 +37,19 @@ class ConfigUtilTest(unittest.TestCase):
 
         self.assertEqual(parser["OTHER"]["log_level"], "INFO")
         self.assertEqual(
-            parser["OTHER"]["log_format"], "%(levelname)s %(threadName)s %(name)s:%(funcName)s %(message)s"
+            parser["OTHER"]["file_format"], "[%(asctime)s] %(levelname)s %(threadName)s %(funcName)s : %(message)s"
         )
+        self.assertEqual(
+            parser["OTHER"]["cloudwatch_format"], "%(levelname)s %(threadName)s %(funcName)s : %(message)s"
+        )
+        self.assertEqual(parser["OTHER"]["console_format"], "%(message)s")
         self.assertEqual(parser["OTHER"]["log_group_name"], "/pds/nucleus/dum/client-log-group")
+        self.assertEqual(parser["OTHER"]["log_file_path"], "")
 
         # Ensure the sanitizing config parser removed any quotes surrounding
         # values within the config
-        self.assertFalse(parser["OTHER"]["log_format"].startswith("'"))
-        self.assertFalse(parser["OTHER"]["log_format"].endswith("'"))
+        self.assertFalse(parser["OTHER"]["cloudwatch_format"].startswith("'"))
+        self.assertFalse(parser["OTHER"]["cloudwatch_format"].endswith("'"))
 
         self.assertFalse(parser["OTHER"]["log_group_name"].startswith('"'))
         self.assertFalse(parser["OTHER"]["log_group_name"].endswith('"'))
