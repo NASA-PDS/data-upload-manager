@@ -89,7 +89,7 @@ def get_manifest_progress_bar(total):
             leave=True,
             desc="Generating checksum manifest",
             colour=LIGHT_GREEN,
-            bar_format="{l_bar}{bar:60}| {n_fmt}/{total_fmt} Batches ({remaining} remaining)",
+            bar_format="{l_bar}{bar:60}| {n_fmt}/{total_fmt} Batches ({remaining} est. remaining)",
         )
 
     return MANIFEST_BAR
@@ -120,7 +120,7 @@ def get_ingress_total_progress_bar(total):
             leave=True,
             desc="Uploading Batches",
             colour=LIGHT_GREEN,
-            bar_format="{l_bar}{bar:60}| {n_fmt}/{total_fmt} Batches",
+            bar_format="{l_bar}{bar:60}| {n_fmt}/{total_fmt} Batches ({remaining} est. remaining)",
         )
 
     return TOTAL_INGRESS_BAR

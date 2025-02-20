@@ -183,12 +183,15 @@ def _process_batch(batch_index, request_batch, node_id, force_overwrite, api_gat
 
     # Get an avaialble Batch progress bar to update while iterating through this
     # current batch
-    batch_pbar = get_available_batch_progress_bar(total=len(request_batch), desc=f"Batch index {batch_index}")
+    batch_pbar = get_available_batch_progress_bar(total=len(request_batch), desc=f"Requesting Batch {batch_index + 1}")
 
     try:
         response_batch = request_batch_for_ingress(
             request_batch, batch_index, node_id, force_overwrite, api_gateway_config
         )
+
+        batch_pbar.desc = f"Uploading Batch {batch_index + 1}"
+        batch_pbar.refresh()
 
         for ingress_response in response_batch:
             try:
