@@ -49,6 +49,7 @@ BEARER_TOKEN = None
 """Placeholder for authentication bearer token used to authenticate to API gateway"""
 
 PARALLEL = Parallel(require="sharedmem")
+"""Joblib backend used to parallelize the various for-loops within this script"""
 
 REFRESH_SCHEDULER = sched.scheduler(time.time, time.sleep)
 """Scheduler object used to periodically refresh the Cognito authentication token"""
@@ -58,6 +59,9 @@ SUMMARY_TABLE = dict()
 
 MANIFEST = dict()
 """Stores the file ingress manifest within memory"""
+
+EXPECTED_MANIFEST_KEYS = ("ingress_path", "md5", "size", "last_modified")
+"""The keys we expect to find assigned to each mapping within a read manifest"""
 
 
 def initialize_summary_table():
@@ -313,12 +317,27 @@ def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pb
         # Remove path prefix if one was configured
         trimmed_path = PathUtil.trim_ingress_path(ingress_path, prefix)
 
-        # Calculate the MD5 checksum of the file payload
-        md5_digest = md5_for_path(ingress_path).hexdigest()
+        if trimmed_path in MANIFEST:
+            # Pull file data from pre-existing manifest
+            manifest_entry = MANIFEST[trimmed_path]
+            md5_digest = manifest_entry["md5"]
+            file_size = manifest_entry["size"]
+            last_modified_time = time.mktime(datetime.fromisoformat(manifest_entry["last_modified"]).timetuple())
+        else:
+            # Calculate the MD5 checksum of the file payload
+            md5_digest = md5_for_path(ingress_path).hexdigest()
 
-        # Get the size and last modified time of the file
-        file_size = os.stat(ingress_path).st_size
-        last_modified_time = os.path.getmtime(ingress_path)
+            # Get the size and last modified time of the file
+            file_size = os.stat(ingress_path).st_size
+            last_modified_time = os.path.getmtime(ingress_path)
+
+            # Update manifest with new entry
+            MANIFEST[trimmed_path] = {
+                "ingress_path": ingress_path,
+                "md5": md5_digest,
+                "size": file_size,
+                "last_modified": datetime.fromtimestamp(last_modified_time, tz=timezone.utc).isoformat(),
+            }
 
         request_batch.append(
             {
@@ -329,8 +348,6 @@ def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pb
                 "last_modified": last_modified_time,
             }
         )
-
-        MANIFEST[trimmed_path] = {"ingress_path": ingress_path, "md5": md5_digest, "size": file_size}
 
     batch_pbar.update()
     elapsed_time = time.time() - start_time
@@ -522,7 +539,41 @@ def print_ingress_summary():
     logger.info("Bytes tranferred: %d", transferred)
 
 
-def create_manifest_file(manifest_path):
+def read_manifest_file(manifest_path):
+    """
+    Reads manifest contents, including file checksums, from the provided
+    path. The contents of the read manifest will be used to supply file information
+    for any files in the current request which are already specified within the
+    read manifest.
+
+    Notes
+    -----
+    This function also validates the contents of the read manifest to ensure
+    the contents conform to the format expected by this version of the DUM client.
+    If the read manifest does not conform, it's contents are discarded so that
+    a new conforming version will be written to disk.
+
+    Parameters
+    ----------
+    manifest_path : str
+        Path to the manifest JSON file
+
+    """
+    global MANIFEST
+
+    logger = get_logger("read_manifest_path")
+
+    with open(manifest_path, "r") as infile:
+        MANIFEST = json.load(infile)
+
+    # Verify the contents of the read manifest conform to what we expect for this version of DUM
+    if not all(key in manifest_entry for manifest_entry in MANIFEST.values() for key in EXPECTED_MANIFEST_KEYS):
+        logger.warning("Provided manifest %s does not conform to expected format.", manifest_path)
+        logger.warning("A new manifest will be generated for this execution.")
+        MANIFEST.clear()
+
+
+def write_manifest_file(manifest_path):
     """
     Commits the contents of the Ingress Manifest to the provided path on disk
     in JSON format.
@@ -539,7 +590,7 @@ def create_manifest_file(manifest_path):
     with open(manifest_path, "w") as outfile:
         outfile.write("{\n")
 
-        for index, (k, v) in enumerate(MANIFEST.items()):
+        for index, (k, v) in enumerate(sorted(MANIFEST.items())):
             outfile.write(f'"{k}": {json.dumps(v)}')
 
             # Can't have a trailing comma on last dictionary entry in JSON
@@ -674,9 +725,12 @@ def setup_argparser():
         "--manifest-path",
         type=str,
         default=None,
-        help="Specify a file path to write a JSON manifiest of all files indexed "
-        "for inclusion in the current ingress request. Be default, no "
-        "manifiest is created.",
+        help="Specify a file path to a JSON manifiest of all files indexed "
+        "for inclusion in the current ingress request. If the provided path is "
+        "not an existing file, then the manifest will be written to that "
+        "location. If the path already exists, this script will read the manifiest, "
+        "and skip checksum generation for any paths that are already specified. "
+        "If not provided, no manifiest is written or read.",
     )
     parser.add_argument(
         "--report-path",
@@ -771,12 +825,16 @@ def main(args):
     logger.info("Using batch size of %d", batch_size)
     logger.info("Request (%d files) split into %d batches", len(resolved_ingress_paths), len(batched_ingress_paths))
 
+    if args.manifest_path and os.path.exists(args.manifest_path):
+        logger.info("Reading existing manifest file %s", args.manifest_path)
+        read_manifest_file(args.manifest_path)
+
     logger.info("Preparing batches for ingress...")
     request_batchs = prepare_batches(batched_ingress_paths, args.prefix)
 
     if args.manifest_path:
-        logger.info("Writing manifest file to %s...", os.path.abspath(args.manifest_path))
-        create_manifest_file(os.path.abspath(args.manifest_path))
+        logger.info("Writing manifest file to %s", os.path.abspath(args.manifest_path))
+        write_manifest_file(os.path.abspath(args.manifest_path))
 
     if not args.dry_run:
         initialize_summary_table()
