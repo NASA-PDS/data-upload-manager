@@ -39,6 +39,24 @@ DEFAULT_FORMAT = "%(levelname)s %(threadName)s %(name)s:%(funcName)s %(message)s
 """Default log format to fall back to if not defined by the INI config."""
 
 
+class SingleLogFilter(logging.Filter):
+    """Simple log filter to ensure each unique log message is only logged once."""
+
+    def __init__(self, name=""):
+        super().__init__(name)
+        self.logged_messages = set()
+
+    def filter(self, record):
+        """Filters out the provided log record if we've seen it before"""
+        log_message = record.getMessage()
+
+        if log_message not in self.logged_messages:
+            self.logged_messages.add(log_message)
+            return True
+
+        return False
+
+
 def get_log_level(log_level):
     """Translates name of a log level to the constant used by the logging module"""
     if log_level is not None:
@@ -177,6 +195,7 @@ def setup_console_log(logger, config, log_level):
         CONSOLE_HANDLER = logging.StreamHandler(stream=sys.stdout)
         CONSOLE_HANDLER.setLevel(log_level)
         CONSOLE_HANDLER.setFormatter(log_format)
+        CONSOLE_HANDLER.addFilter(SingleLogFilter())
 
     if CONSOLE_HANDLER not in logger.handlers:
         logger.addHandler(CONSOLE_HANDLER)
