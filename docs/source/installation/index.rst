@@ -84,8 +84,11 @@ The following may be used as a template for a new INI configuration file::
 
     [OTHER]
     log_level = INFO
-    log_format = "%(levelname)s %(threadName)s %(name)s:%(funcName)s %(message)s"
+    file_format = "[%(asctime)s] %(levelname)s %(threadName)s %(funcName)s : %(message)s"
+    cloudwatch_format = '%(levelname)s %(threadName)s %(funcName)s : %(message)s'
+    console_format = "%(message)s"
     log_group_name = "<Cloudwatch_Log_Group_Name>"
+    log_file_path =
 
 Bracketed fields within the template correspond to values which need to be filled
 in by an end-user prior to using the `pds-ingress-client` script to transfer
