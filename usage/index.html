@@ -210,9 +210,16 @@ prefix that will be trimmed from all file paths discovered by <code class="docut
 <p>For example, if the file <code class="docutils literal notranslate"><span class="pre">/home/user/bundle/file.xml</span></code> were to be uploaded, and
 <code class="docutils literal notranslate"><span class="pre">--prefix</span> <span class="pre">/home/user</span></code> were also provided, the path provided to the ingress service
 in AWS would resolve to <code class="docutils literal notranslate"><span class="pre">bundle/file.xml</span></code>.</p>
-<p>Lastly, the <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code> by default utilizes all available CPUs on the
+<p>The <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code> by default utilizes all available CPUs on the
 local machine to perform parallelized ingress requests to the ingress service. The exact
 number of threads can be controlled via the <code class="docutils literal notranslate"><span class="pre">--num-threads</span></code> argument.</p>
+<p>The client script also provides several arguments for reporting status of an ingress request:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--report-path</span></code> : Specifies a path to write a detailed report file in JSON format, containing details about which files were uploaded, skipped or failed during transfer.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--manifest-path</span></code> : Specifies a path to write the manifest of all files included in ingress request, including file checksums. This option may also be used to provide an existing Manifest file to bypass its recomputation during subsequent requests.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--log-path</span></code> : Specifies a path to write a trace log of the ingress request which does not go to the console. Can be useful for troubleshooting tranfer failures.</p></li>
+</ul>
+<p>Lastly, the <code class="docutils literal notranslate"><span class="pre">--version</span></code> option may be used to verify the version number of installed DUM client.</p>
 </div>
 </div>
 
