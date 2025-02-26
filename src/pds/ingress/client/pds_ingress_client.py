@@ -748,7 +748,12 @@ def main(args):
         logger.info("Dry run requested, skipping ingress request submission.")
 
 
-if __name__ == "__main__":
+def console_main():
+    """No argument entrypoint for use with setuptools"""
     parser = setup_argparser()
     args = parser.parse_args()
     main(args)
+
+
+if __name__ == "__main__":
+    console_main()
