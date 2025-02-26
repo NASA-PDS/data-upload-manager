@@ -30,8 +30,28 @@ LEVEL_MAP = {
     "DEBUG": logging.DEBUG,
 }
 
+
+class SingleLogFilter(logging.Filter):
+    """Simple log filter to ensure each unique log message is only logged once."""
+
+    def __init__(self, name=""):
+        super().__init__(name)
+        self.logged_messages = set()
+
+    def filter(self, record):
+        """Filters out the provided log record if we've seen it before"""
+        log_message = record.getMessage()
+
+        if log_message not in self.logged_messages:
+            self.logged_messages.add(log_message)
+            return True
+
+        return False
+
+
 logger = logging.getLogger()
 logger.setLevel(LEVEL_MAP.get(LOG_LEVEL.upper(), logging.INFO))
+logger.addFilter(SingleLogFilter())
 
 logger.info("Loading function PDS Ingress Service")
 

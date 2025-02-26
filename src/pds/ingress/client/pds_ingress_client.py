@@ -12,11 +12,9 @@ import os
 import sched
 import sys
 import time
-from collections import defaultdict
 from datetime import datetime
 from datetime import timezone
 from http import HTTPStatus
-from itertools import chain
 from threading import Thread
 
 import backoff
@@ -42,6 +40,11 @@ from pds.ingress.util.progress_util import get_path_progress_bar
 from pds.ingress.util.progress_util import get_upload_progress_bar_for_batch
 from pds.ingress.util.progress_util import init_batch_progress_bars
 from pds.ingress.util.progress_util import release_batch_progress_bar
+from pds.ingress.util.report_util import create_report_file
+from pds.ingress.util.report_util import initialize_summary_table
+from pds.ingress.util.report_util import print_ingress_summary
+from pds.ingress.util.report_util import read_manifest_file
+from pds.ingress.util.report_util import write_manifest_file
 from requests.exceptions import RequestException
 from tqdm.utils import CallbackIOWrapper
 
@@ -49,6 +52,7 @@ BEARER_TOKEN = None
 """Placeholder for authentication bearer token used to authenticate to API gateway"""
 
 PARALLEL = Parallel(require="sharedmem")
+"""Joblib backend used to parallelize the various for-loops within this script"""
 
 REFRESH_SCHEDULER = sched.scheduler(time.time, time.sleep)
 """Scheduler object used to periodically refresh the Cognito authentication token"""
@@ -58,22 +62,6 @@ SUMMARY_TABLE = dict()
 
 MANIFEST = dict()
 """Stores the file ingress manifest within memory"""
-
-
-def initialize_summary_table():
-    """Initialzes the global summary table to its default state."""
-    global SUMMARY_TABLE
-
-    SUMMARY_TABLE = {
-        "uploaded": defaultdict(set),
-        "skipped": defaultdict(set),
-        "failed": defaultdict(set),
-        "transferred": 0,
-        "start_time": time.time(),
-        "end_time": None,
-        "batch_size": 0,
-        "num_batches": 0,
-    }
 
 
 def prepare_batches(batched_ingress_paths, prefix):
@@ -179,12 +167,15 @@ def _process_batch(batch_index, request_batch, node_id, force_overwrite, api_gat
 
     # Get an avaialble Batch progress bar to update while iterating through this
     # current batch
-    batch_pbar = get_available_batch_progress_bar(total=len(request_batch), desc=f"Batch index {batch_index}")
+    batch_pbar = get_available_batch_progress_bar(total=len(request_batch), desc=f"Requesting Batch {batch_index + 1}")
 
     try:
         response_batch = request_batch_for_ingress(
             request_batch, batch_index, node_id, force_overwrite, api_gateway_config
         )
+
+        batch_pbar.desc = f"Uploading Batch {batch_index + 1}"
+        batch_pbar.refresh()
 
         for ingress_response in response_batch:
             try:
@@ -313,12 +304,27 @@ def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pb
         # Remove path prefix if one was configured
         trimmed_path = PathUtil.trim_ingress_path(ingress_path, prefix)
 
-        # Calculate the MD5 checksum of the file payload
-        md5_digest = md5_for_path(ingress_path).hexdigest()
+        if trimmed_path in MANIFEST:
+            # Pull file data from pre-existing manifest
+            manifest_entry = MANIFEST[trimmed_path]
+            md5_digest = manifest_entry["md5"]
+            file_size = manifest_entry["size"]
+            last_modified_time = time.mktime(datetime.fromisoformat(manifest_entry["last_modified"]).timetuple())
+        else:
+            # Calculate the MD5 checksum of the file payload
+            md5_digest = md5_for_path(ingress_path).hexdigest()
 
-        # Get the size and last modified time of the file
-        file_size = os.stat(ingress_path).st_size
-        last_modified_time = os.path.getmtime(ingress_path)
+            # Get the size and last modified time of the file
+            file_size = os.stat(ingress_path).st_size
+            last_modified_time = os.path.getmtime(ingress_path)
+
+            # Update manifest with new entry
+            MANIFEST[trimmed_path] = {
+                "ingress_path": ingress_path,
+                "md5": md5_digest,
+                "size": file_size,
+                "last_modified": datetime.fromtimestamp(last_modified_time, tz=timezone.utc).isoformat(),
+            }
 
         request_batch.append(
             {
@@ -329,8 +335,6 @@ def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pb
                 "last_modified": last_modified_time,
             }
         )
-
-        MANIFEST[trimmed_path] = {"ingress_path": ingress_path, "md5": md5_digest, "size": file_size}
 
     batch_pbar.update()
     elapsed_time = time.time() - start_time
@@ -498,101 +502,6 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
         raise RuntimeError
 
 
-def print_ingress_summary():
-    """Prints the summary report for last execution of the client script."""
-    logger = get_logger("print_ingress_summary")
-
-    num_uploaded = sum(len(batch) for batch in SUMMARY_TABLE["uploaded"].values())
-    num_skipped = sum(len(batch) for batch in SUMMARY_TABLE["skipped"].values())
-    num_failed = sum(len(batch) for batch in SUMMARY_TABLE["failed"].values())
-    start_time = SUMMARY_TABLE["start_time"]
-    end_time = SUMMARY_TABLE["end_time"]
-    transferred = SUMMARY_TABLE["transferred"]
-
-    title = f"Ingress Summary Report for {str(datetime.now())}"
-
-    logger.info("")  # Blank line to distance report from any progress bar cleanup
-    logger.info(title)
-    logger.info("-" * len(title))
-    logger.info("Uploaded: %d file(s)", num_uploaded)
-    logger.info("Skipped: %d file(s)", num_skipped)
-    logger.info("Failed: %d file(s)", num_failed)
-    logger.info("Total: %d files(s)", num_uploaded + num_skipped + num_failed)
-    logger.info("Time elapsed: %.2f seconds", end_time - start_time)
-    logger.info("Bytes tranferred: %d", transferred)
-
-
-def create_manifest_file(manifest_path):
-    """
-    Commits the contents of the Ingress Manifest to the provided path on disk
-    in JSON format.
-
-    This function performs some manual whitespace formatting to promote
-    readability of the output JSON file.
-
-    Parameters
-    ----------
-    manifest_path : str
-        Path on disk to commit the Ingress Manifest file to.
-
-    """
-    with open(manifest_path, "w") as outfile:
-        outfile.write("{\n")
-
-        for index, (k, v) in enumerate(MANIFEST.items()):
-            outfile.write(f'"{k}": {json.dumps(v)}')
-
-            # Can't have a trailing comma on last dictionary entry in JSON
-            if index < len(MANIFEST) - 1:
-                outfile.write(",")
-
-            outfile.write("\n")
-        outfile.write("}")
-
-
-def create_report_file(args):
-    """
-    Writes a detailed report for the last transfer in JSON format to disk.
-
-    Parameters
-    ----------
-    args : argparse.Namespace
-        The parsed command-line arguments, including the path to write the
-        summary report to. A listing of all provided arguments is included in
-        the report file.
-
-    """
-    logger = get_logger("create_report_file")
-
-    uploaded = list(sorted(chain(*SUMMARY_TABLE["uploaded"].values())))
-    skipped = list(sorted(chain(*SUMMARY_TABLE["skipped"].values())))
-    failed = list(sorted(chain(*SUMMARY_TABLE["failed"].values())))
-
-    report = {
-        "Arguments": str(args),
-        "Batch Size": SUMMARY_TABLE["batch_size"],
-        "Total Batches": SUMMARY_TABLE["num_batches"],
-        "Start Time": str(datetime.fromtimestamp(SUMMARY_TABLE["start_time"], tz=timezone.utc)),
-        "Finish Time": str(datetime.fromtimestamp(SUMMARY_TABLE["end_time"], tz=timezone.utc)),
-        "Uploaded": uploaded,
-        "Total Uploaded": len(uploaded),
-        "Skipped": skipped,
-        "Total Skipped": len(skipped),
-        "Failed": failed,
-        "Total Failed": len(failed),
-        "Bytes Transferred": SUMMARY_TABLE["transferred"],
-    }
-
-    report["Total Files"] = report["Total Uploaded"] + report["Total Skipped"] + report["Total Failed"]
-
-    try:
-        logger.info("Writing JSON summary report to %s", args.report_path)
-        with open(args.report_path, "w") as outfile:
-            json.dump(report, outfile, indent=4)
-    except OSError as err:
-        logger.warning("Failed to write summary report to %s, reason: %s", args.report_path, str(err))
-
-
 def setup_argparser():
     """
     Helper function to perform setup of the ArgumentParser for the Ingress client
@@ -674,9 +583,12 @@ def setup_argparser():
         "--manifest-path",
         type=str,
         default=None,
-        help="Specify a file path to write a JSON manifiest of all files indexed "
-        "for inclusion in the current ingress request. Be default, no "
-        "manifiest is created.",
+        help="Specify a file path to a JSON manifiest of all files indexed "
+        "for inclusion in the current ingress request. If the provided path is "
+        "not an existing file, then the manifest will be written to that "
+        "location. If the path already exists, this script will read the manifiest, "
+        "and skip checksum generation for any paths that are already specified. "
+        "If not provided, no manifiest is written or read.",
     )
     parser.add_argument(
         "--report-path",
@@ -738,7 +650,7 @@ def main(args):
         and dry-run is not enabled.
 
     """
-    global BEARER_TOKEN
+    global BEARER_TOKEN, MANIFEST, SUMMARY_TABLE
 
     # Note: this should always get called first to ensure the Config singleton is
     #       fully initialized before used in any calls to get_logger
@@ -771,15 +683,19 @@ def main(args):
     logger.info("Using batch size of %d", batch_size)
     logger.info("Request (%d files) split into %d batches", len(resolved_ingress_paths), len(batched_ingress_paths))
 
+    if args.manifest_path and os.path.exists(args.manifest_path):
+        logger.info("Reading existing manifest file %s", args.manifest_path)
+        MANIFEST = read_manifest_file(args.manifest_path)
+
     logger.info("Preparing batches for ingress...")
     request_batchs = prepare_batches(batched_ingress_paths, args.prefix)
 
     if args.manifest_path:
-        logger.info("Writing manifest file to %s...", os.path.abspath(args.manifest_path))
-        create_manifest_file(os.path.abspath(args.manifest_path))
+        logger.info("Writing manifest file to %s", os.path.abspath(args.manifest_path))
+        write_manifest_file(MANIFEST, os.path.abspath(args.manifest_path))
 
     if not args.dry_run:
-        initialize_summary_table()
+        SUMMARY_TABLE = initialize_summary_table()
 
         cognito_config = config["COGNITO"]
 
@@ -821,10 +737,10 @@ def main(args):
 
             # Create the JSON report file, if requested
             if args.report_path:
-                create_report_file(args)
+                create_report_file(args, SUMMARY_TABLE)
 
             # Print the summary table
-            print_ingress_summary()
+            print_ingress_summary(SUMMARY_TABLE)
 
             # Flush all logged statements to CloudWatch Logs
             log_util.CLOUDWATCH_HANDLER.flush()

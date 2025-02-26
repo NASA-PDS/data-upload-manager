@@ -7,7 +7,7 @@ The PDS Data Upload Manager provides the client application and server interface
 The PDS Data Delivery Manager has the following prerequisties:
 
 - `python3` for running the client application and unit tests
-- `awscli` (optional) for deploying the service components to AWS (TBD)
+- `terraform` for creating and deploying DUM server components to AWS
 
 ## User Quickstart
 
@@ -17,11 +17,88 @@ Install with:
 
 To deploy the service components to an AWS environment:
 
-    TBD
+    cd terraform/
+    terraform init
+    terraform apply
 
 To execute the client, run:
 
-    pds-ingress-client.py <ingress path> [<ingress_path> ...]
+    pds-ingress-client -c <config path> -n <PDS node ID> -- <ingress path> [<ingress_path> ...]
+
+To see a listing of all available arguments for the client:
+
+    pds-ingress-client --help
+
+## Data Upload Manager Client Workflow
+
+When utilizing the DUM Client script (`pds-ingress-client`), the following workflow is executed:
+
+1. Indexing of the requested input files/paths to determine the full input file set
+2. Generation of a Manifest file, containing information, including MD5 checksums, of each file to be ingested
+3. Batch ingress requesting of input file set to the DUM Ingress Service in AWS
+4. Batch upload of input file set to AWS S3
+5. Ingress report creation
+
+Determination of the input file set is determined in Step 1 by resolving the paths providing on
+the command-line to the DUM client. Any directories provided are recursed to determine the full set
+of files within. Any paths provided are included as-is into the input file set.
+
+Depending on the size of the input file set, the Manifest file creation in Step 2 can become
+time-consuming due to the hashing of each file in the input file set. To save time, the `--manifest-path`
+command-line option should be leveraged to write the contents of the Manifest to local disk. Specifying
+the same path via `--manifest-path` on subsequent executions of the DUM client will result in
+a read of the existing Manifest from disk. Any files within the input set referenced within the
+read Manifest will reuse the precomputed values within, saving upfront time prior to start of upload
+to S3. The Manifest will then be re-written to the path specified by `--manifest-path` to include
+any new files encountered. In this way, a Manifest file can expand across executions of DUM to serve
+as a sort of cache for file information.
+
+The batch size utilized by Steps 3 and 4 can be configured within the INI config provided to the
+DUM client. The number of batches processed in parallel can be controlled via the `--num-threads`
+command-line argument.
+
+By default, at completion of an ingress request (Step 5), the DUM client provides a summary of the
+results of the transfer:
+
+```
+Ingress Summary Report for 2025-02-25 11:41:29.507022
+-----------------------------------------------------
+Uploaded: 200 file(s)
+Skipped: 0 file(s)
+Failed: 0 file(s)
+Total: 200 files(s)
+Time elapsed: 3019.00 seconds
+Bytes tranferred: 3087368895
+```
+
+A more detailed JSON-format report, containing full listings of all uploaded/skipped/failed paths,
+can be written to disk via the `--report-path` command-line argument:
+
+```
+{
+    "Arguments": "Namespace(config_path='mcp.test.ingress.config.ini', node='sbn', prefix='/PDS/SBN/', force_overwrite=True, num_threads=4, log_path='/tmp/dum_log.txt', manifest_path='/tmp/dum_manifest.json', report_path='/tmp/dum_report.json', dry_run=False, log_level='info', ingress_paths=['/PDS/SBN/gbo.ast.catalina.survey/'])",
+    "Batch Size": 3,
+    "Total Batches": 67,
+    "Start Time": "2025-02-25 18:51:10.507562+00:00",
+    "Finish Time": "2025-02-25 19:41:29.504806+00:00",
+    "Uploaded": [
+        "gbo.ast.catalina.survey/data_calibrated/703/2020/20Apr02/703_20200402_2B_F48FC1_01_0001.arch.fz",
+        ...
+        "gbo.ast.catalina.survey/data_calibrated/703/2020/20Apr02/703_20200402_2B_N02055_01_0001.arch.xml"
+    ],
+    "Total Uploaded": 200,
+    "Skipped": [],
+    "Total Skipped": 0,
+    "Failed": [],
+    "Total Failed": 0,
+    "Bytes Transferred": 3087368895,
+    "Total Files": 200
+}
+```
+
+Lastly, a detailed log file containing trace statements for each file/batch uploaded can be written
+to disk via the `--log-path` command-line argument. The log file path may also be specifed within
+the INI config.
 
 ## Code of Conduct
 
@@ -75,7 +152,7 @@ A complete "build" including test execution, linting (`mypy`, `black`, `flake8`,
 
 #### Unit tests
 
-Our unit tests are launched with command:
+Our unit tests are launched with the command:
 
     pytest
 

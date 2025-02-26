@@ -48,9 +48,18 @@ For example, if the file ``/home/user/bundle/file.xml`` were to be uploaded, and
 ``--prefix /home/user`` were also provided, the path provided to the ingress service
 in AWS would resolve to ``bundle/file.xml``.
 
-Lastly, the ``pds-ingress-client`` by default utilizes all available CPUs on the
+The ``pds-ingress-client`` by default utilizes all available CPUs on the
 local machine to perform parallelized ingress requests to the ingress service. The exact
 number of threads can be controlled via the ``--num-threads`` argument.
+
+The client script also provides several arguments for reporting status of an ingress request:
+
+- ``--report-path`` : Specifies a path to write a detailed report file in JSON format, containing details about which files were uploaded, skipped or failed during transfer.
+- ``--manifest-path`` : Specifies a path to write the manifest of all files included in ingress request, including file checksums. This option may also be used to provide an existing Manifest file to bypass its recomputation during subsequent requests.
+- ``--log-path`` : Specifies a path to write a trace log of the ingress request which does not go to the console. Can be useful for troubleshooting tranfer failures.
+
+Lastly, the ``--version`` option may be used to verify the version number of installed DUM client.
+
 
 .. References:
 .. _installation: ../installation/index.html
