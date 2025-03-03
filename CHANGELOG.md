@@ -4,6 +4,10 @@
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.1.2...«unknown»)
 
+**Requirements:**
+
+- As a user, I want to resume/rerun upload on a directory and only have the updates or missing files uploaded [\#34](https://github.com/NASA-PDS/data-upload-manager/issues/34)
+
 **Improvements:**
 
 - Develop Ingress Lambda Logging Conventions [\#6](https://github.com/NASA-PDS/data-upload-manager/issues/6)
