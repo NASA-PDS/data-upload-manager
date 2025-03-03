@@ -1,5 +1,13 @@
 # Changelog
 
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-03-03)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.1.2...«unknown»)
+
+**Improvements:**
+
+- Develop Ingress Lambda Logging Conventions [\#6](https://github.com/NASA-PDS/data-upload-manager/issues/6)
+
 ## [v2.1.2](https://github.com/NASA-PDS/data-upload-manager/tree/v2.1.2) (2025-02-26)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.1.1...v2.1.2)
