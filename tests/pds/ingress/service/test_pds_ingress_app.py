@@ -13,7 +13,7 @@ import botocore.exceptions
 from pds.ingress import __version__
 from pds.ingress.service.pds_ingress_app import check_client_version
 from pds.ingress.service.pds_ingress_app import get_dum_version
-from pds.ingress.service.pds_ingress_app import initialize_bucket_map
+from pds.ingress.util.config_util import initialize_bucket_map
 from pds.ingress.service.pds_ingress_app import lambda_handler
 from pds.ingress.service.pds_ingress_app import logger as service_logger
 from pds.ingress.service.pds_ingress_app import should_overwrite_file
@@ -44,7 +44,7 @@ class PDSIngressAppTest(unittest.TestCase):
 
     def test_default_bucket_map(self):
         """Test parsing of the default bucket map bundled with the Lambda function"""
-        bucket_map = initialize_bucket_map()
+        bucket_map = initialize_bucket_map(service_logger)
 
         self.assertIsNotNone(bucket_map)
         self.assertIsInstance(bucket_map, dict)
@@ -74,7 +74,7 @@ class PDSIngressAppTest(unittest.TestCase):
             os.environ["BUCKET_MAP_FILE"] = os.path.basename(temp_bucket_file.name)
             os.environ["LAMBDA_TASK_ROOT"] = ""
 
-            bucket_map = initialize_bucket_map()
+            bucket_map = initialize_bucket_map(service_logger)
 
             self.assertIsNotNone(bucket_map)
             self.assertIsInstance(bucket_map, dict)

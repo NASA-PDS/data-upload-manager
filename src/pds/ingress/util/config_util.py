@@ -3,13 +3,15 @@
 config_util.py
 ==============
 
-Module containing functions for parsing the INI config file used by the
-Ingress client script.
+Module containing functions for parsing config files used by the
+Ingress client and service.
 
 """
 import configparser
 import os
+from os.path import join
 
+import yaml
 from pkg_resources import resource_filename
 
 CONFIG = None
@@ -115,3 +117,49 @@ class ConfigUtil:
             region == "localhost"
             for region in [config["API_GATEWAY"]["region"].lower(), config["COGNITO"]["region"].lower()]
         )
+
+
+def initialize_bucket_map(logger):
+    """
+    Parses the YAML bucket map file for use with the Lambda service invocation.
+    The bucket map location is derived from the OS environment. Currently,
+    only the bucket map bundled with this Lambda function is supported.
+
+    Returns
+    -------
+    bucket_map : dict
+        Contents of the parsed bucket map YAML config file.
+
+    Raises
+    ------
+    RuntimeError
+        If the bucket map cannot be found at the configured location.
+
+    """
+    bucket_map_location = os.getenv("BUCKET_MAP_LOCATION", "config")
+    bucket_map_file = os.getenv("BUCKET_MAP_FILE", "bucket-map.yaml")
+
+    bucket_map_path = join(bucket_map_location, bucket_map_file)
+
+    # TODO: add support for bucket map locations that are s3 or http URI's
+    if bucket_map_path.startswith("s3://"):
+        bucket_map = {}
+    elif bucket_map_path.startswith(("http://", "https://")):
+        bucket_map = {}
+    else:
+        logger.info("Searching Lambda root for bucket map")
+
+        lambda_root = os.environ["LAMBDA_TASK_ROOT"]
+
+        bucket_map_path = join(lambda_root, bucket_map_path)
+
+        if not os.path.exists(bucket_map_path):
+            raise RuntimeError(f"No bucket map found at location {bucket_map_path}")
+
+        with open(bucket_map_path, "r") as infile:
+            bucket_map = yaml.safe_load(infile)
+
+    logger.info("Bucket map %s loaded", bucket_map_path)
+    logger.debug(str(bucket_map))
+
+    return bucket_map

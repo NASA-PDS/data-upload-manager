@@ -17,40 +17,15 @@ from os.path import join
 
 import boto3
 import botocore
-import yaml
 from botocore.exceptions import ClientError
+
+from .util.config_util import initialize_bucket_map
+from .util.log_util import SingleLogFilter, LOG_LEVELS
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
-LEVEL_MAP = {
-    "CRITICAL": logging.CRITICAL,
-    "WARNING": logging.WARNING,
-    "WARN": logging.WARNING,
-    "INFO": logging.INFO,
-    "DEBUG": logging.DEBUG,
-}
-
-
-class SingleLogFilter(logging.Filter):
-    """Simple log filter to ensure each unique log message is only logged once."""
-
-    def __init__(self, name=""):
-        super().__init__(name)
-        self.logged_messages = set()
-
-    def filter(self, record):
-        """Filters out the provided log record if we've seen it before"""
-        log_message = record.getMessage()
-
-        if log_message not in self.logged_messages:
-            self.logged_messages.add(log_message)
-            return True
-
-        return False
-
-
 logger = logging.getLogger()
-logger.setLevel(LEVEL_MAP.get(LOG_LEVEL.upper(), logging.INFO))
+logger.setLevel(LOG_LEVELS.get(LOG_LEVEL.lower(), logging.INFO))
 logger.addFilter(SingleLogFilter())
 
 logger.info("Loading function PDS Ingress Service")
@@ -91,52 +66,6 @@ def get_dum_version():
     logger.info("Read version %s from %s", version, version_path)
 
     return version
-
-
-def initialize_bucket_map():
-    """
-    Parses the YAML bucket map file for use with the current service invocation.
-    The bucket map location is derived from the OS environment. Currently,
-    only the bucket map bundled with this Lambda function is supported.
-
-    Returns
-    -------
-    bucket_map : dict
-        Contents of the parsed bucket map YAML config file.
-
-    Raises
-    ------
-    RuntimeError
-        If the bucket map cannot be found at the configured location.
-
-    """
-    bucket_map_location = os.getenv("BUCKET_MAP_LOCATION", "config")
-    bucket_map_file = os.getenv("BUCKET_MAP_FILE", "bucket-map.yaml")
-
-    bucket_map_path = join(bucket_map_location, bucket_map_file)
-
-    # TODO: add support for bucket map locations that are s3 or http URI's
-    if bucket_map_path.startswith("s3://"):
-        bucket_map = {}
-    elif bucket_map_path.startswith(("http://", "https://")):
-        bucket_map = {}
-    else:
-        logger.info("Searching Lambda root for bucket map")
-
-        lambda_root = os.environ["LAMBDA_TASK_ROOT"]
-
-        bucket_map_path = join(lambda_root, bucket_map_path)
-
-        if not os.path.exists(bucket_map_path):
-            raise RuntimeError(f"No bucket map found at location {bucket_map_path}")
-
-        with open(bucket_map_path, "r") as infile:
-            bucket_map = yaml.safe_load(infile)
-
-    logger.info("Bucket map %s loaded", bucket_map_path)
-    logger.debug(str(bucket_map))
-
-    return bucket_map
 
 
 def check_client_version(client_version, service_version):
@@ -348,7 +277,7 @@ def lambda_handler(event, context):
     service_version = get_dum_version()
 
     # Read the bucket map configured for the service
-    bucket_map = initialize_bucket_map()
+    bucket_map = initialize_bucket_map(logger)
 
     # Parse request details from event object
     body = json.loads(event["body"])
