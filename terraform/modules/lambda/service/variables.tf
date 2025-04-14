@@ -20,10 +20,22 @@ variable "lambda_ingress_service_function_name" {
   description = "Name to assign to the Lambda Ingress Service function"
 }
 
+variable "lambda_status_service_function_name" {
+  type        = string
+  default     = "nucleus-dum-status-service"
+  description = "Name to assign to the Lambda Status Service function"
+}
+
 variable "lambda_ingress_service_function_description" {
   type        = string
   default     = "PDS Data Upload Manager Ingress Service function"
   description = "Description for the Lambda Ingress Service function"
+}
+
+variable "lambda_status_service_function_description" {
+  type        = string
+  default     = "PDS Data Upload Mangager Status Service function"
+  description = "Description for the Lambda Status Service function"
 }
 
 variable "lambda_ingress_service_iam_role_arn" {

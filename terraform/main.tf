@@ -9,10 +9,24 @@ provider "aws" {
 module "nucleus_dum_ingress_service_lambda" {
   source = "./modules/lambda/service"
 
-  venue                               = var.venue
-  lambda_s3_bucket_name               = var.lambda_s3_bucket_name
-  lambda_ingress_service_iam_role_arn = var.lambda_ingress_service_iam_role_arn
-  lambda_ingress_localstack_context   = var.localstack_context
+  venue                                  = var.venue
+  lambda_s3_bucket_name                  = var.lambda_s3_bucket_name
+  lambda_ingress_service_iam_role_arn    = var.lambda_ingress_service_iam_role_arn
+  lambda_ingress_localstack_context      = var.localstack_context
+  lambda_ingress_service_default_buckets = var.lambda_ingress_service_default_buckets
+}
+
+module "nucleus_dum_status_queue" {
+  source = "./modules/sqs"
+}
+
+resource "aws_lambda_event_source_mapping" "lambda_status_service_sqs_trigger" {
+  event_source_arn = module.nucleus_dum_status_queue.nucleus_dum_sqs_arn
+  function_name    = module.nucleus_dum_ingress_service_lambda.lambda_status_service_function_name
+
+  function_response_types = ["ReportBatchItemFailures"]
+
+  depends_on = [module.nucleus_dum_ingress_service_lambda, module.nucleus_dum_status_queue]
 }
 
 module "nucleus_dum_cognito" {

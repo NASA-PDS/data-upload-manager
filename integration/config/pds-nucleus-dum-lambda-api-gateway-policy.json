@@ -104,7 +104,26 @@
             "Effect": "Allow",
             "Resource": "*",
             "Sid": ""
-        }
+        },
+        {
+            "Action": [
+                "ses:SendEmail",
+                "ses:SendRawEmail"
+            ],
+            "Effect": "Allow",
+            "Resource": "*",
+            "Sid": ""
+        },
+        {
+		    "Action": [
+		        "sqs:DeleteMessage",
+		        "sqs:GetQueueAttributes",
+		        "sqs:ReceiveMessage"
+		    ],
+		    "Effect": "Allow",
+		    "Resource": "*",
+		    "Sid": ""
+		}
     ],
     "Version": "2012-10-17"
 }
