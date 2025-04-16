@@ -60,7 +60,7 @@ resource "aws_lambda_layer_version" "lambda_ingress_service_pyyaml_layer" {
   s3_bucket           = aws_s3_bucket.lambda_bucket.id
   s3_key              = aws_s3_object.lambda_ingress_service_pyyaml_layer.key
   layer_name          = "PyYAML"
-  compatible_runtimes = ["python3.8","python3.9"]
+  compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12","python3.13"]
 }
 
 # Create the Ingress Service Lambda function using the zip uploaded to S3
@@ -71,7 +71,7 @@ resource "aws_lambda_function" "lambda_ingress_service" {
   s3_bucket = aws_s3_bucket.lambda_bucket.id
   s3_key    = aws_s3_object.lambda_ingress_service.key
 
-  runtime = "python3.9"
+  runtime = "python3.10"
   handler = "pds_ingress_app.lambda_handler"
 
   source_code_hash = data.archive_file.lambda_ingress_service.output_base64sha256

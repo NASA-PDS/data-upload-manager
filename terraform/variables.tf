@@ -59,6 +59,7 @@ variable "lambda_authorizer_iam_role_arn" {
 
 variable "localstack_context" {
     type        = bool
+    default     = false
     description = "Flag indicating whether DUM is to be deployed to a Localstack instance"
 }
 
@@ -80,4 +81,16 @@ variable "nucleus_dum_client_cloudwatch_log_group" {
   type        = string
   default     = "/pds/nucleus/dum/client-log-group"
   description = "Name of the CloudWatch Log Group for use with the DUM Ingress Client script"
+}
+
+variable "lambda_ingress_service_default_buckets" {
+  type = list(
+    object(
+      {
+        name        = string
+        description = string
+      }
+    )
+  )
+  description = "List of the default S3 staging buckets to create for each PDS Node, each name will be appended with the designated venue name to form the final bucket name"
 }

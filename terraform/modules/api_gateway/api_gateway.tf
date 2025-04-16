@@ -49,7 +49,6 @@ resource "aws_api_gateway_deployment" "nucleus_dum_api_deployments" {
   count = length(var.api_deployment_stages)
 
   rest_api_id = aws_api_gateway_rest_api.nucleus_dum_api.id
-  stage_name  = var.api_deployment_stages[count.index]
 
   triggers = {
     redeployment = sha1(yamlencode(aws_api_gateway_rest_api.nucleus_dum_api.body))
@@ -60,6 +59,15 @@ resource "aws_api_gateway_deployment" "nucleus_dum_api_deployments" {
   }
 }
 
+resource "aws_api_gateway_stage" "stages" {
+  count = length(var.api_deployment_stages)
+
+  deployment_id        = aws_api_gateway_deployment.nucleus_dum_api_deployments[count.index].id
+  rest_api_id          = aws_api_gateway_rest_api.nucleus_dum_api.id
+  stage_name           = var.api_deployment_stages[count.index]
+  xray_tracing_enabled = true
+}
+
 resource "aws_api_gateway_account" "cloudwatch_role_arn_setting" {
   cloudwatch_role_arn = data.aws_iam_role.cloudwatch_iam_role.arn
 }
@@ -68,7 +76,7 @@ resource "aws_api_gateway_method_settings" "nucleus_dum_api_deployment_settings"
   count = length(var.api_deployment_stages)
 
   rest_api_id = aws_api_gateway_rest_api.nucleus_dum_api.id
-  stage_name  = aws_api_gateway_deployment.nucleus_dum_api_deployments[count.index].stage_name
+  stage_name  = aws_api_gateway_stage.stages[count.index].stage_name
   method_path = "*/*"  # Apply settings to all methods in deployment
 
   settings {
