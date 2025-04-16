@@ -11,6 +11,7 @@ import configparser
 import os
 from os.path import join
 
+import yamale
 import yaml
 from pkg_resources import resource_filename
 
@@ -119,11 +120,43 @@ class ConfigUtil:
         )
 
 
+def validate_bucket_map(bucket_map_path, logger):
+    """
+    Validates the bucket map at the provided path against the Yamale schema defined
+    by the environment.
+
+    Parameters
+    ----------
+    bucket_map_path : str
+        Path to the bucket map file to validate.
+    logger : logging.logger
+        Object to log results of bucket map validation to.
+
+    """
+    lambda_root = os.environ["LAMBDA_TASK_ROOT"]
+    bucket_schema_location = os.getenv("BUCKET_MAP_SCHEMA_LOCATION", "config")
+    bucket_schema_file = os.getenv("BUCKET_MAP_SCHEMA_FILE", "bucket-map.schema")
+
+    bucket_map_schema_path = join(lambda_root, bucket_schema_location, bucket_schema_file)
+
+    bucket_map_schema = yamale.make_schema(bucket_map_schema_path)
+    bucket_map_data = yamale.make_data(bucket_map_path)
+
+    logger.info(f"Validating bucket map {bucket_map_path} with Yamale schema {bucket_map_schema_path}...")
+    yamale.validate(bucket_map_schema, bucket_map_data)
+    logger.info("Bucket map is valid.")
+
+
 def initialize_bucket_map(logger):
     """
     Parses the YAML bucket map file for use with the Lambda service invocation.
     The bucket map location is derived from the OS environment. Currently,
     only the bucket map bundled with this Lambda function is supported.
+
+    Parameters
+    ----------
+    logger : logging.logger
+        Object to log results of bucket map initialization to.
 
     Returns
     -------
@@ -155,6 +188,8 @@ def initialize_bucket_map(logger):
 
         if not os.path.exists(bucket_map_path):
             raise RuntimeError(f"No bucket map found at location {bucket_map_path}")
+
+        validate_bucket_map(bucket_map_path, logger)
 
         with open(bucket_map_path, "r") as infile:
             bucket_map = yaml.safe_load(infile)
