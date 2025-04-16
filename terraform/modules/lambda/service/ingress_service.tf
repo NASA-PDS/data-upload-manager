@@ -30,9 +30,9 @@ resource "aws_s3_object" "lambda_ingress_service" {
   etag   = data.archive_file.lambda_ingress_service.output_md5
 }
 
-# Create the PyYAML layer needed by the Ingress Service Lambda to parse the
-# bucket map, then deploy the zip to S3
-# Note that the creation of the zip file is included here to ensure the
+# Create the Yaml package layers needed by the Ingress Service Lambda to parse
+# and validate the bucket map, then deploy the zips to S3
+# Note that the creation of the zip files are included here to ensure the
 # directory structure matches what AWS expects
 resource "null_resource" "lambda_ingress_service_pyyaml_layer" {
   provisioner "local-exec" {
@@ -47,6 +47,19 @@ resource "null_resource" "lambda_ingress_service_pyyaml_layer" {
   }
 }
 
+resource "null_resource" "lambda_ingress_service_yamale_layer" {
+  provisioner "local-exec" {
+    command = <<-EOT
+      python3 -m venv ${path.module}/files/yamale
+      source ${path.module}/files/yamale/bin/activate
+      pip install yamale -t ${path.module}/files/yamale/python
+      deactivate
+      cd ${path.module}/files/yamale
+      zip -r layer-Yamale.zip ./python/
+    EOT
+  }
+}
+
 resource "aws_s3_object" "lambda_ingress_service_pyyaml_layer" {
   bucket = aws_s3_bucket.lambda_bucket.id
 
@@ -56,10 +69,26 @@ resource "aws_s3_object" "lambda_ingress_service_pyyaml_layer" {
   depends_on = [null_resource.lambda_ingress_service_pyyaml_layer]
 }
 
+resource "aws_s3_object" "lambda_ingress_service_yamale_layer" {
+  bucket = aws_s3_bucket.lambda_bucket.id
+
+  key    = "layer-Yamale.zip"
+  source = "${path.module}/files/yamale/layer-Yamale.zip"
+
+  depends_on = [null_resource.lambda_ingress_service_yamale_layer]
+}
+
 resource "aws_lambda_layer_version" "lambda_ingress_service_pyyaml_layer" {
   s3_bucket           = aws_s3_bucket.lambda_bucket.id
   s3_key              = aws_s3_object.lambda_ingress_service_pyyaml_layer.key
   layer_name          = "PyYAML"
+  compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12","python3.13"]
+}
+
+resource "aws_lambda_layer_version" "lambda_ingress_service_yamale_layer" {
+  s3_bucket           = aws_s3_bucket.lambda_bucket.id
+  s3_key              = aws_s3_object.lambda_ingress_service_yamale_layer.key
+  layer_name          = "Yamale"
   compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12","python3.13"]
 }
 
@@ -78,16 +107,19 @@ resource "aws_lambda_function" "lambda_ingress_service" {
 
   role = var.lambda_ingress_service_iam_role_arn
 
-  layers = [aws_lambda_layer_version.lambda_ingress_service_pyyaml_layer.arn]
+  layers = [aws_lambda_layer_version.lambda_ingress_service_pyyaml_layer.arn,
+            aws_lambda_layer_version.lambda_ingress_service_yamale_layer.arn]
 
   environment {
     variables = {
-      BUCKET_MAP_FILE     = "bucket-map.yaml",
-      BUCKET_MAP_LOCATION = "config",
-      LOG_LEVEL           = "INFO",
-      VERSION_LOCATION    = "config",
-      VERSION_FILE        = "VERSION.txt"
-      ENDPOINT_URL        = var.lambda_ingress_localstack_context ? "http://localhost.localstack.cloud:4566" : ""
+      BUCKET_MAP_FILE            = "bucket-map.yaml",
+      BUCKET_MAP_LOCATION        = "config",
+      BUCKET_MAP_SCHEMA_FILE     = "bucket-map.schema",
+      BUCKET_MAP_SCHEMA_LOCATION = "config",
+      LOG_LEVEL                  = "INFO",
+      VERSION_LOCATION           = "config",
+      VERSION_FILE               = "VERSION.txt"
+      ENDPOINT_URL               = var.lambda_ingress_localstack_context ? "http://localhost.localstack.cloud:4566" : ""
     }
   }
 
