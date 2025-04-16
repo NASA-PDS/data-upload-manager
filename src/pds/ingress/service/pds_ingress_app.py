@@ -19,8 +19,18 @@ import boto3
 import botocore
 from botocore.exceptions import ClientError
 
-from .util.config_util import initialize_bucket_map, bucket_for_path
-from .util.log_util import SingleLogFilter, LOG_LEVELS
+# When deployed to AWS, these imports need to absolute
+try:
+    from util.config_util import bucket_for_path
+    from util.config_util import initialize_bucket_map
+    from util.log_util import LOG_LEVELS
+    from util.log_util import SingleLogFilter
+# When running the unit tests, these imports need to be relative
+except ModuleNotFoundError:
+    from .util.config_util import bucket_for_path
+    from .util.config_util import initialize_bucket_map
+    from .util.log_util import LOG_LEVELS
+    from .util.log_util import SingleLogFilter
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
@@ -187,7 +197,7 @@ def should_overwrite_file(destination_bucket, object_key, md5_digest, file_size,
 
 
 def generate_presigned_upload_url(
-    bucket_name,
+    bucket_info,
     object_key,
     md5_digest,
     base64_md5_digest,
@@ -202,8 +212,8 @@ def generate_presigned_upload_url(
 
     Parameters
     ----------
-    bucket_name : str
-        Name of the S3 bucket to be uploaded to.
+    bucket_info : dict
+        Dictionary containing information about the destination bucket.
     object_key : str
         Object key location within the S3 bucket to be uploaded to.
     md5_digest : str
@@ -230,7 +240,7 @@ def generate_presigned_upload_url(
     """
     client_method = "put_object"
     method_parameters = {
-        "Bucket": bucket_name,
+        "Bucket": bucket_info["name"],
         "Key": object_key,
         "ContentMD5": base64_md5_digest,
         "Metadata": {
@@ -241,6 +251,9 @@ def generate_presigned_upload_url(
         },
     }
 
+    if bucket_info.get("storage_class"):
+        method_parameters["StorageClass"] = bucket_info["storage_class"]
+
     try:
         url = s3_client.generate_presigned_url(
             ClientMethod=client_method, Params=method_parameters, ExpiresIn=expires_in
@@ -248,7 +261,7 @@ def generate_presigned_upload_url(
 
         logger.info("Generated presigned URL: %s", url)
     except ClientError:
-        logger.exception("Failed to generate a presigned URL for %s", join(bucket_name, object_key))
+        logger.exception("Failed to generate a presigned URL for %s", join(bucket_info["name"], object_key))
         raise
 
     return url
@@ -337,7 +350,7 @@ def lambda_handler(event, context):
                 destination_bucket, object_key, md5_digest, int(file_size), float(last_modifed), force_overwrite
             ):
                 s3_url = generate_presigned_upload_url(
-                    destination_bucket,
+                    bucket_info,
                     object_key,
                     md5_digest,
                     base64_md5_digest,
