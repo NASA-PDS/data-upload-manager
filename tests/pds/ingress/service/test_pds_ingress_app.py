@@ -13,11 +13,11 @@ import botocore.exceptions
 from pds.ingress import __version__
 from pds.ingress.service.pds_ingress_app import check_client_version
 from pds.ingress.service.pds_ingress_app import get_dum_version
-from pds.ingress.util.config_util import initialize_bucket_map
-from pds.ingress.util.node_util import NodeUtil
 from pds.ingress.service.pds_ingress_app import lambda_handler
 from pds.ingress.service.pds_ingress_app import logger as service_logger
 from pds.ingress.service.pds_ingress_app import should_overwrite_file
+from pds.ingress.util.config_util import initialize_bucket_map
+from pds.ingress.util.node_util import NodeUtil
 from pkg_resources import resource_filename
 
 
@@ -69,39 +69,39 @@ class PDSIngressAppTest(unittest.TestCase):
                 MAP:
                   NODES:
                     ATM:
-                      default: 
+                      default:
                         bucket:
                           name: test-bucket-name
                     ENG:
-                      default: 
+                      default:
                         bucket:
                           name: test-bucket-name
                     GEO:
-                      default: 
+                      default:
                         bucket:
                           name: test-bucket-name
                     IMG:
-                      default: 
+                      default:
                         bucket:
                           name: test-bucket-name
                     NAIF:
-                      default: 
+                      default:
                         bucket:
                           name: test-bucket-name
                     PPI:
-                      default: 
+                      default:
                         bucket:
                           name: test-bucket-name
                     RMS:
-                      default: 
+                      default:
                         bucket:
                           name: test-bucket-name
                     RS:
-                      default: 
+                      default:
                         bucket:
                           name: test-bucket-name
                     SBN:
-                      default: 
+                      default:
                         bucket:
                           name: test-bucket-name
                 """
@@ -123,7 +123,9 @@ class PDSIngressAppTest(unittest.TestCase):
             for node_name in NodeUtil.permissible_node_ids():
                 self.assertIn(node_name.upper(), bucket_map["MAP"]["NODES"])
                 self.assertIn("default", bucket_map["MAP"]["NODES"][node_name.upper()])
-                self.assertEqual(bucket_map["MAP"]["NODES"][node_name.upper()]["default"]["bucket"]["name"], "test-bucket-name")
+                self.assertEqual(
+                    bucket_map["MAP"]["NODES"][node_name.upper()]["default"]["bucket"]["name"], "test-bucket-name"
+                )
 
     def test_check_client_version(self):
         """Test the logging that occurs during the client version check"""
