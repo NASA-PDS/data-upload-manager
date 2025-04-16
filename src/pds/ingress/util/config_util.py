@@ -9,6 +9,7 @@ Ingress client and service.
 """
 import configparser
 import os
+from fnmatch import fnmatchcase
 from os.path import join
 
 import yamale
@@ -198,3 +199,43 @@ def initialize_bucket_map(logger):
     logger.debug(str(bucket_map))
 
     return bucket_map
+
+
+def bucket_for_path(node_bucket_map, file_path, logger):
+    """
+    Derives the appropriate bucket location and settings for the specified
+    file path using the provided node-specific portion of the bucket map.
+
+    Parameters
+    ----------
+    node_bucket_map : dict
+        Bucket mapping specific to the node requesting file ingress.
+    file_path : str
+        The file path to match to a bucket map entry.
+    logger : logging.logger
+        Object to log results of the path resolution to.
+
+    Returns
+    -------
+    bucket : dict
+        Dicitonary containing details on the S3 bucket that will act as destination
+        for the incomming file. This includes the bucket name, as well as any
+        other configuration options that can be specified in the bucket map.
+
+    """
+
+    def _match_path_to_prefix(file_path, prefix):
+        """Determine if a file path matches a bucket map prefix via equality, substring, or Unix-style pattern matching"""
+        return file_path == prefix or file_path.startswith(prefix) or fnmatchcase(file_path, prefix)
+
+    bucket = node_bucket_map["default"]["bucket"]
+
+    for path in node_bucket_map.get("paths", []):
+        if _match_path_to_prefix(file_path, path["prefix"]):
+            bucket = path["bucket"]
+            logger.info("Resolved bucket location %s for path %s", bucket, file_path)
+            break
+    else:
+        logger.warning('No bucket location configured for path "%s", using default bucket %s', file_path, bucket)
+
+    return bucket

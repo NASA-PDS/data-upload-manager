@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+import logging
 import unittest
 from os.path import join
 from unittest.mock import patch
 
 import pds.ingress.util.config_util
+from pds.ingress.util.config_util import bucket_for_path
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.config_util import SanitizingConfigParser
 from pkg_resources import resource_filename
@@ -14,7 +16,7 @@ class ConfigUtilTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.test_dir = resource_filename(__name__, "")
 
-    def test_default_config(self):
+    def test_default_ini_config(self):
         """Test with the default configuration file"""
         parser = ConfigUtil.get_config()
 
@@ -54,7 +56,7 @@ class ConfigUtilTest(unittest.TestCase):
         self.assertFalse(parser["OTHER"]["log_group_name"].startswith('"'))
         self.assertFalse(parser["OTHER"]["log_group_name"].endswith('"'))
 
-    def mock_default_config_path(self):
+    def mock_default_ini_config_path(self):
         return join(self.test_dir, "data", "mock.localstack.config.ini")
 
     def test_is_localstack_context(self):
@@ -67,12 +69,48 @@ class ConfigUtilTest(unittest.TestCase):
 
         # Retest using the mock localstack config in place of the default
         with patch.object(
-            pds.ingress.util.config_util.ConfigUtil, "default_config_path", self.mock_default_config_path
+            pds.ingress.util.config_util.ConfigUtil, "default_config_path", self.mock_default_ini_config_path
         ):
             self.assertTrue(ConfigUtil.is_localstack_context())
 
         # Reset cached config
         pds.ingress.util.config_util.CONFIG = None
+
+    def test_bucket_for_path(self):
+        """Tests for config_util.bucket_for_path()"""
+        test_node_bucket_map = {
+            "default": {"bucket": {"name": "default_path_bucket"}},
+            "paths": [
+                {"prefix": "full/path/to/object", "bucket": {"name": "full_path_bucket"}},
+                {"prefix": "substring/path/to", "bucket": {"name": "substring_path_bucket"}},
+                {"prefix": "wildcard/path/to/*", "bucket": {"name": "wildcard_path_bucket"}},
+            ],
+        }
+        logger = logging.getLogger(__name__)
+
+        bucket = bucket_for_path(test_node_bucket_map, "full/path/to/object", logger)
+
+        self.assertIsInstance(bucket, dict)
+        self.assertIn("name", bucket)
+        self.assertEqual(bucket["name"], "full_path_bucket")
+
+        bucket = bucket_for_path(test_node_bucket_map, "substring/path/to/object", logger)
+
+        self.assertIsInstance(bucket, dict)
+        self.assertIn("name", bucket)
+        self.assertEqual(bucket["name"], "substring_path_bucket")
+
+        bucket = bucket_for_path(test_node_bucket_map, "wildcard/path/to/test/object", logger)
+
+        self.assertIsInstance(bucket, dict)
+        self.assertIn("name", bucket)
+        self.assertEqual(bucket["name"], "wildcard_path_bucket")
+
+        bucket = bucket_for_path(test_node_bucket_map, "unknown/path/to/object", logger)
+
+        self.assertIsInstance(bucket, dict)
+        self.assertIn("name", bucket)
+        self.assertEqual(bucket["name"], "default_path_bucket")
 
 
 if __name__ == "__main__":

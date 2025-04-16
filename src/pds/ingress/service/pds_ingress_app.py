@@ -19,7 +19,7 @@ import boto3
 import botocore
 from botocore.exceptions import ClientError
 
-from .util.config_util import initialize_bucket_map
+from .util.config_util import initialize_bucket_map, bucket_for_path
 from .util.log_util import SingleLogFilter, LOG_LEVELS
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
@@ -318,16 +318,8 @@ def lambda_handler(event, context):
 
         logger.info("Processing request for %s (index %d)", trimmed_path, request_index)
 
-        prefix_key = trimmed_path.split(os.sep)[0]
-
-        if prefix_key in node_bucket_map:
-            destination_bucket = node_bucket_map[prefix_key]
-            logger.info("Resolved bucket location %s for prefix %s", destination_bucket, prefix_key)
-        else:
-            destination_bucket = node_bucket_map["default"]
-            logger.warning(
-                "No bucket location configured for prefix %s, using default bucket %s", prefix_key, destination_bucket
-            )
+        bucket_info = bucket_for_path(node_bucket_map, trimmed_path, logger)
+        destination_bucket = bucket_info["name"]
 
         if not bucket_exists(destination_bucket):
             result.append(
