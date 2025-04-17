@@ -11,7 +11,9 @@ import configparser
 import os
 from fnmatch import fnmatchcase
 from os.path import join
+from urllib.parse import urlparse
 
+import boto3
 import yamale
 import yaml
 from pkg_resources import resource_filename
@@ -170,30 +172,39 @@ def initialize_bucket_map(logger):
         If the bucket map cannot be found at the configured location.
 
     """
+    lambda_root = os.environ["LAMBDA_TASK_ROOT"]
     bucket_map_location = os.getenv("BUCKET_MAP_LOCATION", "config")
     bucket_map_file = os.getenv("BUCKET_MAP_FILE", "bucket-map.yaml")
 
     bucket_map_path = join(bucket_map_location, bucket_map_file)
 
-    # TODO: add support for bucket map locations that are s3 or http URI's
     if bucket_map_path.startswith("s3://"):
-        bucket_map = {}
-    elif bucket_map_path.startswith(("http://", "https://")):
-        bucket_map = {}
+        logger.info("Downloading bucket map from %s", bucket_map_path)
+
+        parsed_s3_uri = urlparse(bucket_map_path)
+        bucket = parsed_s3_uri.netloc
+        key = parsed_s3_uri.path[1:]
+        bucket_map_dest = os.path.join(lambda_root, os.path.basename(key))
+
+        try:
+            s3_client = boto3.client("s3")
+            s3_client.download_file(bucket, key, bucket_map_dest)
+        except Exception as err:
+            raise RuntimeError(f"Failed to download bucket map from {bucket_map_path}, reason: {str(err)}")
+
+        bucket_map_path = bucket_map_dest
     else:
         logger.info("Searching Lambda root for bucket map")
 
-        lambda_root = os.environ["LAMBDA_TASK_ROOT"]
-
         bucket_map_path = join(lambda_root, bucket_map_path)
 
-        if not os.path.exists(bucket_map_path):
-            raise RuntimeError(f"No bucket map found at location {bucket_map_path}")
+    if not os.path.exists(bucket_map_path):
+        raise RuntimeError(f"No bucket map found at location {bucket_map_path}")
 
-        validate_bucket_map(bucket_map_path, logger)
+    validate_bucket_map(bucket_map_path, logger)
 
-        with open(bucket_map_path, "r") as infile:
-            bucket_map = yaml.safe_load(infile)
+    with open(bucket_map_path, "r") as infile:
+        bucket_map = yaml.safe_load(infile)
 
     logger.info("Bucket map %s loaded", bucket_map_path)
     logger.debug(str(bucket_map))

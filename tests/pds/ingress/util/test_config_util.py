@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import logging
 import os
 import tempfile
@@ -7,15 +6,77 @@ import unittest
 from os.path import join
 from unittest.mock import patch
 
-from pkg_resources import resource_filename
-
 import pds.ingress.util.config_util
 from pds.ingress.util.config_util import bucket_for_path
 from pds.ingress.util.config_util import ConfigUtil
-from pds.ingress.util.config_util import SanitizingConfigParser
-from pds.ingress.util.config_util import bucket_for_path
 from pds.ingress.util.config_util import initialize_bucket_map
+from pds.ingress.util.config_util import SanitizingConfigParser
 from pds.ingress.util.node_util import NodeUtil
+from pkg_resources import resource_filename
+
+
+class MockS3Client:
+    """Mock implementation for the boto3 S3 client class"""
+
+    def download_file(self, Bucket: str, Key: str, Filename: str):
+        """Simulate download of the file"""
+        with open(Filename, "w") as outfile:
+            outfile.write(
+                """
+                MAP:
+                  NODES:
+                    ATM:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    ENG:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    GEO:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    IMG:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    NAIF:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    PPI:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    RMS:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    RS:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    SBN:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                      paths:
+                        - prefix: path/to/archive/2022
+                          bucket:
+                            name: dummy-bucket
+                            storage_class: STANDARD
+                        - prefix: path/to/archive/2021
+                          bucket:
+                            name: dummy-bucket
+                            storage_class: GLACIER
+                """
+            )
+
+
+def mock_boto3_client(*args, **kwargs):
+    """Mock implementation for boto3.client to always return the Mock S3 client class"""
+    return MockS3Client()
 
 
 class ConfigUtilTest(unittest.TestCase):
@@ -174,6 +235,38 @@ class ConfigUtilTest(unittest.TestCase):
                 self.assertEqual(
                     bucket_map["MAP"]["NODES"][node_name.upper()]["default"]["bucket"]["name"], "test-bucket-name"
                 )
+
+    @patch.object(pds.ingress.util.config_util.boto3, "client", mock_boto3_client)
+    def test_bucket_map_from_s3(self):
+        """Test reading of a bucket map file from an S3 location"""
+        os.environ["BUCKET_MAP_LOCATION"] = "s3://test-bucket/path/to/bucket/map/"
+        os.environ["BUCKET_MAP_FILE"] = "bucket-map-from-s3.yaml"
+        os.environ["LAMBDA_TASK_ROOT"] = join(self.test_dir, os.pardir, "service")
+
+        bucket_map = initialize_bucket_map(logging.getLogger())
+
+        # Ensure the bucket map was "downloaded" where we expect
+        expected_bucket_map_path = join(os.environ["LAMBDA_TASK_ROOT"], os.environ["BUCKET_MAP_FILE"])
+        self.assertTrue(os.path.exists(expected_bucket_map_path))
+
+        try:
+            self.assertIsNotNone(bucket_map)
+            self.assertIsInstance(bucket_map, dict)
+            self.assertIn("MAP", bucket_map)
+            self.assertIn("NODES", bucket_map["MAP"])
+            for node_name in NodeUtil.permissible_node_ids():
+                self.assertIn(node_name.upper(), bucket_map["MAP"]["NODES"])
+                self.assertIn("default", bucket_map["MAP"]["NODES"][node_name.upper()])
+                self.assertEqual(
+                    bucket_map["MAP"]["NODES"][node_name.upper()]["default"]["bucket"]["name"], "dummy-bucket"
+                )
+
+            self.assertIn("paths", bucket_map["MAP"]["NODES"]["SBN"])
+            self.assertEqual(len(bucket_map["MAP"]["NODES"]["SBN"]["paths"]), 2)
+        finally:
+            # Cleanup "downloaded" dummy bucket map file
+            if os.path.exists(expected_bucket_map_path):
+                os.unlink(expected_bucket_map_path)
 
     def test_bucket_for_path(self):
         """Tests for config_util.bucket_for_path()"""
