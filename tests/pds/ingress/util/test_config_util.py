@@ -1,20 +1,35 @@
 #!/usr/bin/env python3
+
 import logging
+import os
+import tempfile
 import unittest
 from os.path import join
 from unittest.mock import patch
+
+from pkg_resources import resource_filename
 
 import pds.ingress.util.config_util
 from pds.ingress.util.config_util import bucket_for_path
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.config_util import SanitizingConfigParser
-from pkg_resources import resource_filename
+from pds.ingress.util.config_util import bucket_for_path
+from pds.ingress.util.config_util import initialize_bucket_map
+from pds.ingress.util.node_util import NodeUtil
 
 
 class ConfigUtilTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.test_dir = resource_filename(__name__, "")
+
+    def setUp(self) -> None:
+        os.environ["BUCKET_MAP_LOCATION"] = "config"
+        os.environ["BUCKET_MAP_SCHEMA_LOCATION"] = "config"
+        os.environ["BUCKET_MAP_FILE"] = "bucket-map.yaml"
+        os.environ["BUCKET_MAP_SCHEMA_FILE"] = "bucket-map.schema"
+        os.environ["VERSION_LOCATION"] = "config"
+        os.environ["VERSION_FILE"] = "VERSION.txt"
 
     def test_default_ini_config(self):
         """Test with the default configuration file"""
@@ -75,6 +90,90 @@ class ConfigUtilTest(unittest.TestCase):
 
         # Reset cached config
         pds.ingress.util.config_util.CONFIG = None
+
+    def test_default_bucket_map(self):
+        """Test parsing of the default bucket map bundled with the Lambda function"""
+        os.environ["LAMBDA_TASK_ROOT"] = join(self.test_dir, os.pardir, "service")
+
+        bucket_map = initialize_bucket_map(logging.getLogger())
+
+        self.assertIsNotNone(bucket_map)
+        self.assertIsInstance(bucket_map, dict)
+        self.assertIn("MAP", bucket_map)
+        self.assertIn("NODES", bucket_map["MAP"])
+        self.assertIn("SBN", bucket_map["MAP"]["NODES"])
+        self.assertIn("default", bucket_map["MAP"]["NODES"]["SBN"])
+        self.assertIn("bucket", bucket_map["MAP"]["NODES"]["SBN"]["default"])
+        self.assertIn("name", bucket_map["MAP"]["NODES"]["SBN"]["default"]["bucket"])
+        self.assertEqual(bucket_map["MAP"]["NODES"]["SBN"]["default"]["bucket"]["name"], "pds-sbn-staging-test")
+
+    def test_custom_bucket_map_from_file(self):
+        """Test parsing of a non-default bucket map bundled with the Lambda function"""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", prefix="temp-bucket-map-", dir=self.test_dir
+        ) as temp_bucket_file:
+            temp_bucket_file.write(
+                """
+                MAP:
+                  NODES:
+                    ATM:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    ENG:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    GEO:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    IMG:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    NAIF:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    PPI:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    RMS:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    RS:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    SBN:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                """
+            )
+
+            temp_bucket_file.flush()
+
+            os.environ["BUCKET_MAP_LOCATION"] = self.test_dir
+            os.environ["BUCKET_MAP_SCHEMA_LOCATION"] = os.path.join(self.test_dir, os.pardir, "service", "config")
+            os.environ["BUCKET_MAP_FILE"] = os.path.basename(temp_bucket_file.name)
+            os.environ["LAMBDA_TASK_ROOT"] = join(self.test_dir, os.pardir, "service")
+
+            bucket_map = initialize_bucket_map(logging.getLogger())
+
+            self.assertIsNotNone(bucket_map)
+            self.assertIsInstance(bucket_map, dict)
+            self.assertIn("MAP", bucket_map)
+            self.assertIn("NODES", bucket_map["MAP"])
+            for node_name in NodeUtil.permissible_node_ids():
+                self.assertIn(node_name.upper(), bucket_map["MAP"]["NODES"])
+                self.assertIn("default", bucket_map["MAP"]["NODES"][node_name.upper()])
+                self.assertEqual(
+                    bucket_map["MAP"]["NODES"][node_name.upper()]["default"]["bucket"]["name"], "test-bucket-name"
+                )
 
     def test_bucket_for_path(self):
         """Tests for config_util.bucket_for_path()"""

@@ -1,6 +1,5 @@
 import json
 import os
-import tempfile
 import unittest
 from datetime import datetime
 from datetime import timezone
@@ -16,8 +15,7 @@ from pds.ingress.service.pds_ingress_app import get_dum_version
 from pds.ingress.service.pds_ingress_app import lambda_handler
 from pds.ingress.service.pds_ingress_app import logger as service_logger
 from pds.ingress.service.pds_ingress_app import should_overwrite_file
-from pds.ingress.util.config_util import initialize_bucket_map
-from pds.ingress.util.node_util import NodeUtil
+
 from pkg_resources import resource_filename
 
 
@@ -44,88 +42,6 @@ class PDSIngressAppTest(unittest.TestCase):
         # Version read from bundled file should always match what was parsed into
         # the __init__.py module for the pds.ingress package
         self.assertEqual(version, __version__)
-
-    def test_default_bucket_map(self):
-        """Test parsing of the default bucket map bundled with the Lambda function"""
-        bucket_map = initialize_bucket_map(service_logger)
-
-        self.assertIsNotNone(bucket_map)
-        self.assertIsInstance(bucket_map, dict)
-        self.assertIn("MAP", bucket_map)
-        self.assertIn("NODES", bucket_map["MAP"])
-        self.assertIn("SBN", bucket_map["MAP"]["NODES"])
-        self.assertIn("default", bucket_map["MAP"]["NODES"]["SBN"])
-        self.assertIn("bucket", bucket_map["MAP"]["NODES"]["SBN"]["default"])
-        self.assertIn("name", bucket_map["MAP"]["NODES"]["SBN"]["default"]["bucket"])
-        self.assertEqual(bucket_map["MAP"]["NODES"]["SBN"]["default"]["bucket"]["name"], "pds-sbn-staging-test")
-
-    def test_custom_bucket_map_from_file(self):
-        """Test parsing of a non-default bucket map bundled with the Lambda function"""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", prefix="temp-bucket-map-", dir=self.test_dir
-        ) as temp_bucket_file:
-            temp_bucket_file.write(
-                """
-                MAP:
-                  NODES:
-                    ATM:
-                      default:
-                        bucket:
-                          name: test-bucket-name
-                    ENG:
-                      default:
-                        bucket:
-                          name: test-bucket-name
-                    GEO:
-                      default:
-                        bucket:
-                          name: test-bucket-name
-                    IMG:
-                      default:
-                        bucket:
-                          name: test-bucket-name
-                    NAIF:
-                      default:
-                        bucket:
-                          name: test-bucket-name
-                    PPI:
-                      default:
-                        bucket:
-                          name: test-bucket-name
-                    RMS:
-                      default:
-                        bucket:
-                          name: test-bucket-name
-                    RS:
-                      default:
-                        bucket:
-                          name: test-bucket-name
-                    SBN:
-                      default:
-                        bucket:
-                          name: test-bucket-name
-                """
-            )
-
-            temp_bucket_file.flush()
-
-            os.environ["BUCKET_MAP_LOCATION"] = self.test_dir
-            os.environ["BUCKET_MAP_SCHEMA_LOCATION"] = os.path.join(self.test_dir, "config")
-            os.environ["BUCKET_MAP_FILE"] = os.path.basename(temp_bucket_file.name)
-            os.environ["LAMBDA_TASK_ROOT"] = ""
-
-            bucket_map = initialize_bucket_map(service_logger)
-
-            self.assertIsNotNone(bucket_map)
-            self.assertIsInstance(bucket_map, dict)
-            self.assertIn("MAP", bucket_map)
-            self.assertIn("NODES", bucket_map["MAP"])
-            for node_name in NodeUtil.permissible_node_ids():
-                self.assertIn(node_name.upper(), bucket_map["MAP"]["NODES"])
-                self.assertIn("default", bucket_map["MAP"]["NODES"][node_name.upper()])
-                self.assertEqual(
-                    bucket_map["MAP"]["NODES"][node_name.upper()]["default"]["bucket"]["name"], "test-bucket-name"
-                )
 
     def test_check_client_version(self):
         """Test the logging that occurs during the client version check"""
