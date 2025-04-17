@@ -9,10 +9,11 @@ provider "aws" {
 module "nucleus_dum_ingress_service_lambda" {
   source = "./modules/lambda/service"
 
-  venue                               = var.venue
-  lambda_s3_bucket_name               = var.lambda_s3_bucket_name
-  lambda_ingress_service_iam_role_arn = var.lambda_ingress_service_iam_role_arn
-  lambda_ingress_localstack_context   = var.localstack_context
+  venue                                  = var.venue
+  lambda_s3_bucket_name                  = var.lambda_s3_bucket_name
+  lambda_ingress_service_iam_role_arn    = var.lambda_ingress_service_iam_role_arn
+  lambda_ingress_localstack_context      = var.localstack_context
+  lambda_ingress_service_default_buckets = var.lambda_ingress_service_default_buckets
 }
 
 module "nucleus_dum_cognito" {

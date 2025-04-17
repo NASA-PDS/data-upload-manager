@@ -57,6 +57,15 @@ resource "aws_cognito_user_pool_client" "nucleus_dum_cognito_user_pool_client" {
   allowed_oauth_scopes                 = ["email", "openid"]
   explicit_auth_flows                  = ["ALLOW_CUSTOM_AUTH", "ALLOW_REFRESH_TOKEN_AUTH", "ALLOW_USER_PASSWORD_AUTH", "ALLOW_USER_SRP_AUTH"]
   supported_identity_providers         = ["COGNITO"]
+
+  refresh_token_validity = 30
+  access_token_validity  = 60
+  id_token_validity      = 60
+  token_validity_units {
+    refresh_token = "days"
+    access_token  = "minutes"
+    id_token      = "minutes"
+  }
 }
 
 resource "aws_ssm_parameter" "nucleus_dum_cognito_user_pool_client_id_parameter" {

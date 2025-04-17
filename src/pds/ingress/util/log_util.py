@@ -14,8 +14,18 @@ import tempfile
 from datetime import datetime
 from logging.handlers import BufferingHandler
 
-import backoff
-import requests
+# When leveraging this module with the Lambda service functions, the backoff
+# and requests modules will not be available within the Python runtime.
+# They should not be needed by those Lambda's, so use MagicMock to bypass any
+# import errors
+try:
+    import backoff
+    import requests
+except ImportError:
+    from unittest.mock import MagicMock
+
+    backoff = MagicMock()
+    requests = MagicMock()
 
 from .backoff_util import fatal_code
 from .config_util import ConfigUtil
@@ -23,7 +33,13 @@ from .node_util import NodeUtil
 
 MILLI_PER_SEC = 1000
 
-LOG_LEVELS = {"warn": logging.WARNING, "warning": logging.WARNING, "info": logging.INFO, "debug": logging.DEBUG}
+LOG_LEVELS = {
+    "critical": logging.CRITICAL,
+    "warn": logging.WARNING,
+    "warning": logging.WARNING,
+    "info": logging.INFO,
+    "debug": logging.DEBUG,
+}
 """Constant to help evaluate what level to do logging at."""
 
 FILE_HANDLER = None

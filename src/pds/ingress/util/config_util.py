@@ -3,13 +3,19 @@
 config_util.py
 ==============
 
-Module containing functions for parsing the INI config file used by the
-Ingress client script.
+Module containing functions for parsing config files used by the
+Ingress client and service.
 
 """
 import configparser
 import os
+from fnmatch import fnmatchcase
+from os.path import join
+from urllib.parse import urlparse
 
+import boto3
+import yamale
+import yaml
 from pkg_resources import resource_filename
 
 CONFIG = None
@@ -115,3 +121,132 @@ class ConfigUtil:
             region == "localhost"
             for region in [config["API_GATEWAY"]["region"].lower(), config["COGNITO"]["region"].lower()]
         )
+
+
+def validate_bucket_map(bucket_map_path, logger):
+    """
+    Validates the bucket map at the provided path against the Yamale schema defined
+    by the environment.
+
+    Parameters
+    ----------
+    bucket_map_path : str
+        Path to the bucket map file to validate.
+    logger : logging.logger
+        Object to log results of bucket map validation to.
+
+    """
+    lambda_root = os.environ["LAMBDA_TASK_ROOT"]
+    bucket_schema_location = os.getenv("BUCKET_MAP_SCHEMA_LOCATION", "config")
+    bucket_schema_file = os.getenv("BUCKET_MAP_SCHEMA_FILE", "bucket-map.schema")
+
+    bucket_map_schema_path = join(lambda_root, bucket_schema_location, bucket_schema_file)
+
+    bucket_map_schema = yamale.make_schema(bucket_map_schema_path)
+    bucket_map_data = yamale.make_data(bucket_map_path)
+
+    logger.info(f"Validating bucket map {bucket_map_path} with Yamale schema {bucket_map_schema_path}...")
+    yamale.validate(bucket_map_schema, bucket_map_data)
+    logger.info("Bucket map is valid.")
+
+
+def initialize_bucket_map(logger):
+    """
+    Parses the YAML bucket map file for use with the Lambda service invocation.
+    The bucket map location is derived from the OS environment. Currently,
+    only the bucket map bundled with this Lambda function is supported.
+
+    Parameters
+    ----------
+    logger : logging.logger
+        Object to log results of bucket map initialization to.
+
+    Returns
+    -------
+    bucket_map : dict
+        Contents of the parsed bucket map YAML config file.
+
+    Raises
+    ------
+    RuntimeError
+        If the bucket map cannot be found at the configured location.
+
+    """
+    lambda_root = os.environ["LAMBDA_TASK_ROOT"]
+    bucket_map_location = os.getenv("BUCKET_MAP_LOCATION", "config")
+    bucket_map_file = os.getenv("BUCKET_MAP_FILE", "bucket-map.yaml")
+
+    bucket_map_path = join(bucket_map_location, bucket_map_file)
+
+    if bucket_map_path.startswith("s3://"):
+        logger.info("Downloading bucket map from %s", bucket_map_path)
+
+        parsed_s3_uri = urlparse(bucket_map_path)
+        bucket = parsed_s3_uri.netloc
+        key = parsed_s3_uri.path[1:]
+        bucket_map_dest = os.path.join(lambda_root, os.path.basename(key))
+
+        try:
+            s3_client = boto3.client("s3")
+            s3_client.download_file(bucket, key, bucket_map_dest)
+        except Exception as err:
+            raise RuntimeError(f"Failed to download bucket map from {bucket_map_path}, reason: {str(err)}")
+
+        bucket_map_path = bucket_map_dest
+    else:
+        logger.info("Searching Lambda root for bucket map")
+
+        bucket_map_path = join(lambda_root, bucket_map_path)
+
+    if not os.path.exists(bucket_map_path):
+        raise RuntimeError(f"No bucket map found at location {bucket_map_path}")
+
+    validate_bucket_map(bucket_map_path, logger)
+
+    with open(bucket_map_path, "r") as infile:
+        bucket_map = yaml.safe_load(infile)
+
+    logger.info("Bucket map %s loaded", bucket_map_path)
+    logger.debug(str(bucket_map))
+
+    return bucket_map
+
+
+def bucket_for_path(node_bucket_map, file_path, logger):
+    """
+    Derives the appropriate bucket location and settings for the specified
+    file path using the provided node-specific portion of the bucket map.
+
+    Parameters
+    ----------
+    node_bucket_map : dict
+        Bucket mapping specific to the node requesting file ingress.
+    file_path : str
+        The file path to match to a bucket map entry.
+    logger : logging.logger
+        Object to log results of the path resolution to.
+
+    Returns
+    -------
+    bucket : dict
+        Dicitonary containing details on the S3 bucket that will act as destination
+        for the incomming file. This includes the bucket name, as well as any
+        other configuration options that can be specified in the bucket map.
+
+    """
+
+    def _match_path_to_prefix(file_path, prefix):
+        """Determine if a file path matches a bucket map prefix via equality, substring, or Unix-style pattern matching"""
+        return file_path == prefix or file_path.startswith(prefix) or fnmatchcase(file_path, prefix)
+
+    bucket = node_bucket_map["default"]["bucket"]
+
+    for path in node_bucket_map.get("paths", []):
+        if _match_path_to_prefix(file_path, path["prefix"]):
+            bucket = path["bucket"]
+            logger.info("Resolved bucket location %s for path %s", bucket, file_path)
+            break
+    else:
+        logger.warning('No bucket location configured for path "%s", using default bucket %s', file_path, bucket)
+
+    return bucket
