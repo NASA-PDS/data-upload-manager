@@ -1,16 +1,24 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-03-03)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-04-17)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.1.2...«unknown»)
 
 **Requirements:**
 
+- As a user, I want to upload files to S3 Glacier directly via DUM [\#205](https://github.com/NASA-PDS/data-upload-manager/issues/205)
+- As a user, I want timestamps to the ongoing logs that are printed to stdout while running the job [\#118](https://github.com/NASA-PDS/data-upload-manager/issues/118)
 - As a user, I want to resume/rerun upload on a directory and only have the updates or missing files uploaded [\#34](https://github.com/NASA-PDS/data-upload-manager/issues/34)
 
 **Improvements:**
 
 - Develop Ingress Lambda Logging Conventions [\#6](https://github.com/NASA-PDS/data-upload-manager/issues/6)
+
+**Other closed issues:**
+
+- Investigate monitoring solutions for very long running jobs [\#182](https://github.com/NASA-PDS/data-upload-manager/issues/182)
+- The bucket-map.yaml file used for terraform deployments should be pulled from a private location   [\#82](https://github.com/NASA-PDS/data-upload-manager/issues/82)
+- Update installation documentation to only use virtual environment only [\#76](https://github.com/NASA-PDS/data-upload-manager/issues/76)
 
 ## [v2.1.2](https://github.com/NASA-PDS/data-upload-manager/tree/v2.1.2) (2025-02-26)
 
