@@ -1,6 +1,5 @@
 import json
 import os
-import tempfile
 import unittest
 from datetime import datetime
 from datetime import timezone
@@ -13,7 +12,6 @@ import botocore.exceptions
 from pds.ingress import __version__
 from pds.ingress.service.pds_ingress_app import check_client_version
 from pds.ingress.service.pds_ingress_app import get_dum_version
-from pds.ingress.service.pds_ingress_app import initialize_bucket_map
 from pds.ingress.service.pds_ingress_app import lambda_handler
 from pds.ingress.service.pds_ingress_app import logger as service_logger
 from pds.ingress.service.pds_ingress_app import should_overwrite_file
@@ -30,7 +28,9 @@ class PDSIngressAppTest(unittest.TestCase):
         os.environ["LAMBDA_TASK_ROOT"] = self.test_dir
 
         os.environ["BUCKET_MAP_LOCATION"] = "config"
+        os.environ["BUCKET_MAP_SCHEMA_LOCATION"] = "config"
         os.environ["BUCKET_MAP_FILE"] = "bucket-map.yaml"
+        os.environ["BUCKET_MAP_SCHEMA_FILE"] = "bucket-map.schema"
         os.environ["VERSION_LOCATION"] = "config"
         os.environ["VERSION_FILE"] = "VERSION.txt"
 
@@ -41,48 +41,6 @@ class PDSIngressAppTest(unittest.TestCase):
         # Version read from bundled file should always match what was parsed into
         # the __init__.py module for the pds.ingress package
         self.assertEqual(version, __version__)
-
-    def test_default_bucket_map(self):
-        """Test parsing of the default bucket map bundled with the Lambda function"""
-        bucket_map = initialize_bucket_map()
-
-        self.assertIsNotNone(bucket_map)
-        self.assertIsInstance(bucket_map, dict)
-        self.assertIn("MAP", bucket_map)
-        self.assertIn("NODES", bucket_map["MAP"])
-        self.assertIn("SBN", bucket_map["MAP"]["NODES"])
-        self.assertIn("default", bucket_map["MAP"]["NODES"]["SBN"])
-        self.assertEqual(bucket_map["MAP"]["NODES"]["SBN"]["default"], "pds-sbn-staging-test")
-
-    def test_custom_bucket_map_from_file(self):
-        """Test parsing of a non-default bucket map bundled with the Lambda function"""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", prefix="temp-bucket-map-", dir=self.test_dir
-        ) as temp_bucket_file:
-            temp_bucket_file.write(
-                """
-                MAP:
-                  NODES:
-                    ENG:
-                      default: test-bucket-name
-                """
-            )
-
-            temp_bucket_file.flush()
-
-            os.environ["BUCKET_MAP_LOCATION"] = self.test_dir
-            os.environ["BUCKET_MAP_FILE"] = os.path.basename(temp_bucket_file.name)
-            os.environ["LAMBDA_TASK_ROOT"] = ""
-
-            bucket_map = initialize_bucket_map()
-
-            self.assertIsNotNone(bucket_map)
-            self.assertIsInstance(bucket_map, dict)
-            self.assertIn("MAP", bucket_map)
-            self.assertIn("NODES", bucket_map["MAP"])
-            self.assertIn("ENG", bucket_map["MAP"]["NODES"])
-            self.assertIn("default", bucket_map["MAP"]["NODES"]["ENG"])
-            self.assertEqual(bucket_map["MAP"]["NODES"]["ENG"]["default"], "test-bucket-name")
 
     def test_check_client_version(self):
         """Test the logging that occurs during the client version check"""

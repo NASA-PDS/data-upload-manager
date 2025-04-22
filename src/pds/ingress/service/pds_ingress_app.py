@@ -17,40 +17,25 @@ from os.path import join
 
 import boto3
 import botocore
-import yaml
 from botocore.exceptions import ClientError
+
+# When deployed to AWS, these imports need to absolute
+try:
+    from util.config_util import bucket_for_path
+    from util.config_util import initialize_bucket_map
+    from util.log_util import LOG_LEVELS
+    from util.log_util import SingleLogFilter
+# When running the unit tests, these imports need to be relative
+except ModuleNotFoundError:
+    from .util.config_util import bucket_for_path
+    from .util.config_util import initialize_bucket_map
+    from .util.log_util import LOG_LEVELS
+    from .util.log_util import SingleLogFilter
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
-LEVEL_MAP = {
-    "CRITICAL": logging.CRITICAL,
-    "WARNING": logging.WARNING,
-    "WARN": logging.WARNING,
-    "INFO": logging.INFO,
-    "DEBUG": logging.DEBUG,
-}
-
-
-class SingleLogFilter(logging.Filter):
-    """Simple log filter to ensure each unique log message is only logged once."""
-
-    def __init__(self, name=""):
-        super().__init__(name)
-        self.logged_messages = set()
-
-    def filter(self, record):
-        """Filters out the provided log record if we've seen it before"""
-        log_message = record.getMessage()
-
-        if log_message not in self.logged_messages:
-            self.logged_messages.add(log_message)
-            return True
-
-        return False
-
-
 logger = logging.getLogger()
-logger.setLevel(LEVEL_MAP.get(LOG_LEVEL.upper(), logging.INFO))
+logger.setLevel(LOG_LEVELS.get(LOG_LEVEL.lower(), logging.INFO))
 logger.addFilter(SingleLogFilter())
 
 logger.info("Loading function PDS Ingress Service")
@@ -91,52 +76,6 @@ def get_dum_version():
     logger.info("Read version %s from %s", version, version_path)
 
     return version
-
-
-def initialize_bucket_map():
-    """
-    Parses the YAML bucket map file for use with the current service invocation.
-    The bucket map location is derived from the OS environment. Currently,
-    only the bucket map bundled with this Lambda function is supported.
-
-    Returns
-    -------
-    bucket_map : dict
-        Contents of the parsed bucket map YAML config file.
-
-    Raises
-    ------
-    RuntimeError
-        If the bucket map cannot be found at the configured location.
-
-    """
-    bucket_map_location = os.getenv("BUCKET_MAP_LOCATION", "config")
-    bucket_map_file = os.getenv("BUCKET_MAP_FILE", "bucket-map.yaml")
-
-    bucket_map_path = join(bucket_map_location, bucket_map_file)
-
-    # TODO: add support for bucket map locations that are s3 or http URI's
-    if bucket_map_path.startswith("s3://"):
-        bucket_map = {}
-    elif bucket_map_path.startswith(("http://", "https://")):
-        bucket_map = {}
-    else:
-        logger.info("Searching Lambda root for bucket map")
-
-        lambda_root = os.environ["LAMBDA_TASK_ROOT"]
-
-        bucket_map_path = join(lambda_root, bucket_map_path)
-
-        if not os.path.exists(bucket_map_path):
-            raise RuntimeError(f"No bucket map found at location {bucket_map_path}")
-
-        with open(bucket_map_path, "r") as infile:
-            bucket_map = yaml.safe_load(infile)
-
-    logger.info("Bucket map %s loaded", bucket_map_path)
-    logger.debug(str(bucket_map))
-
-    return bucket_map
 
 
 def check_client_version(client_version, service_version):
@@ -258,7 +197,7 @@ def should_overwrite_file(destination_bucket, object_key, md5_digest, file_size,
 
 
 def generate_presigned_upload_url(
-    bucket_name,
+    bucket_info,
     object_key,
     md5_digest,
     base64_md5_digest,
@@ -273,8 +212,8 @@ def generate_presigned_upload_url(
 
     Parameters
     ----------
-    bucket_name : str
-        Name of the S3 bucket to be uploaded to.
+    bucket_info : dict
+        Dictionary containing information about the destination bucket.
     object_key : str
         Object key location within the S3 bucket to be uploaded to.
     md5_digest : str
@@ -301,7 +240,7 @@ def generate_presigned_upload_url(
     """
     client_method = "put_object"
     method_parameters = {
-        "Bucket": bucket_name,
+        "Bucket": bucket_info["name"],
         "Key": object_key,
         "ContentMD5": base64_md5_digest,
         "Metadata": {
@@ -312,6 +251,9 @@ def generate_presigned_upload_url(
         },
     }
 
+    if bucket_info.get("storage_class"):
+        method_parameters["StorageClass"] = bucket_info["storage_class"]
+
     try:
         url = s3_client.generate_presigned_url(
             ClientMethod=client_method, Params=method_parameters, ExpiresIn=expires_in
@@ -319,7 +261,7 @@ def generate_presigned_upload_url(
 
         logger.info("Generated presigned URL: %s", url)
     except ClientError:
-        logger.exception("Failed to generate a presigned URL for %s", join(bucket_name, object_key))
+        logger.exception("Failed to generate a presigned URL for %s", join(bucket_info["name"], object_key))
         raise
 
     return url
@@ -348,7 +290,7 @@ def lambda_handler(event, context):
     service_version = get_dum_version()
 
     # Read the bucket map configured for the service
-    bucket_map = initialize_bucket_map()
+    bucket_map = initialize_bucket_map(logger)
 
     # Parse request details from event object
     body = json.loads(event["body"])
@@ -389,16 +331,8 @@ def lambda_handler(event, context):
 
         logger.info("Processing request for %s (index %d)", trimmed_path, request_index)
 
-        prefix_key = trimmed_path.split(os.sep)[0]
-
-        if prefix_key in node_bucket_map:
-            destination_bucket = node_bucket_map[prefix_key]
-            logger.info("Resolved bucket location %s for prefix %s", destination_bucket, prefix_key)
-        else:
-            destination_bucket = node_bucket_map["default"]
-            logger.warning(
-                "No bucket location configured for prefix %s, using default bucket %s", prefix_key, destination_bucket
-            )
+        bucket_info = bucket_for_path(node_bucket_map, trimmed_path, logger)
+        destination_bucket = bucket_info["name"]
 
         if not bucket_exists(destination_bucket):
             result.append(
@@ -416,7 +350,7 @@ def lambda_handler(event, context):
                 destination_bucket, object_key, md5_digest, int(file_size), float(last_modifed), force_overwrite
             ):
                 s3_url = generate_presigned_upload_url(
-                    destination_bucket,
+                    bucket_info,
                     object_key,
                     md5_digest,
                     base64_md5_digest,

@@ -1,12 +1,82 @@
 #!/usr/bin/env python3
+import logging
+import os
+import tempfile
 import unittest
 from os.path import join
 from unittest.mock import patch
 
 import pds.ingress.util.config_util
+from pds.ingress.util.config_util import bucket_for_path
 from pds.ingress.util.config_util import ConfigUtil
+from pds.ingress.util.config_util import initialize_bucket_map
 from pds.ingress.util.config_util import SanitizingConfigParser
+from pds.ingress.util.node_util import NodeUtil
 from pkg_resources import resource_filename
+
+
+class MockS3Client:
+    """Mock implementation for the boto3 S3 client class"""
+
+    def download_file(self, Bucket: str, Key: str, Filename: str):
+        """Simulate download of the file"""
+        with open(Filename, "w") as outfile:
+            outfile.write(
+                """
+                MAP:
+                  NODES:
+                    ATM:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    ENG:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    GEO:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    IMG:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    NAIF:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    PPI:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    RMS:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    RS:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                    SBN:
+                      default:
+                        bucket:
+                          name: dummy-bucket
+                      paths:
+                        - prefix: path/to/archive/2022
+                          bucket:
+                            name: dummy-bucket
+                            storage_class: STANDARD
+                        - prefix: path/to/archive/2021
+                          bucket:
+                            name: dummy-bucket
+                            storage_class: GLACIER
+                """
+            )
+
+
+def mock_boto3_client(*args, **kwargs):
+    """Mock implementation for boto3.client to always return the Mock S3 client class"""
+    return MockS3Client()
 
 
 class ConfigUtilTest(unittest.TestCase):
@@ -14,7 +84,15 @@ class ConfigUtilTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.test_dir = resource_filename(__name__, "")
 
-    def test_default_config(self):
+    def setUp(self) -> None:
+        os.environ["BUCKET_MAP_LOCATION"] = "config"
+        os.environ["BUCKET_MAP_SCHEMA_LOCATION"] = "config"
+        os.environ["BUCKET_MAP_FILE"] = "bucket-map.yaml"
+        os.environ["BUCKET_MAP_SCHEMA_FILE"] = "bucket-map.schema"
+        os.environ["VERSION_LOCATION"] = "config"
+        os.environ["VERSION_FILE"] = "VERSION.txt"
+
+    def test_default_ini_config(self):
         """Test with the default configuration file"""
         parser = ConfigUtil.get_config()
 
@@ -54,7 +132,7 @@ class ConfigUtilTest(unittest.TestCase):
         self.assertFalse(parser["OTHER"]["log_group_name"].startswith('"'))
         self.assertFalse(parser["OTHER"]["log_group_name"].endswith('"'))
 
-    def mock_default_config_path(self):
+    def mock_default_ini_config_path(self):
         return join(self.test_dir, "data", "mock.localstack.config.ini")
 
     def test_is_localstack_context(self):
@@ -67,12 +145,164 @@ class ConfigUtilTest(unittest.TestCase):
 
         # Retest using the mock localstack config in place of the default
         with patch.object(
-            pds.ingress.util.config_util.ConfigUtil, "default_config_path", self.mock_default_config_path
+            pds.ingress.util.config_util.ConfigUtil, "default_config_path", self.mock_default_ini_config_path
         ):
             self.assertTrue(ConfigUtil.is_localstack_context())
 
         # Reset cached config
         pds.ingress.util.config_util.CONFIG = None
+
+    def test_default_bucket_map(self):
+        """Test parsing of the default bucket map bundled with the Lambda function"""
+        os.environ["LAMBDA_TASK_ROOT"] = join(self.test_dir, os.pardir, "service")
+
+        bucket_map = initialize_bucket_map(logging.getLogger())
+
+        self.assertIsNotNone(bucket_map)
+        self.assertIsInstance(bucket_map, dict)
+        self.assertIn("MAP", bucket_map)
+        self.assertIn("NODES", bucket_map["MAP"])
+        self.assertIn("SBN", bucket_map["MAP"]["NODES"])
+        self.assertIn("default", bucket_map["MAP"]["NODES"]["SBN"])
+        self.assertIn("bucket", bucket_map["MAP"]["NODES"]["SBN"]["default"])
+        self.assertIn("name", bucket_map["MAP"]["NODES"]["SBN"]["default"]["bucket"])
+        self.assertEqual(bucket_map["MAP"]["NODES"]["SBN"]["default"]["bucket"]["name"], "pds-sbn-staging-test")
+
+    def test_custom_bucket_map_from_file(self):
+        """Test parsing of a non-default bucket map bundled with the Lambda function"""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", prefix="temp-bucket-map-", dir=self.test_dir
+        ) as temp_bucket_file:
+            temp_bucket_file.write(
+                """
+                MAP:
+                  NODES:
+                    ATM:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    ENG:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    GEO:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    IMG:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    NAIF:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    PPI:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    RMS:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    RS:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                    SBN:
+                      default:
+                        bucket:
+                          name: test-bucket-name
+                """
+            )
+
+            temp_bucket_file.flush()
+
+            os.environ["BUCKET_MAP_LOCATION"] = self.test_dir
+            os.environ["BUCKET_MAP_SCHEMA_LOCATION"] = os.path.join(self.test_dir, os.pardir, "service", "config")
+            os.environ["BUCKET_MAP_FILE"] = os.path.basename(temp_bucket_file.name)
+            os.environ["LAMBDA_TASK_ROOT"] = join(self.test_dir, os.pardir, "service")
+
+            bucket_map = initialize_bucket_map(logging.getLogger())
+
+            self.assertIsNotNone(bucket_map)
+            self.assertIsInstance(bucket_map, dict)
+            self.assertIn("MAP", bucket_map)
+            self.assertIn("NODES", bucket_map["MAP"])
+            for node_name in NodeUtil.permissible_node_ids():
+                self.assertIn(node_name.upper(), bucket_map["MAP"]["NODES"])
+                self.assertIn("default", bucket_map["MAP"]["NODES"][node_name.upper()])
+                self.assertEqual(
+                    bucket_map["MAP"]["NODES"][node_name.upper()]["default"]["bucket"]["name"], "test-bucket-name"
+                )
+
+    @patch.object(pds.ingress.util.config_util.boto3, "client", mock_boto3_client)
+    def test_bucket_map_from_s3(self):
+        """Test reading of a bucket map file from an S3 location"""
+        os.environ["BUCKET_MAP_LOCATION"] = "s3://test-bucket/path/to/bucket/map/"
+        os.environ["BUCKET_MAP_FILE"] = "bucket-map-from-s3.yaml"
+        os.environ["LAMBDA_TASK_ROOT"] = join(self.test_dir, os.pardir, "service")
+
+        bucket_map = initialize_bucket_map(logging.getLogger())
+
+        # Ensure the bucket map was "downloaded" where we expect
+        expected_bucket_map_path = join(os.environ["LAMBDA_TASK_ROOT"], os.environ["BUCKET_MAP_FILE"])
+        self.assertTrue(os.path.exists(expected_bucket_map_path))
+
+        try:
+            self.assertIsNotNone(bucket_map)
+            self.assertIsInstance(bucket_map, dict)
+            self.assertIn("MAP", bucket_map)
+            self.assertIn("NODES", bucket_map["MAP"])
+            for node_name in NodeUtil.permissible_node_ids():
+                self.assertIn(node_name.upper(), bucket_map["MAP"]["NODES"])
+                self.assertIn("default", bucket_map["MAP"]["NODES"][node_name.upper()])
+                self.assertEqual(
+                    bucket_map["MAP"]["NODES"][node_name.upper()]["default"]["bucket"]["name"], "dummy-bucket"
+                )
+
+            self.assertIn("paths", bucket_map["MAP"]["NODES"]["SBN"])
+            self.assertEqual(len(bucket_map["MAP"]["NODES"]["SBN"]["paths"]), 2)
+        finally:
+            # Cleanup "downloaded" dummy bucket map file
+            if os.path.exists(expected_bucket_map_path):
+                os.unlink(expected_bucket_map_path)
+
+    def test_bucket_for_path(self):
+        """Tests for config_util.bucket_for_path()"""
+        test_node_bucket_map = {
+            "default": {"bucket": {"name": "default_path_bucket"}},
+            "paths": [
+                {"prefix": "full/path/to/object", "bucket": {"name": "full_path_bucket"}},
+                {"prefix": "substring/path/to", "bucket": {"name": "substring_path_bucket"}},
+                {"prefix": "wildcard/path/to/*", "bucket": {"name": "wildcard_path_bucket"}},
+            ],
+        }
+        logger = logging.getLogger(__name__)
+
+        bucket = bucket_for_path(test_node_bucket_map, "full/path/to/object", logger)
+
+        self.assertIsInstance(bucket, dict)
+        self.assertIn("name", bucket)
+        self.assertEqual(bucket["name"], "full_path_bucket")
+
+        bucket = bucket_for_path(test_node_bucket_map, "substring/path/to/object", logger)
+
+        self.assertIsInstance(bucket, dict)
+        self.assertIn("name", bucket)
+        self.assertEqual(bucket["name"], "substring_path_bucket")
+
+        bucket = bucket_for_path(test_node_bucket_map, "wildcard/path/to/test/object", logger)
+
+        self.assertIsInstance(bucket, dict)
+        self.assertIn("name", bucket)
+        self.assertEqual(bucket["name"], "wildcard_path_bucket")
+
+        bucket = bucket_for_path(test_node_bucket_map, "unknown/path/to/object", logger)
+
+        self.assertIsInstance(bucket, dict)
+        self.assertIn("name", bucket)
+        self.assertEqual(bucket["name"], "default_path_bucket")
 
 
 if __name__ == "__main__":

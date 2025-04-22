@@ -1,20 +1,38 @@
 MAP:
   NODES:
     ATM:
-      default: pds-atm-staging-test
+      default:
+        bucket:
+          name: pds-atm-staging-test
     ENG:
-      default: pds-eng-staging-test
+      default:
+        bucket:
+          name: pds-eng-staging-test
     GEO:
-      default: pds-geo-staging-test
+      default:
+        bucket:
+          name: pds-geo-staging-test
     IMG:
-      default: pds-img-staging-test
+      default:
+        bucket:
+          name: pds-img-staging-test
     NAIF:
-      default: pds-naif-staging-test
+      default:
+        bucket:
+          name: pds-naif-staging-test
     PPI:
-      default: pds-ppi-staging-test
+      default:
+        bucket:
+          name: pds-ppi-staging-test
     RMS:
-      default: pds-rms-staging-test
+      default:
+        bucket:
+          name: pds-rms-staging-test
     RS:
-      default: pds-rs-staging-test
+      default:
+        bucket:
+          name: pds-rs-staging-test
     SBN:
-      default: pds-sbn-staging-test
+      default:
+        bucket:
+          name: pds-sbn-staging-test

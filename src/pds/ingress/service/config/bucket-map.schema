@@ -1,0 +1,27 @@
+# Yamale schema for the bucket map used by the DUM Ingress Service Lambda
+MAP:
+  NODES:
+    ATM: include('node')
+    ENG: include('node')
+    GEO: include('node')
+    IMG: include('node')
+    NAIF: include('node')
+    PPI: include('node')
+    RMS: include('node')
+    RS: include('node')
+    SBN: include('node')
+
+---
+node:
+  default:
+    bucket: include('bucket', required=True)
+
+  paths: list(include('path'), required=False)
+
+path:
+  prefix: str(required=True)
+  bucket: include('bucket', required=True)
+
+bucket:
+  name: str(required=True)
+  storage_class: enum('STANDARD','GLACIER','GLACIER_IR', required=False, default='STANDARD')

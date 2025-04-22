@@ -9,8 +9,18 @@ automatic backoff/retry of HTTP requests.
 """
 from http import HTTPStatus
 
-import requests
-from requests.exceptions import SSLError
+# When leveraging this module with the Lambda service functions, the requests
+# module will not be available within the Python runtime.
+# It should not be needed by those Lambda's, so use MagicMock to bypass any
+# import errors
+try:
+    import requests
+    from requests.exceptions import SSLError
+except ImportError:
+    from unittest.mock import MagicMock
+
+    requests = MagicMock()
+    SSLError = MagicMock()
 
 
 def fatal_code(err: requests.exceptions.RequestException) -> bool:
