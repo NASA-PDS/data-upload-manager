@@ -98,8 +98,6 @@ class ConfigUtilTest(unittest.TestCase):
 
         self.assertIsInstance(parser, SanitizingConfigParser)
 
-        self.assertEqual(parser["AWS"]["profile"], "AWS_Profile_1234")
-
         self.assertEqual(
             parser["API_GATEWAY"]["url_template"], "https://{id}.execute-api.{region}.amazonaws.com/{stage}/{resource}"
         )

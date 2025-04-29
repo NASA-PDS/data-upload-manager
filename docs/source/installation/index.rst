@@ -66,9 +66,6 @@ INI configuration with the correct endpoints and user credentials filled in.
 
 The following may be used as a template for a new INI configuration file::
 
-    [AWS]
-    profile = <AWS_Profile_Name>
-
     [API_GATEWAY]
     url_template = https://{id}.execute-api.{region}.amazonaws.com/{stage}/{resource}
     id           = <API_Gateway_ID>
@@ -89,14 +86,14 @@ The following may be used as a template for a new INI configuration file::
     console_format = "%(message)s"
     log_group_name = "<Cloudwatch_Log_Group_Name>"
     log_file_path =
+    batch_size = 100
 
 Bracketed fields within the template correspond to values which need to be filled
 in by an end-user prior to using the `pds-ingress-client` script to transfer
 files to PDS. The remaining fields should be left as-is.
 
-To obtain the correct values for `<AWS_Profile_Name>`, `<API_Gateway_ID>`,
-`<API_Gateway_Stage_Name>` and `<Cognito_Client_ID>`, `<Cloudwatch_Log_Group_Name>`
-contact a PDS Operator.
+To obtain the correct values for `<API_Gateway_ID>`, `<API_Gateway_Stage_Name>`
+and `<Cognito_Client_ID>`, `<Cloudwatch_Log_Group_Name>` contact a PDS Operator.
 
 To obtain values for `<Cognito_Username>` and `<Cognito_Password>`, consult
 the section on User Registration within this document.
