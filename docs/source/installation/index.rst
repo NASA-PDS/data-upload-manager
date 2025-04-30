@@ -10,7 +10,7 @@ Prior to installing this software, ensure your system meets the following
 requirements:
 
 * Python_ 3.9 or above. Python 2 is *not* supported.
-* Terraform_ 1.0.11 or above. Note that Terraform is only required when deploying
+* Terraform 1.0.11 or above. Note that Terraform is only required when deploying
   the server side components. It is not required to run the client-side script.
   For more information on deploying the server side components via Terraform,
   consult the terraform_ section of the documentation.
@@ -66,9 +66,6 @@ INI configuration with the correct endpoints and user credentials filled in.
 
 The following may be used as a template for a new INI configuration file::
 
-    [AWS]
-    profile = <AWS_Profile_Name>
-
     [API_GATEWAY]
     url_template = https://{id}.execute-api.{region}.amazonaws.com/{stage}/{resource}
     id           = <API_Gateway_ID>
@@ -89,14 +86,14 @@ The following may be used as a template for a new INI configuration file::
     console_format = "%(message)s"
     log_group_name = "<Cloudwatch_Log_Group_Name>"
     log_file_path =
+    batch_size = 100
 
 Bracketed fields within the template correspond to values which need to be filled
 in by an end-user prior to using the `pds-ingress-client` script to transfer
 files to PDS. The remaining fields should be left as-is.
 
-To obtain the correct values for `<AWS_Profile_Name>`, `<API_Gateway_ID>`,
-`<API_Gateway_Stage_Name>` and `<Cognito_Client_ID>`, `<Cloudwatch_Log_Group_Name>`
-contact a PDS Operator.
+To obtain the correct values for `<API_Gateway_ID>`, `<API_Gateway_Stage_Name>`
+and `<Cognito_Client_ID>`, `<Cloudwatch_Log_Group_Name>` contact a PDS Operator.
 
 To obtain values for `<Cognito_Username>` and `<Cognito_Password>`, consult
 the section on User Registration within this document.
@@ -136,39 +133,64 @@ The format of the file is a simple YAML_ format file. An example bucket map is s
     MAP:
       NODES:
         ATM:
-          default: pds-nucleus-dum
+          default:
+            bucket:
+              name: pds-nucleus-dum
         ENG:
-          default: pds-nucleus-dum
+          - prefix: path/to/archive/2022
+            bucket:
+              name: bucket-for-2022
+              storage_class: STANDARD
+          default:
+            bucket:
+              name: pds-nucleus-dum
         GEO:
-          default: pds-nucleus-dum
+          default:
+            bucket:
+              name: pds-nucleus-dum
         IMG:
-          default: pds-nucleus-dum
+          default:
+            bucket:
+              name: pds-nucleus-dum
         NAIF:
-          default: pds-nucleus-dum
+          default:
+            bucket:
+              name: pds-nucleus-dum
         PPI:
-          default: pds-nucleus-dum
+          default:
+            bucket:
+              name: pds-nucleus-dum
         RMS:
-          default: pds-nucleus-dum
+          default:
+            bucket:
+              name: pds-nucleus-dum
         RS:
-          default: pds-nucleus-dum
+          default:
+            bucket:
+              name: pds-nucleus-dum
         SBN:
-          gbo.ast.catalina.survey: pds-nucleus-staging
-          default: pds-nucleus-dum
+          default:
+            bucket:
+              name: pds-nucleus-dum
+
 
 Within the mapping is are separate entries for each PDS Node which could make
 an ingress request via the client script. Within each Node section are one or
-more key/value mappings, where keys correspond to an expected path prefix of
-a file requested for ingest, and each value is the name of an S3 bucket where the
-file should be uploaded to.
+more entry mappings, where an expected path prefix of a file requested for ingest
+is mapped to the name of an S3 bucket where the file should be uploaded to.
 
 In the above example, we can see that a default mapping is configured for all
-nodes that instructs the ingress lambda function to route all files to the ``pds-nucleus-dum``
-bucket. This is the mapping that will be used when no other mapping for a path prefix exists.
+nodes (except ENG) that instructs the Ingress Lambda function to route all files to the ``pds-nucleus-dum``
+bucket. This is the mapping that is used when no other mapping for a path prefix exists.
 
-Within the ``SBN`` section, we also see that a mapping from the ``gbo.ast.catalina.survey``
-path prefix to the ``pds-nucleus-staging`` bucket is also defined. This means that any
-requests file paths that begin with ``gbo.ast.catalina.survey`` will be routed to the
-``pds-nucleus-staging`` bucket during upload.
+Within the ``ENG`` section, we also see that a mapping from the ``path/to/archive/2022``
+path prefix to the ``bucket-for-2022``, is also defined. This means that any requests
+file paths that begin with ``path/to/archive/2022`` will be routed to the ``bucket-for-2022``
+bucket during upload.
+
+Bucket configuration settings can also be provided for each mapping.
+Consult the current bucket map schema (available within the DUM repo under ``src/pds/ingress/service/config``)
+for the full set of available options.
 
 .. note::
 
@@ -202,7 +224,6 @@ Currently, there are only two ways to configure new users within the User Pool:
 .. _terraform: ../terraform/index.html
 .. _Pip: https://pip.pypa.io/en/stable/
 .. _Python: https://www.python.org/
-.. _Terraform: https://www.terraform.io/
 .. _`virtual environment`: https://docs.python.org/3/library/venv.html
 .. _INI: https://en.wikipedia.org/wiki/INI_file
 .. _YAML: https://yaml.org
