@@ -11,6 +11,7 @@ import requests
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.node_util import NodeUtil
 from requests import Response
+from requests.exceptions import ConnectionError
 
 
 class LogUtilTest(unittest.TestCase):
@@ -142,6 +143,8 @@ class LogUtilTest(unittest.TestCase):
         log_util.CLOUDWATCH_HANDLER.node_id = "eng"
 
         # Set up some canned HTTP responses for the transient error codes we retry for
+        response_400 = Response()
+        response_400.status_code = HTTPStatus.BAD_REQUEST
         response_408 = Response()
         response_408.status_code = HTTPStatus.REQUEST_TIMEOUT
         response_425 = Response()
@@ -160,6 +163,7 @@ class LogUtilTest(unittest.TestCase):
         response_509.status_code = 509  # Bandwidth Limit Exceeded (non-standard code used by AWS)
 
         responses = [
+            response_400,
             response_408,
             response_425,
             response_429,
@@ -180,3 +184,14 @@ class LogUtilTest(unittest.TestCase):
         # Ensure we retired for each of the failed responses, plus
         # the two "successful" post calls that send_log_events_to_cloud_watch makes
         self.assertEqual(mock_requests_post.call_count, len(responses) + 1)
+
+        # Now try with a simulated connection error, which is not caught by requests.raise_for_status()
+        response_104 = Response()
+        response_104.status_code = 104
+        mock_requests_post = MagicMock(side_effect=ConnectionError("Connection reset by peer", response=response_104))
+
+        with patch.object(log_util.requests, "post", mock_requests_post):
+            log_util.CLOUDWATCH_HANDLER.flush()
+
+        # Ensure we retried at least once for a connection error
+        self.assertGreater(mock_requests_post.call_count, 1)

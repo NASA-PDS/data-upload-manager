@@ -368,7 +368,7 @@ class CloudWatchHandler(BufferingHandler):
 
     @backoff.on_exception(
         backoff.constant,
-        requests.exceptions.RequestException,
+        (requests.exceptions.ConnectionError, requests.exceptions.RequestException),
         max_time=60,
         giveup=fatal_code,
         logger=__name__,
