@@ -54,6 +54,11 @@ variable "lambda_ingress_service_function_name" {
   description = "Name of the DUM Lambda Ingress Service function"
 }
 
+variable status_queue_arn {
+  type        = string
+  description = "ARN of the SQS Queue used with the Status Service"
+}
+
 variable "api_deployment_stages" {
   type        = list(string)
   description = "List of stages to create initial API Gateway deployments for"

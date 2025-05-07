@@ -16,6 +16,19 @@ module "nucleus_dum_ingress_service_lambda" {
   lambda_ingress_service_default_buckets = var.lambda_ingress_service_default_buckets
 }
 
+module "nucleus_dum_status_queue" {
+  source = "./modules/sqs"
+}
+
+resource "aws_lambda_event_source_mapping" "lambda_status_service_sqs_trigger" {
+  event_source_arn = module.nucleus_dum_status_queue.nucleus_dum_sqs_arn
+  function_name    = module.nucleus_dum_ingress_service_lambda.lambda_status_service_function_name
+
+  function_response_types = ["ReportBatchItemFailures"]
+
+  depends_on = [module.nucleus_dum_ingress_service_lambda, module.nucleus_dum_status_queue]
+}
+
 module "nucleus_dum_cognito" {
   source = "./modules/cognito"
 
@@ -45,8 +58,11 @@ module "nucleus_dum_api" {
   lambda_authorizer_function_name      = module.nucleus_dum_lambda_authorizer.lambda_authorizer_function_name
   lambda_ingress_service_function_name = module.nucleus_dum_ingress_service_lambda.lambda_ingress_service_function_name
   lambda_ingress_service_function_arn  = module.nucleus_dum_ingress_service_lambda.lambda_ingress_service_function_arn
+  status_queue_arn                     = module.nucleus_dum_status_queue.nucleus_dum_sqs_arn
 
-  depends_on = [module.nucleus_dum_lambda_authorizer, module.nucleus_dum_ingress_service_lambda]
+  depends_on = [module.nucleus_dum_lambda_authorizer,
+                module.nucleus_dum_ingress_service_lambda,
+                module.nucleus_dum_status_queue]
 }
 
 resource "aws_cloudwatch_log_group" "ingress_client_cloudwatch_log_group" {

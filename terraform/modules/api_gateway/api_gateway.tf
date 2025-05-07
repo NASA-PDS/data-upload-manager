@@ -23,6 +23,8 @@ resource "aws_api_gateway_rest_api" "nucleus_dum_api" {
       lambdaAuthorizerFunctionName        = var.lambda_authorizer_function_name,
       lambdaServiceARN                    = var.lambda_ingress_service_function_arn,
       logResourceMappingTemplate          = jsonencode(file("${path.module}/templates/log-resource-mapping-template.json"))
+      statusResourceMappingTemplate       = jsonencode(file("${path.module}/templates/status-resource-mapping-template.json"))
+      statusQueueARN                      = var.status_queue_arn
     }
   )
 }

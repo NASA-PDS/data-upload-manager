@@ -22,6 +22,7 @@ paths:
       security:
       - ${lambdaAuthorizerFunctionName}: []
       x-amazon-apigateway-integration:
+        type: "aws"
         credentials: ${apiGatewayLambdaRole}
         httpMethod: "POST"
         uri: "arn:aws:apigateway:${awsRegion}:logs:action/PutLogEvents"
@@ -31,7 +32,32 @@ paths:
         requestTemplates:
           application/json: ${logResourceMappingTemplate}
         passthroughBehavior: "when_no_templates"
+  /status:
+    post:
+      responses:
+        "200":
+          description: "200 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Empty"
+      security:
+      - ${lambdaAuthorizerFunctionName}: []
+      x-amazon-apigateway-integration:
         type: "aws"
+        credentials: ${apiGatewayLambdaRole}
+        httpMethod: "POST"
+        uri: ${statusQueueARN}
+        responses:
+          default:
+            statusCode: "200"
+        requestParameters:
+          integration.request.header.Content-Type: "'application/x-www-form-urlencoded'"
+        requestTemplates:
+          application/json: ${statusResourceMappingTemplate}
+        passthroughBehavior: "when_no_match"
+        cacheKeyParameters:
+        - "integration.request.header.Content-Type"
   /request:
     post:
       responses:
@@ -44,6 +70,7 @@ paths:
       security:
       - ${lambdaAuthorizerFunctionName}: []
       x-amazon-apigateway-integration:
+        type: "aws_proxy"
         httpMethod: "POST"
         uri: "arn:aws:apigateway:${awsRegion}:lambda:path/2015-03-31/functions/${lambdaServiceARN}/invocations"
         responses:
@@ -51,7 +78,6 @@ paths:
             statusCode: "200"
         passthroughBehavior: "when_no_match"
         contentHandling: "CONVERT_TO_TEXT"
-        type: "aws_proxy"
   /createstream:
     post:
       requestBody:
@@ -70,6 +96,7 @@ paths:
       security:
       - ${lambdaAuthorizerFunctionName}: []
       x-amazon-apigateway-integration:
+        type: "aws"
         credentials: ${apiGatewayLambdaRole}
         httpMethod: "POST"
         uri: "arn:aws:apigateway:${awsRegion}:logs:action/CreateLogStream"
@@ -79,7 +106,6 @@ paths:
         requestTemplates:
           application/json: ${createStreamResourceMappingTemplate}
         passthroughBehavior: "when_no_templates"
-        type: "aws"
 components:
   schemas:
     Empty:
@@ -106,6 +132,7 @@ components:
                 type: "string"
               timestamp:
                 type: "integer"
+                format: "int32"
         logGroupName:
           type: "string"
         logStreamName:
@@ -117,7 +144,8 @@ components:
       in: "header"
       x-amazon-apigateway-authtype: "custom"
       x-amazon-apigateway-authorizer:
+        type: "request"
         authorizerUri: "arn:aws:apigateway:${awsRegion}:lambda:path/2015-03-31/functions/${lambdaAuthorizerARN}/invocations"
         authorizerCredentials: ${apiGatewayLambdaRole}
+        authorizerResultTtlInSeconds: 0
         identitySource: "method.request.header.Authorization, method.request.header.UserGroup"
-        type: "request"
