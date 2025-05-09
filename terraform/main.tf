@@ -70,3 +70,25 @@ resource "aws_cloudwatch_log_group" "ingress_client_cloudwatch_log_group" {
 
   retention_in_days = 30
 }
+
+resource "aws_lambda_permission" "nucleus_dum_api_lambda_authorizer_permission" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = module.nucleus_dum_lambda_authorizer.lambda_authorizer_function_name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${module.nucleus_dum_api.nucleus_dum_api_execution_arn}/*"
+
+  depends_on = [module.nucleus_dum_lambda_authorizer, module.nucleus_dum_api]
+}
+
+resource "aws_lambda_permission" "nucleus_dum_api_lambda_ingress_service_permission" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = module.nucleus_dum_ingress_service_lambda.lambda_ingress_service_function_name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${module.nucleus_dum_api.nucleus_dum_api_execution_arn}/*"
+
+  depends_on = [module.nucleus_dum_ingress_service_lambda, module.nucleus_dum_api]
+}

@@ -29,24 +29,6 @@ resource "aws_api_gateway_rest_api" "nucleus_dum_api" {
   )
 }
 
-resource "aws_lambda_permission" "nucleus_dum_api_lambda_authorizer_permission" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = var.lambda_authorizer_function_name
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_api_gateway_rest_api.nucleus_dum_api.execution_arn}/*"
-}
-
-resource "aws_lambda_permission" "nucleus_dum_api_lambda_ingress_service_permission" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = var.lambda_ingress_service_function_name
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_api_gateway_rest_api.nucleus_dum_api.execution_arn}/*"
-}
-
 resource "aws_api_gateway_deployment" "nucleus_dum_api_deployments" {
   count = length(var.api_deployment_stages)
 
