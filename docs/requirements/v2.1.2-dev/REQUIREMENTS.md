@@ -80,7 +80,11 @@ This requirement is not impacted by the current version
 
 
 This requirement is not impacted by the current version
-## Investigate Glacier Retrieval Requirement ([#208](https://github.com/NASA-PDS/data-upload-manager/issues/208)) 
+## As a user, I can read rclone-generated checksums when checking for existing files in the staging bucket ([#209](https://github.com/NASA-PDS/data-upload-manager/issues/209)) 
+
+
+This requirement is not impacted by the current version
+## As a user, I want to support upload of files >5GB ([#221](https://github.com/NASA-PDS/data-upload-manager/issues/221)) 
 
 
 This requirement is not impacted by the current version
