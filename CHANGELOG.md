@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-04-30)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-05-09)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.1.2...«unknown»)
 
@@ -16,6 +16,7 @@
 
 **Other closed issues:**
 
+- Develop prototype Ingress Status utility [\#203](https://github.com/NASA-PDS/data-upload-manager/issues/203)
 - Investigate monitoring solutions for very long running jobs [\#182](https://github.com/NASA-PDS/data-upload-manager/issues/182)
 - The bucket-map.yaml file used for terraform deployments should be pulled from a private location   [\#82](https://github.com/NASA-PDS/data-upload-manager/issues/82)
 - Update installation documentation to only use virtual environment only [\#76](https://github.com/NASA-PDS/data-upload-manager/issues/76)
