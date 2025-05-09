@@ -1,0 +1,8 @@
+Action=SendMessage##
+&MessageBody=$util.urlEncode($input.json('$.Message'))##
+&MessageAttribute.1.Name=email##
+&MessageAttribute.1.Value.DataType=String##
+&MessageAttribute.1.Value.StringValue=$util.urlEncode($input.json('$.Email'))##
+&MessageAttribute.2.Name=node##
+&MessageAttribute.2.Value.DataType=String##
+&MessageAttribute.2.Value.StringValue=$util.urlEncode($input.json('$.Node'))

@@ -15,11 +15,12 @@ from http import HTTPStatus
 # import errors
 try:
     import requests
-    from requests.exceptions import SSLError
+    from requests.exceptions import ConnectionError, SSLError
 except ImportError:
     from unittest.mock import MagicMock
 
     requests = MagicMock()
+    ConnectionError = MagicMock()
     SSLError = MagicMock()
 
 
@@ -35,6 +36,7 @@ def fatal_code(err: requests.exceptions.RequestException) -> bool:
         # HTTP codes indicating a transient error (including throttling) which
         # are worth retrying after a backoff
         transient_codes = [
+            104,  # Connection reset, could be result of throttling by AWS
             HTTPStatus.BAD_REQUEST,
             HTTPStatus.REQUEST_TIMEOUT,
             HTTPStatus.TOO_EARLY,
@@ -47,6 +49,9 @@ def fatal_code(err: requests.exceptions.RequestException) -> bool:
         ]
 
         return err.response.status_code not in transient_codes
+    elif isinstance(err, ConnectionError):
+        # Connection error could be transient due to throttling from AWS
+        return False
     elif isinstance(err, SSLError):
         # Some errors returned from AWS manifest as SSLErrors when AWS terminates
         # the connection on their end. This makes it hard to tell if

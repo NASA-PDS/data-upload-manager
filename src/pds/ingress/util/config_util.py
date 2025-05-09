@@ -152,9 +152,8 @@ def validate_bucket_map(bucket_map_path, logger):
 
 def initialize_bucket_map(logger):
     """
-    Parses the YAML bucket map file for use with the Lambda service invocation.
-    The bucket map location is derived from the OS environment. Currently,
-    only the bucket map bundled with this Lambda function is supported.
+    Parses the YAML bucket map file for use with the current service invocation.
+    The bucket map location is derived from the OS environment.
 
     Parameters
     ----------

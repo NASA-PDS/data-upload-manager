@@ -6,6 +6,9 @@ from datetime import timezone
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+# Needed before import of pds_ingress_app
+os.environ["AWS_DEFAULT_REGION"] = "us-west-2"
+
 import botocore.auth
 import botocore.client
 import botocore.exceptions

@@ -345,7 +345,7 @@ def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pb
 
 @backoff.on_exception(
     backoff.constant,
-    requests.exceptions.RequestException,
+    (requests.exceptions.ConnectionError, requests.exceptions.RequestException),
     max_time=60,
     giveup=fatal_code,
     logger="request_batch_for_ingress",
@@ -423,7 +423,7 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
 
 @backoff.on_exception(
     backoff.constant,
-    requests.exceptions.RequestException,
+    (requests.exceptions.ConnectionError, requests.exceptions.RequestException),
     max_time=60,
     giveup=fatal_code,
     logger="ingress_file_to_s3",
