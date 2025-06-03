@@ -29,7 +29,7 @@ data "aws_caller_identity" "current" {}
 
 # Deploy the zips to S3
 module "lambda_bucket" {
-  source        = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/bucket"
+  source        = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/bucket"  # pragma: allowlist secret
   bucket_name   = var.lambda_s3_bucket_name
   partition     = var.lambda_s3_bucket_partition
   bucket_policy = <<POLICY
@@ -237,7 +237,7 @@ resource "aws_cloudwatch_log_group" "lambda_status_service" {
 
 # Create the default staging buckets referenced by the bucket-map
 module "staging_buckets" {
-  source        = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/bucket"
+  source        = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/bucket"  # pragma: allowlist secret
   count         = length(var.lambda_ingress_service_default_buckets)
   bucket_name   = "${var.lambda_ingress_service_default_buckets[count.index].name}-${var.venue}"
   partition     = var.lambda_s3_bucket_partition
