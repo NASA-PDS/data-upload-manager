@@ -25,13 +25,11 @@ data "aws_s3_bucket" "lambda_bucket" {
   bucket = var.lambda_s3_bucket_name
 }
 
-resource "aws_s3_object" "lambda_authorizer" {
-  bucket = data.aws_s3_bucket.lambda_bucket.id
-
-  key    = "dum-lambda-auth.zip"
-  source = data.archive_file.lambda_authorizer.output_path
-
-  etag   = data.archive_file.lambda_authorizer.output_md5
+module "lambda_authorizer_s3_object" {
+  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object"  # pragma: allowlist secret
+  bucket      = data.aws_s3_bucket.lambda_bucket.id
+  key         = "dum-lambda-auth.zip"
+  source_path = data.archive_file.lambda_authorizer.output_path
 
   depends_on = [data.archive_file.lambda_authorizer]
 }
@@ -42,7 +40,7 @@ resource "aws_lambda_function" "lambda_authorizer" {
   description   = var.lambda_authorizer_function_description
 
   s3_bucket = data.aws_s3_bucket.lambda_bucket.id
-  s3_key    = aws_s3_object.lambda_authorizer.key
+  s3_key    = module.lambda_authorizer_s3_object.s3_object_key
 
   runtime = "nodejs18.x"
   handler = "index.handler"

@@ -9,6 +9,8 @@ provider "aws" {
 module "nucleus_dum_ingress_service_lambda" {
   source = "./modules/lambda/service"
 
+  project                                = var.project
+  cicd                                   = var.cicd
   venue                                  = var.venue
   lambda_s3_bucket_name                  = var.lambda_s3_bucket_name
   lambda_ingress_service_iam_role_arn    = var.lambda_ingress_service_iam_role_arn

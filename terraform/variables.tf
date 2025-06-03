@@ -1,4 +1,16 @@
 
+variable "project" {
+  type        = string
+  description = "Project name"
+  default     = "pds-en"
+}
+
+variable "cicd" {
+  type        = string
+  description = "CI/CD environment name"
+  default     = "pds-github"
+}
+
 variable "region" {
   type        = string
   default     = "us-west-2"
