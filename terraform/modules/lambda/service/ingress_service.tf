@@ -25,27 +25,70 @@ data "archive_file" "lambda_status_service" {
                  "${path.root}/../src/pds/ingress/service/pds_ingress_app.py"]
 }
 
+data "aws_caller_identity" "current" {}
+
 # Deploy the zips to S3
-resource "aws_s3_bucket" "lambda_bucket" {
-  bucket = var.lambda_s3_bucket_name
+module "lambda_bucket" {
+  source        = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/bucket"  # pragma: allowlist secret
+  bucket_name   = var.lambda_s3_bucket_name
+  partition     = var.lambda_s3_bucket_partition
+  bucket_policy = <<POLICY
+  {
+     "Version": "2012-10-17",
+     "Statement": [
+         {
+             "Sid": "AllowOnlyMCPTenantOperator",
+             "Effect": "Allow",
+             "Principal": {
+               "AWS": [
+                 "arn:${var.lambda_s3_bucket_partition}:iam::${data.aws_caller_identity.current.account_id}:role/mcp-tenantOperator"
+               ]
+             },
+             "Action": "s3:*",
+             "Resource": [
+                 "arn:${var.lambda_s3_bucket_partition}:s3:::${var.lambda_s3_bucket_name}/*",
+                 "arn:${var.lambda_s3_bucket_partition}:s3:::${var.lambda_s3_bucket_name}"
+             ]
+         },
+         {
+             "Sid": "AllowSSLRequestsOnly",
+             "Effect": "Deny",
+             "Principal": "*",
+             "Action": "s3:*",
+             "Resource": [
+                "arn:${var.lambda_s3_bucket_partition}:s3:::${var.lambda_s3_bucket_name}",
+                "arn:${var.lambda_s3_bucket_partition}:s3:::${var.lambda_s3_bucket_name}/*"
+              ],
+              "Condition": {
+                "Bool": {
+                   "aws:SecureTransport": "false"
+                 }
+             }
+         }
+     ]
+  }
+  POLICY
+  enable_blocks = true
+  enable_policy = true
+
+  required_tags = {
+    project = var.project
+    cicd    = var.cicd
+  }
 }
 
-resource "aws_s3_object" "lambda_ingress_service" {
-  bucket = aws_s3_bucket.lambda_bucket.id
-
-  key    = "dum-ingress-service.zip"
-  source = data.archive_file.lambda_ingress_service.output_path
-
-  etag   = data.archive_file.lambda_ingress_service.output_md5
+module "lambda_ingress_service_s3_object" {
+  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object"  # pragma: allowlist secret
+  bucket      = module.lambda_bucket.bucket_id
+  key         = "dum-lambda-auth.zip"
+  source_path = data.archive_file.lambda_ingress_service.output_path
 }
 
-resource "aws_s3_object" "lambda_status_service" {
-  bucket = aws_s3_bucket.lambda_bucket.id
-
-  key    = "dum-status-service.zip"
-  source = data.archive_file.lambda_status_service.output_path
-
-  etag   = data.archive_file.lambda_status_service.output_md5
+module "lambda_status_service_s3_object" {
+  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object"  # pragma: allowlist secret
+  bucket      = module.lambda_bucket.bucket_id
+  key         = "dum-status-service.zip"
+  source_path = data.archive_file.lambda_status_service.output_path
 }
 
 # Create the Yaml package layers needed by the Ingress Service Lambda to parse
@@ -78,34 +121,34 @@ resource "null_resource" "lambda_ingress_service_yamale_layer" {
   }
 }
 
-resource "aws_s3_object" "lambda_ingress_service_pyyaml_layer" {
-  bucket = aws_s3_bucket.lambda_bucket.id
-
-  key    = "layer-PyYAML.zip"
-  source = "${path.module}/files/pyyaml/layer-PyYAML.zip"
+module "lambda_ingress_service_pyyaml_layer_s3_object" {
+  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object"  # pragma: allowlist secret
+  bucket      = module.lambda_bucket.bucket_id
+  key         = "layer-PyYAML.zip"
+  source_path = "${path.module}/files/pyyaml/layer-PyYAML.zip"
 
   depends_on = [null_resource.lambda_ingress_service_pyyaml_layer]
 }
 
-resource "aws_s3_object" "lambda_ingress_service_yamale_layer" {
-  bucket = aws_s3_bucket.lambda_bucket.id
-
-  key    = "layer-Yamale.zip"
-  source = "${path.module}/files/yamale/layer-Yamale.zip"
+module "lambda_ingress_service_yamale_layer_s3_object" {
+  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object"  # pragma: allowlist secret
+  bucket      = module.lambda_bucket.bucket_id
+  key         = "layer-Yamale.zip"
+  source_path = "${path.module}/files/yamale/layer-Yamale.zip"
 
   depends_on = [null_resource.lambda_ingress_service_yamale_layer]
 }
 
 resource "aws_lambda_layer_version" "lambda_ingress_service_pyyaml_layer" {
-  s3_bucket           = aws_s3_bucket.lambda_bucket.id
-  s3_key              = aws_s3_object.lambda_ingress_service_pyyaml_layer.key
+  s3_bucket           = module.lambda_bucket.bucket_id
+  s3_key              = "layer-PyYAML.zip"
   layer_name          = "PyYAML"
   compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12","python3.13"]
 }
 
 resource "aws_lambda_layer_version" "lambda_ingress_service_yamale_layer" {
-  s3_bucket           = aws_s3_bucket.lambda_bucket.id
-  s3_key              = aws_s3_object.lambda_ingress_service_yamale_layer.key
+  s3_bucket           = module.lambda_bucket.bucket_id
+  s3_key              = "layer-Yamale.zip"
   layer_name          = "Yamale"
   compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12","python3.13"]
 }
@@ -115,8 +158,8 @@ resource "aws_lambda_function" "lambda_ingress_service" {
   function_name = var.lambda_ingress_service_function_name
   description   = var.lambda_ingress_service_function_description
 
-  s3_bucket = aws_s3_bucket.lambda_bucket.id
-  s3_key    = aws_s3_object.lambda_ingress_service.key
+  s3_bucket = module.lambda_bucket.bucket_id
+  s3_key    = module.lambda_ingress_service_s3_object.s3_object_key
 
   runtime = "python3.10"
   handler = "pds_ingress_app.lambda_handler"
@@ -149,8 +192,8 @@ resource "aws_lambda_function" "lambda_status_service" {
   function_name = var.lambda_status_service_function_name
   description   = var.lambda_status_service_function_description
 
-  s3_bucket = aws_s3_bucket.lambda_bucket.id
-  s3_key    = aws_s3_object.lambda_status_service.key
+  s3_bucket = module.lambda_bucket.bucket_id
+  s3_key    = module.lambda_status_service_s3_object.s3_object_key
 
   runtime = "python3.10"
   handler = "pds_status_app.lambda_handler"
@@ -193,7 +236,51 @@ resource "aws_cloudwatch_log_group" "lambda_status_service" {
 }
 
 # Create the default staging buckets referenced by the bucket-map
-resource "aws_s3_bucket" "staging_buckets" {
-    count      = length(var.lambda_ingress_service_default_buckets)
-    bucket     = "${var.lambda_ingress_service_default_buckets[count.index].name}-${var.venue}"
+module "staging_buckets" {
+  source        = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/bucket"  # pragma: allowlist secret
+  count         = length(var.lambda_ingress_service_default_buckets)
+  bucket_name   = "${var.lambda_ingress_service_default_buckets[count.index].name}-${var.venue}"
+  partition     = var.lambda_s3_bucket_partition
+  bucket_policy = <<POLICY
+  {
+     "Version": "2012-10-17",
+     "Statement": [
+         {
+             "Effect": "Allow",
+             "Principal": {
+                "AWS": [
+                  "arn:${var.lambda_s3_bucket_partition}:iam::${data.aws_caller_identity.current.account_id}:role/mcp-tenantOperator"
+               ]
+             },
+             "Action": "s3:*",
+             "Resource": [
+                 "arn:${var.lambda_s3_bucket_partition}:s3:::${var.lambda_ingress_service_default_buckets[count.index].name}-${var.venue}/*",
+                 "arn:${var.lambda_s3_bucket_partition}:s3:::${var.lambda_ingress_service_default_buckets[count.index].name}-${var.venue}"
+             ]
+         },
+         {
+             "Sid": "AllowSSLRequestsOnly",
+             "Effect": "Deny",
+             "Principal": "*",
+             "Action": "s3:*",
+             "Resource": [
+                "arn:${var.lambda_s3_bucket_partition}:s3:::${var.lambda_ingress_service_default_buckets[count.index].name}-${var.venue}/*",
+                "arn:${var.lambda_s3_bucket_partition}:s3:::${var.lambda_ingress_service_default_buckets[count.index].name}-${var.venue}"
+              ],
+              "Condition": {
+                "Bool": {
+                   "aws:SecureTransport": "false"
+                 }
+             }
+         }
+     ]
+  }
+  POLICY
+  enable_blocks = true
+  enable_policy = true
+
+  required_tags = {
+    project = var.project
+    cicd    = var.cicd
+  }
 }

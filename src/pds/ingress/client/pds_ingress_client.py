@@ -291,7 +291,7 @@ def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pb
         the file.
 
     """
-    global MANIFEST
+    global MANIFEST  # noqa: F824
 
     logger = get_logger("_prepare_batch_for_ingress", console=False)
 
@@ -377,7 +377,7 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
         The list of responses from the Ingress Lambda service.
 
     """
-    global BEARER_TOKEN
+    global BEARER_TOKEN  # noqa: F824
 
     logger = get_logger("request_batch_for_ingress", console=False)
 

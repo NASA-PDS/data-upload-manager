@@ -1,4 +1,14 @@
 
+variable "project" {
+  type        = string
+  description = "Project name"
+}
+
+variable "cicd" {
+  type        = string
+  description = "CI/CD environment name"
+}
+
 variable "venue" {
     type        = string
     description = "Name of the venue to be deployed to. Should be one of [dev,test,prod]"
@@ -7,6 +17,11 @@ variable "venue" {
 variable "lambda_s3_bucket_name" {
   type        = string
   description = "Name of the S3 bucket to upload Lambda artifacts to"
+}
+
+variable "lambda_s3_bucket_partition" {
+  type    = string
+  default = "aws"
 }
 
 variable "lambda_ingress_localstack_context" {
