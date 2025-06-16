@@ -1,11 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-05-09)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-06-16)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.1.2...«unknown»)
 
 **Requirements:**
 
+- As a user, I want to support upload of files \>5GB [\#221](https://github.com/NASA-PDS/data-upload-manager/issues/221)
 - As a user, I want to upload files to S3 Glacier directly via DUM [\#205](https://github.com/NASA-PDS/data-upload-manager/issues/205)
 - As a user, I want timestamps to the ongoing logs that are printed to stdout while running the job [\#118](https://github.com/NASA-PDS/data-upload-manager/issues/118)
 - As a user, I want to resume/rerun upload on a directory and only have the updates or missing files uploaded [\#34](https://github.com/NASA-PDS/data-upload-manager/issues/34)
@@ -16,8 +17,11 @@
 
 **Other closed issues:**
 
+- Add HTTP 104 Error to Backoff/Retry Logic [\#222](https://github.com/NASA-PDS/data-upload-manager/issues/222)
 - Develop prototype Ingress Status utility [\#203](https://github.com/NASA-PDS/data-upload-manager/issues/203)
+- Include cognito link for password update in the email [\#194](https://github.com/NASA-PDS/data-upload-manager/issues/194)
 - Investigate monitoring solutions for very long running jobs [\#182](https://github.com/NASA-PDS/data-upload-manager/issues/182)
+- Update S3 terraform to use pds-mcp-infra modules [\#180](https://github.com/NASA-PDS/data-upload-manager/issues/180)
 - The bucket-map.yaml file used for terraform deployments should be pulled from a private location   [\#82](https://github.com/NASA-PDS/data-upload-manager/issues/82)
 - Update installation documentation to only use virtual environment only [\#76](https://github.com/NASA-PDS/data-upload-manager/issues/76)
 
