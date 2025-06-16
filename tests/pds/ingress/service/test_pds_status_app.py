@@ -3,6 +3,7 @@ import os
 import unittest
 from datetime import datetime
 from datetime import timezone
+from importlib.resources import files
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -12,13 +13,12 @@ import pds.ingress.service.pds_status_app
 from pds.ingress.service.pds_status_app import get_ingress_status
 from pds.ingress.service.pds_status_app import parse_manifest
 from pds.ingress.service.pds_status_app import process_manifest
-from pkg_resources import resource_filename
 
 
 class PDSStatusAppTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.test_dir = resource_filename(__name__, "")
+        cls.test_dir = str(files("tests.pds.ingress").joinpath("service"))
 
     def setUp(self) -> None:
         # Set up environment variables to mock a default Lambda setup

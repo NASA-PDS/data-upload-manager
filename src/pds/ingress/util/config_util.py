@@ -10,13 +10,13 @@ Ingress client and service.
 import configparser
 import os
 from fnmatch import fnmatchcase
+from importlib.resources import files
 from os.path import join
 from urllib.parse import urlparse
 
 import boto3
 import yamale
 import yaml
-from pkg_resources import resource_filename
 
 CONFIG = None
 
@@ -51,7 +51,8 @@ class ConfigUtil:
     @staticmethod
     def default_config_path():
         """Returns path to the default configuration file."""
-        return resource_filename(__name__, "conf.default.ini")
+        resource = files("pds.ingress").joinpath("conf.default.ini")
+        return str(resource)
 
     @staticmethod
     def get_config(config_path=None):

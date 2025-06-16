@@ -6,6 +6,7 @@ import unittest
 from argparse import Namespace
 from datetime import datetime
 from datetime import timezone
+from importlib.resources import files
 from os.path import abspath
 from os.path import exists
 from os.path import join
@@ -14,7 +15,6 @@ from pds.ingress.util.report_util import create_report_file
 from pds.ingress.util.report_util import initialize_summary_table
 from pds.ingress.util.report_util import read_manifest_file
 from pds.ingress.util.report_util import write_manifest_file
-from pkg_resources import resource_filename
 
 
 class ReportUtilTest(unittest.TestCase):
@@ -22,7 +22,7 @@ class ReportUtilTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         """Set up directories and files for testing"""
         cls.starting_dir = abspath(os.curdir)
-        cls.test_dir = resource_filename(__name__, "")
+        cls.test_dir = str(files("tests.pds.ingress").joinpath("util"))
 
         os.chdir(cls.test_dir)
 

@@ -3,6 +3,7 @@ import logging
 import os
 import tempfile
 import unittest
+from importlib.resources import files
 from os.path import join
 from unittest.mock import patch
 
@@ -12,7 +13,6 @@ from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.config_util import initialize_bucket_map
 from pds.ingress.util.config_util import SanitizingConfigParser
 from pds.ingress.util.node_util import NodeUtil
-from pkg_resources import resource_filename
 
 
 class MockS3Client:
@@ -82,7 +82,7 @@ def mock_boto3_client(*args, **kwargs):
 class ConfigUtilTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.test_dir = resource_filename(__name__, "")
+        cls.test_dir = str(files("tests.pds.ingress").joinpath("util"))
 
     def setUp(self) -> None:
         os.environ["BUCKET_MAP_LOCATION"] = "config"

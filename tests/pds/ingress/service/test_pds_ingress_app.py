@@ -18,13 +18,13 @@ from pds.ingress.service.pds_ingress_app import get_dum_version
 from pds.ingress.service.pds_ingress_app import lambda_handler
 from pds.ingress.service.pds_ingress_app import logger as service_logger
 from pds.ingress.service.pds_ingress_app import should_overwrite_file
-from pkg_resources import resource_filename
+from importlib.resources import files
 
 
 class PDSIngressAppTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.test_dir = resource_filename(__name__, "")
+        cls.test_dir = str(files("tests.pds.ingress").joinpath("service"))
 
     def setUp(self) -> None:
         # Set up environment variables to mock a default Lambda setup
