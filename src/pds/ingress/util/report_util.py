@@ -175,3 +175,33 @@ def create_report_file(args, summary_table):
             json.dump(report, outfile, indent=4)
     except OSError as err:
         logger.warning("Failed to write summary report to %s, reason: %s", args.report_path, str(err))
+
+
+def parts_to_xml(multi_parts):
+    """
+    Converts a list of multipart upload parts to an XML string for use
+    as the body in a CompleteMultipartUpload request.
+
+    Parameters
+    ----------
+    multi_parts : list
+        List of dictionaries representing the parts of a multipart upload.
+        Each dictionary should contain "PartNumber" and "ETag" keys.
+
+    Returns
+    -------
+    parts_xml: str
+        The XML string representing the multipart upload parts.
+
+    """
+    parts_xml = "<CompleteMultipartUpload>\n"
+
+    for part in multi_parts:
+        parts_xml += "  <Part>\n"
+        parts_xml += "    <PartNumber>%d</PartNumber>\n" % part["PartNumber"]
+        parts_xml += "    <ETag>%s</ETag>\n" % part["ETag"]
+        parts_xml += "  </Part>\n"
+
+    parts_xml += "</CompleteMultipartUpload>"
+
+    return parts_xml

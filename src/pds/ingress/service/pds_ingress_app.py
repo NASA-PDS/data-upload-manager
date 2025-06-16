@@ -13,6 +13,7 @@ import os
 from datetime import datetime
 from datetime import timezone
 from http import HTTPStatus
+from math import ceil
 from os.path import join
 
 import boto3
@@ -45,6 +46,9 @@ if os.getenv("ENDPOINT_URL", None):
     s3_client = boto3.client("s3", endpoint_url=os.environ["ENDPOINT_URL"])
 else:
     s3_client = boto3.client("s3")
+
+MAX_UPLOAD_SIZE = 5000000000  # 5 GB single file upload limit for S3
+CHUNK_SIZE = 50000000  # 50 MB chunk size for multipart uploads
 
 
 def get_dum_version():
@@ -175,7 +179,13 @@ def should_overwrite_file(destination_bucket, object_key, md5_digest, file_size,
 
     object_length = int(object_head["ContentLength"])
     object_last_modified = object_head["LastModified"]
-    object_md5 = object_head["ETag"][1:-1]  # strip embedded quotes
+
+    # Pull the MD5 we assign as custom metaata, if it's missing fallback to the Etag
+    try:
+        object_md5 = object_head["Metadata"]["md5"]
+    except KeyError:
+        logger.warning("Missing MD5 for %s/%s, falling back to ETag", destination_bucket, object_key)
+        object_md5 = object_head["ETag"][1:-1]  # strip embedded quotes
 
     logger.debug("object_length=%d", object_length)
     logger.debug("object_last_modified=%s", object_last_modified)
@@ -267,6 +277,113 @@ def generate_presigned_upload_url(
     return url
 
 
+def process_multipart_upload(
+    bucket_info, object_key, file_size, md5_digest, last_modified, client_version, service_version, expires_in=3600
+):
+    """
+    Initiates a multipart upload request for the provided S3 bucket/key location.
+    This function also derives the presigned URLs for each upload part request
+    based on the size of the file, as well as URLs the client can use to either
+    complete or prematurely terminate the multipart upload request.
+
+    Parameters
+    ----------
+    bucket_info : dict
+        Dictionary containing information about the destination bucket.
+    object_key : str
+        Object key location within the S3 bucket to be uploaded to.
+    file_size : int
+        Size of the file to be multipart uploaded, in bytes.
+    md5_digest : str
+        MD5 hash digest corresponding to the file to generate a URL for.
+    last_modified : float
+        Last modified time of the incoming version of the file as a Unix Epoch.
+    client_version : str
+        Version of the DUM client used to initiate the ingress reqeust.
+    service_version : str
+        Version of the DUM lambda service used to process this ingress request.
+    expires_in: int, optional
+        Expiration time of the generated URL in seconds. After this time,
+        the URL should no longer be valid. Defaults to 3600 seconds.
+
+    Returns
+    -------
+    signed_urls : list
+        List of pre-signed URLs for each part of the multipart upload.
+    complete_upload_url : str
+        Pre-signed URL for the client to complete the multipart upload.
+    abort_upload_url : str
+        Pre-signed URL for the client to abort the multipart upload.
+    num_parts : int
+        The total number of parts in the multipart upload.
+
+    """
+    # Initiate the multi-part upload request
+    response = s3_client.create_multipart_upload(
+        Bucket=bucket_info["name"],
+        Key=object_key,
+        Metadata={
+            "md5": md5_digest,
+            "last_modified": datetime.fromtimestamp(last_modified, tz=timezone.utc).isoformat(),
+            "dum_client_version": client_version,
+            "dum_service_version": service_version,
+        },
+    )
+
+    # This upload ID will be required for all subsequent requests related to
+    # this multipart upload
+    upload_id = response["UploadId"]
+
+    num_parts = int(ceil(file_size / CHUNK_SIZE))
+
+    logger.info(f"Generating pre-signed URLs for {num_parts} file parts, {upload_id=}")
+
+    signed_urls = []
+
+    try:
+        # Generate the pre-signed URLs for each part of the upload
+        for part_num in range(1, num_parts + 1):  # part numbers use 1-based index
+            method_parameters = {
+                "Bucket": bucket_info["name"],
+                "Key": object_key,
+                "UploadId": upload_id,
+                "PartNumber": part_num,
+            }
+
+            try:
+                signed_urls.append(
+                    s3_client.generate_presigned_url(
+                        ClientMethod="upload_part", Params=method_parameters, ExpiresIn=expires_in
+                    )
+                )
+            except ClientError:
+                logger.exception(
+                    "Failed to generate a multipart presigned URL for %s", join(bucket_info["name"], object_key)
+                )
+                raise
+
+        # Create pre-signed URLs for the client to complete (or abort) the multipart upload
+        method_parameters = {"Bucket": bucket_info["name"], "Key": object_key, "UploadId": upload_id}
+
+        complete_upload_url = s3_client.generate_presigned_url(
+            ClientMethod="complete_multipart_upload", Params=method_parameters, ExpiresIn=expires_in, HttpMethod="POST"
+        )
+
+        logger.info("Generated multipart upload complete presigned URL: %s", complete_upload_url)
+
+        abort_upload_url = s3_client.generate_presigned_url(
+            ClientMethod="abort_multipart_upload", Params=method_parameters, ExpiresIn=expires_in, HttpMethod="POST"
+        )
+
+        logger.info("Generated multipart upload abort presigned URL: %s", abort_upload_url)
+    except Exception:
+        logger.exception("Aborting multipart upload for upload_id=%s due to error", upload_id)
+        s3_client.abort_multipart_upload(Bucket=bucket_info["name"], Key=object_key, UploadId=upload_id)
+        raise
+
+    return signed_urls, complete_upload_url, abort_upload_url, num_parts
+
+
 def lambda_handler(event, context):
     """
     Entrypoint for this Lambda function. Derives the appropriate S3 upload URI
@@ -320,12 +437,12 @@ def lambda_handler(event, context):
         trimmed_path = ingress_request.get("trimmed_path")
         md5_digest = ingress_request.get("md5")
         file_size = ingress_request.get("size")
-        last_modifed = ingress_request.get("last_modified")
+        last_modified = ingress_request.get("last_modified")
 
         # Convert MD5 from hex to base64, since this is how AWS represents it
         base64_md5_digest = base64.b64encode(bytes.fromhex(md5_digest)).decode()
 
-        if not all(field is not None for field in (ingress_path, trimmed_path, md5_digest, file_size, last_modifed)):
+        if not all(field is not None for field in (ingress_path, trimmed_path, md5_digest, file_size, last_modified)):
             logger.error("One or more missing fields in request index %d", request_index)
             raise RuntimeError
 
@@ -347,29 +464,56 @@ def lambda_handler(event, context):
             object_key = join(request_node.lower(), trimmed_path)
 
             if should_overwrite_file(
-                destination_bucket, object_key, md5_digest, int(file_size), float(last_modifed), force_overwrite
+                destination_bucket, object_key, md5_digest, int(file_size), float(last_modified), force_overwrite
             ):
-                s3_url = generate_presigned_upload_url(
-                    bucket_info,
-                    object_key,
-                    md5_digest,
-                    base64_md5_digest,
-                    float(last_modifed),
-                    client_version,
-                    service_version,
-                )
+                if file_size >= MAX_UPLOAD_SIZE:
+                    logger.info("%s exceeds maximum upload size, initiating Multi-part upload", object_key)
 
-                result.append(
-                    {
-                        "result": HTTPStatus.OK,
-                        "trimmed_path": trimmed_path,
-                        "ingress_path": ingress_path,
-                        "md5": md5_digest,
-                        "base64_md5": base64_md5_digest,
-                        "s3_url": s3_url,
-                        "message": "Request success",
-                    }
-                )
+                    signed_urls, complete_url, abort_url, num_parts = process_multipart_upload(
+                        bucket_info,
+                        object_key,
+                        file_size,
+                        md5_digest,
+                        float(last_modified),
+                        client_version,
+                        service_version,
+                    )
+
+                    result.append(
+                        {
+                            "result": HTTPStatus.OK,
+                            "trimmed_path": trimmed_path,
+                            "ingress_path": ingress_path,
+                            "s3_urls": signed_urls,
+                            "upload_complete_url": complete_url,
+                            "upload_abort_url": abort_url,
+                            "num_parts": num_parts,
+                            "chunk_size": CHUNK_SIZE,
+                            "message": "Multipart Upload Request initiated",
+                        }
+                    )
+                else:
+                    s3_url = generate_presigned_upload_url(
+                        bucket_info,
+                        object_key,
+                        md5_digest,
+                        base64_md5_digest,
+                        float(last_modified),
+                        client_version,
+                        service_version,
+                    )
+
+                    result.append(
+                        {
+                            "result": HTTPStatus.OK,
+                            "trimmed_path": trimmed_path,
+                            "ingress_path": ingress_path,
+                            "md5": md5_digest,
+                            "base64_md5": base64_md5_digest,
+                            "s3_url": s3_url,
+                            "message": "Request success",
+                        }
+                    )
             else:
                 logger.info(
                     "File %s already exists in bucket %s and should not be overwritten", object_key, destination_bucket

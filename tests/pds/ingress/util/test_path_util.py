@@ -2,12 +2,12 @@
 import os
 import tempfile
 import unittest
+from importlib.resources import files
 from os.path import abspath
 from os.path import join
 
 from pds.ingress.util.path_util import PathUtil
 from pds.ingress.util.progress_util import get_path_progress_bar
-from pkg_resources import resource_filename
 
 
 class PathUtilTest(unittest.TestCase):
@@ -15,7 +15,7 @@ class PathUtilTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         """Set up directories and files for testing"""
         cls.starting_dir = abspath(os.curdir)
-        cls.test_dir = resource_filename(__name__, "")
+        cls.test_dir = str(files("tests.pds.ingress").joinpath("util"))
 
         os.chdir(cls.test_dir)
 
