@@ -254,11 +254,27 @@ def get_upload_progress_bar_for_batch(batch_pbar, total, filename=None):
     upload_pbar.total = total
 
     if filename:
-        upload_pbar.desc = f"    |_ {filename}"
+        update_upload_pbar_filename(upload_pbar, filename)
 
     upload_pbar.refresh()
 
     return upload_pbar
+
+
+def update_upload_pbar_filename(upload_pbar, filename):
+    """
+    Updates the filename of the provided Batch progress bar.
+
+    Parameters
+    ----------
+    upload_pbar : tqdm.tqdm_asyncio
+        The file upload progress bar to update.
+    filename : str
+        The new filename text to assign to the Batch progress bar.
+
+    """
+    upload_pbar.desc = f"    |_ {filename}"
+    upload_pbar.refresh()
 
 
 def close_batch_progress_bars():
