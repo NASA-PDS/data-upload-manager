@@ -40,8 +40,10 @@ from pds.ingress.util.progress_util import get_path_progress_bar
 from pds.ingress.util.progress_util import get_upload_progress_bar_for_batch
 from pds.ingress.util.progress_util import init_batch_progress_bars
 from pds.ingress.util.progress_util import release_batch_progress_bar
+from pds.ingress.util.progress_util import update_upload_pbar_filename
 from pds.ingress.util.report_util import create_report_file
 from pds.ingress.util.report_util import initialize_summary_table
+from pds.ingress.util.report_util import parts_to_xml
 from pds.ingress.util.report_util import print_ingress_summary
 from pds.ingress.util.report_util import read_manifest_file
 from pds.ingress.util.report_util import write_manifest_file
@@ -179,7 +181,12 @@ def _process_batch(batch_index, request_batch, node_id, force_overwrite, api_gat
 
         for ingress_response in response_batch:
             try:
-                ingress_file_to_s3(ingress_response, batch_index, batch_pbar)
+                # If a single response contains multiple s3 URLs, then this is a multipart upload request
+                if "s3_urls" in ingress_response:
+                    ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar)
+                else:
+                    ingress_file_to_s3(ingress_response, batch_index, batch_pbar)
+
                 batch_pbar.update()
             except RequestException as err:
                 # If here, the HTTP request error was unrecoverable by a backoff/retry
@@ -291,7 +298,7 @@ def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pb
         the file.
 
     """
-    global MANIFEST
+    global MANIFEST  # noqa: F824
 
     logger = get_logger("_prepare_batch_for_ingress", console=False)
 
@@ -377,7 +384,7 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
         The list of responses from the Ingress Lambda service.
 
     """
-    global BEARER_TOKEN
+    global BEARER_TOKEN  # noqa: F824
 
     logger = get_logger("request_batch_for_ingress", console=False)
 
@@ -483,6 +490,113 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
             response.raise_for_status()
 
         logger.info("Batch %d : %s Ingest complete", batch_index, trimmed_path)
+        SUMMARY_TABLE["uploaded"][batch_index].add(trimmed_path)
+
+        # Update total number of bytes transferrred
+        SUMMARY_TABLE["transferred"] += os.stat(ingress_path).st_size
+    elif response_result == HTTPStatus.NO_CONTENT:
+        logger.info(
+            "Batch %d : Skipping ingress for %s, reason %s", batch_index, trimmed_path, ingress_response.get("message")
+        )
+        SUMMARY_TABLE["skipped"][batch_index].add(trimmed_path)
+    elif response_result == HTTPStatus.NOT_FOUND:
+        logger.warning(
+            "Batch %d : Ingress failed for %s, reason: %s", batch_index, trimmed_path, ingress_response.get("message")
+        )
+        SUMMARY_TABLE["failed"][batch_index].add(trimmed_path)
+    else:
+        logger.error("Batch %d : Unexepected response code (%d) from Ingress service", batch_index, response_result)
+        raise RuntimeError
+
+
+@backoff.on_exception(
+    backoff.constant,
+    (requests.exceptions.ConnectionError, requests.exceptions.RequestException),
+    max_time=60,
+    giveup=fatal_code,
+    logger="ingress_multipart_file_to_s3",
+    interval=15,
+)
+def ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar):
+    """
+    Performs an ingress request for a file that is too large to be uploaded
+    in a single request. The file is instead uploaded in multiple parts using
+    the list of pre-signed S3 URLs returned from the Ingress Service Lambda.
+
+    Parameters
+    ----------
+    ingress_response : dict
+        Dictionary containing the information returned from the Ingress Lambda
+        App required to perform the multipart upload to S3.
+    batch_index : int
+        Index of the batch that the ingressed file was assigned to. Used for
+        tracking within the summary table.
+    batch_pbar : tqdm.tqdm_asyncio
+        The Batch progress bar instance used to obtain the corresponding File
+        Upload progress sub-bar.
+
+    Raises
+    ------
+    RuntimeError
+        If an unexpected response is received from the Ingress Lambda app.
+
+    """
+    logger = get_logger("ingress_multipart_file_to_s3", console=False)
+
+    response_result = int(ingress_response.get("result", -1))
+    trimmed_path = ingress_response.get("trimmed_path")
+
+    if response_result == HTTPStatus.OK:
+        logger.info("Batch %d : Performing Multipart Upload for %s", batch_index, trimmed_path)
+
+        ingress_path = ingress_response.get("ingress_path")
+        s3_ingress_urls = ingress_response.get("s3_urls", [])
+        upload_complete_url = ingress_response.get("upload_complete_url")
+        upload_abort_url = ingress_response.get("upload_abort_url")
+        chunk_size = ingress_response.get("chunk_size")
+
+        upload_pbar = get_upload_progress_bar_for_batch(
+            batch_pbar, total=os.stat(ingress_path).st_size, filename=os.path.basename(ingress_path)
+        )
+
+        # Open a handle to file to upload, wrap it so it updates the progress bar,
+        # then create an iterator that reads the file in chunks of the size
+        # specified by the ingress lambda
+        file_handle = open(ingress_path, "rb")
+        wrapped_file = CallbackIOWrapper(upload_pbar.update, file_handle, "read")
+        chunk_iterator = iter(lambda: wrapped_file.read(chunk_size), b"")
+
+        completed_parts = []
+
+        try:
+            for part_number, s3_ingress_url in enumerate(s3_ingress_urls, start=1):
+                logger.info("Uploading part %d of %d for %s", part_number, len(s3_ingress_urls), trimmed_path)
+
+                # Update the upload progress bar with the current part number
+                update_upload_pbar_filename(
+                    upload_pbar, f"{os.path.basename(ingress_path)} (Part {part_number}/{len(s3_ingress_urls)})"
+                )
+
+                # Submit a single chunk to AWS
+                response = requests.put(s3_ingress_url, data=next(chunk_iterator))
+                response.raise_for_status()
+
+                completed_parts.append({"ETag": response.headers["ETag"], "PartNumber": part_number})
+        except Exception as err:
+            logger.error("Failure occurred during Multipart upload, reason: %s", str(err))
+            logger.error("Aborting Multipart Upload for %s", trimmed_path)
+            response = requests.post(upload_abort_url)
+            response.raise_for_status()
+            raise
+        finally:
+            file_handle.close()
+
+        # Complete the multipart upload
+        logger.info("Completing Multipart Upload for %s", trimmed_path)
+        response = requests.post(upload_complete_url, data=parts_to_xml(completed_parts))
+        response.raise_for_status()
+
+        logger.info("Batch %d : %s Multipart Upload complete", batch_index, trimmed_path)
         SUMMARY_TABLE["uploaded"][batch_index].add(trimmed_path)
 
         # Update total number of bytes transferrred
