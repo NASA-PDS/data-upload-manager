@@ -19,7 +19,7 @@ lambda_authorizer_iam_role_arn      = "arn:aws:iam::000000000000:role/pds-nucleu
 nucleus_dum_cognito_initial_users = [
   {
     "username": "__USERNAME__",
-    "password": "@Pa55w0rd@",  # pragma: allowlist secret
+    "password": "not_a_real_password_this_is_only_used_with_localstack_deployments",  # pragma: allowlist secret
     "group": "PDS_ENG_USERS"
     "email": "pds-user@jpl.nasa.gov"  # pragma: allowlist secret
   }
