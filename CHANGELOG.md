@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-06-16)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-06-17)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.1.2...«unknown»)
 
@@ -18,6 +18,7 @@
 **Other closed issues:**
 
 - Add HTTP 104 Error to Backoff/Retry Logic [\#222](https://github.com/NASA-PDS/data-upload-manager/issues/222)
+- DUM set up with IMG node [\#211](https://github.com/NASA-PDS/data-upload-manager/issues/211)
 - Develop prototype Ingress Status utility [\#203](https://github.com/NASA-PDS/data-upload-manager/issues/203)
 - Include cognito link for password update in the email [\#194](https://github.com/NASA-PDS/data-upload-manager/issues/194)
 - Investigate monitoring solutions for very long running jobs [\#182](https://github.com/NASA-PDS/data-upload-manager/issues/182)
