@@ -12,16 +12,9 @@
             "Sid": ""
         },
         {
-            "Action": "dynamodb:ListTables",
-            "Effect": "Allow",
-            "Resource": "*",
-            "Sid": ""
-        },
-        {
             "Action": [
                 "s3:PutObject",
                 "s3:PutObjectTagging",
-                "s3:PutObjectVersion",
                 "s3:PutObjectVersionTagging",
                 "s3:ListMultipartUploadParts",
                 "s3:GetObject*",
@@ -31,40 +24,27 @@
             ],
             "Effect": "Allow",
             "Resource": [
-                "arn:aws:s3:::pds-prod-nucleus-dum",
-                "arn:aws:s3:::pds-prod-nucleus-dum/*",
-                "arn:aws:s3:::pds-eng-staging-prod",
-                "arn:aws:s3:::pds-eng-staging-prod/*",
-                "arn:aws:s3:::pds-geo-staging-prod",
-                "arn:aws:s3:::pds-geo-staging-prod/*",
-                "arn:aws:s3:::pds-img-staging-prod",
-                "arn:aws:s3:::pds-img-staging-prod/*",
-                "arn:aws:s3:::pds-naif-staging-prod",
-                "arn:aws:s3:::pds-naif-staging-prod/*",
-                "arn:aws:s3:::pds-ppi-staging-prod",
-                "arn:aws:s3:::pds-ppi-staging-prod/*",
-                "arn:aws:s3:::pds-rms-staging-prod",
-                "arn:aws:s3:::pds-rms-staging-prod/*",
-                "arn:aws:s3:::pds-rs-staging-prod",
-                "arn:aws:s3:::pds-rs-staging-prod/*",
-                "arn:aws:s3:::pds-sbn-staging-prod",
-                "arn:aws:s3:::pds-sbn-staging-prod/*"
+                "arn:aws:s3:::pds-eng-staging-localstack",
+                "arn:aws:s3:::pds-eng-staging-localstack/*",
+                "arn:aws:s3:::pds-geo-staging-localstack",
+                "arn:aws:s3:::pds-geo-staging-localstack/*",
+                "arn:aws:s3:::pds-img-staging-localstack",
+                "arn:aws:s3:::pds-img-staging-localstack/*",
+                "arn:aws:s3:::pds-naif-staging-localstack",
+                "arn:aws:s3:::pds-naif-staging-localstack/*",
+                "arn:aws:s3:::pds-ppi-staging-localstack",
+                "arn:aws:s3:::pds-ppi-staging-localstack/*",
+                "arn:aws:s3:::pds-rms-staging-localstack",
+                "arn:aws:s3:::pds-rms-staging-localstack/*",
+                "arn:aws:s3:::pds-rs-staging-localstack",
+                "arn:aws:s3:::pds-rs-staging-localstack/*",
+                "arn:aws:s3:::pds-sbn-staging-localstack",
+                "arn:aws:s3:::pds-sbn-staging-localstack/*"
             ],
             "Sid": ""
         },
         {
             "Action": "s3:ListAllMyBuckets",
-            "Effect": "Allow",
-            "Resource": "*",
-            "Sid": ""
-        },
-        {
-            "Action": [
-                "sns:publish",
-                "sns:Unsubscribe",
-                "sns:Subscribe",
-                "sns:List*"
-            ],
             "Effect": "Allow",
             "Resource": "*",
             "Sid": ""
@@ -83,35 +63,6 @@
             "Action": "apigateway:GET",
             "Effect": "Allow",
             "Resource": "arn:aws:apigateway:us-west-2::/restapis/*/stages",
-            "Sid": ""
-        },
-        {
-            "Action": [
-                "states:GetExecutionHistory",
-                "states:DescribeStateMachine",
-                "states:DescribeExecution"
-            ],
-            "Effect": "Allow",
-            "Resource": "*",
-            "Sid": ""
-        },
-        {
-            "Action": [
-                "ec2:DescribeNetworkInterfaces",
-                "ec2:DeleteNetworkInterface",
-                "ec2:CreateNetworkInterface"
-            ],
-            "Effect": "Allow",
-            "Resource": "*",
-            "Sid": ""
-        },
-        {
-            "Action": [
-                "ses:SendEmail",
-                "ses:SendRawEmail"
-            ],
-            "Effect": "Allow",
-            "Resource": "*",
             "Sid": ""
         },
         {
