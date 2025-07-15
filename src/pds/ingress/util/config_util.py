@@ -244,9 +244,9 @@ def bucket_for_path(node_bucket_map, file_path, logger):
     for path in node_bucket_map.get("paths", []):
         if _match_path_to_prefix(file_path, path["prefix"]):
             bucket = path["bucket"]
-            logger.info("Resolved bucket location %s for path %s", bucket, file_path)
+            logger.debug("Resolved bucket location %s for path %s", bucket, file_path)
             break
     else:
-        logger.warning('No bucket location configured for path "%s", using default bucket %s', file_path, bucket)
+        logger.debug('No bucket location configured for path "%s", using default bucket %s', file_path, bucket)
 
     return bucket
