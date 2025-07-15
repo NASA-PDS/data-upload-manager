@@ -123,14 +123,26 @@ class PDSIngressAppTest(unittest.TestCase):
             body[0]["ingress_path"], "/home/user/data/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"
         )
 
-        self.assertIn("message", body[0])
-        self.assertEqual(body[0]["message"], "Request success")
+        self.assertIn("md5", body[0])
+        self.assertEqual(body[0]["md5"], "deadbeefdeadbeefdeadbeef")
+
+        self.assertIn("base64_md5", body[0])
+        self.assertEqual(body[0]["base64_md5"], "3q2+796tvu/erb7v")
 
         self.assertIn("s3_url", body[0])
         s3_url = body[0]["s3_url"]
 
         expected_url = "https://pds-sbn-staging-test.s3.amazonaws.com/sbn/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml"
         self.assertTrue(s3_url.startswith(expected_url))
+
+        self.assertIn("bucket", body[0])
+        self.assertEqual(body[0]["bucket"], "pds-sbn-staging-test")
+
+        self.assertIn("key", body[0])
+        self.assertEqual(body[0]["key"], "sbn/gbo.ast.catalina.survey/bundle_gbo.ast.catalina.survey_v1.0.xml")
+
+        self.assertIn("message", body[0])
+        self.assertEqual(body[0]["message"], "Request success")
 
         test_event = {
             "body": json.dumps(
