@@ -104,7 +104,6 @@ class ConfigUtilTest(unittest.TestCase):
         self.assertEqual(parser["API_GATEWAY"]["id"], "abcdefghi")
         self.assertEqual(parser["API_GATEWAY"]["region"], "us-west-2")
         self.assertEqual(parser["API_GATEWAY"]["stage"], "test")
-        self.assertEqual(parser["API_GATEWAY"]["resource"], "request")
 
         self.assertEqual(parser["COGNITO"]["client_id"], "123456789")
         self.assertEqual(parser["COGNITO"]["username"], "cognito_user")

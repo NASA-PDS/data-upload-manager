@@ -10,9 +10,23 @@ from unittest.mock import patch
 import botocore.client
 import botocore.exceptions
 import pds.ingress.service.pds_status_app
+import pds.ingress.util.config_util
 from pds.ingress.service.pds_status_app import get_ingress_status
 from pds.ingress.service.pds_status_app import parse_manifest
 from pds.ingress.service.pds_status_app import process_manifest
+
+
+class MockS3Client:
+    """Mock implementation for the boto3 S3 client class"""
+
+    def download_file(self, Bucket: str, Key: str, Filename: str):
+        """Simulate download of the file"""
+        with open(Filename, "w") as outfile:
+            outfile.write(
+                '{"gbo.ast.catalina.survey/calibration/703/2022/22Apr01/mflat.703.20210907.fits.fz": '
+                '{"md5": "186699c0133422ce3eb6129d1fe41e30", "size": 17962560, '  # pragma: allowlist secret
+                '"last_modified": "2024-08-19T20:36:50+00:00"}}'
+            )
 
 
 class PDSStatusAppTest(unittest.TestCase):
@@ -35,10 +49,11 @@ class PDSStatusAppTest(unittest.TestCase):
         # Dummy manifest string for use with tests
         self.test_manifest = '{"gbo.ast.catalina.survey/calibration/703/2022/22Apr01/mflat.703.20210907.fits.fz": {"md5": "186699c0133422ce3eb6129d1fe41e30", "size": 17962560, "last_modified": "2024-08-19T20:36:50+00:00"}}'  # pragma: allowlist secret
 
+    @patch.object(pds.ingress.service.pds_status_app, "s3_client", MockS3Client())
     def test_parse_manifest(self):
         """Test parsing of manifest info from an SQS record"""
         test_record = {
-            "body": self.test_manifest,
+            "body": json.dumps("s3://pds-ingress-staging-test/manifest.json"),
             "messageAttributes": {
                 "email": {"stringValue": '"email@email.com"'},  # pragma: allowlist secret
                 "node": {"stringValue": '"eng"'},

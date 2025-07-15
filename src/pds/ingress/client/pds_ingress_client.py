@@ -396,7 +396,7 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
     api_gateway_id = api_gateway_config["id"]
     api_gateway_region = api_gateway_config["region"]
     api_gateway_stage = api_gateway_config["stage"]
-    api_gateway_resource = api_gateway_config["resource"]
+    api_gateway_resource = "request"
 
     api_gateway_url = api_gateway_template.format(
         id=api_gateway_id, region=api_gateway_region, stage=api_gateway_stage, resource=api_gateway_resource
