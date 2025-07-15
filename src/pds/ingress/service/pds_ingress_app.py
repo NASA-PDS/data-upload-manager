@@ -457,6 +457,8 @@ def lambda_handler(event, context):
                     "result": HTTPStatus.NOT_FOUND,
                     "trimmed_path": trimmed_path,
                     "s3_url": None,
+                    "bucket": None,
+                    "key": None,
                     "message": f"Mapped bucket {destination_bucket} does not exist or has insufficient access permisisons",
                 }
             )
@@ -485,6 +487,8 @@ def lambda_handler(event, context):
                             "trimmed_path": trimmed_path,
                             "ingress_path": ingress_path,
                             "s3_urls": signed_urls,
+                            "bucket": destination_bucket,
+                            "key": object_key,
                             "upload_complete_url": complete_url,
                             "upload_abort_url": abort_url,
                             "num_parts": num_parts,
@@ -511,6 +515,8 @@ def lambda_handler(event, context):
                             "md5": md5_digest,
                             "base64_md5": base64_md5_digest,
                             "s3_url": s3_url,
+                            "bucket": destination_bucket,
+                            "key": object_key,
                             "message": "Request success",
                         }
                     )
@@ -524,6 +530,8 @@ def lambda_handler(event, context):
                         "result": HTTPStatus.NO_CONTENT,
                         "trimmed_path": trimmed_path,
                         "s3_url": None,
+                        "bucket": destination_bucket,
+                        "key": object_key,
                         "message": "File already exists",
                     }
                 )

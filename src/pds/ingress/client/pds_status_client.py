@@ -15,6 +15,7 @@ import requests
 from pds.ingress import __version__
 from pds.ingress.util.auth_util import AuthUtil
 from pds.ingress.util.config_util import ConfigUtil
+from pds.ingress.util.hash_util import md5_for_path
 from pds.ingress.util.log_util import get_log_level
 from pds.ingress.util.log_util import get_logger
 from pds.ingress.util.node_util import NodeUtil
@@ -107,14 +108,6 @@ def main(args):
     if not os.path.exists(args.manifest_path):
         raise ValueError(f'Manifest path "{args.manifest_path}" does not exist')
 
-    logger.info(f"Reading Manifest file {args.manifest_path}")
-    with open(os.path.abspath(args.manifest_path), "r") as infile:
-        manifest = json.load(infile)
-
-    # Trim fields that are not needed by the status service
-    for key in manifest:
-        manifest[key].pop("ingress_path")
-
     cognito_config = config["COGNITO"]
 
     if not cognito_config["username"] and cognito_config["password"]:
@@ -129,13 +122,65 @@ def main(args):
     api_gateway_id = api_gateway_config["id"]
     api_gateway_region = api_gateway_config["region"]
     api_gateway_stage = api_gateway_config["stage"]
-    api_gateway_resource = "status"  # TODO this doesn't need to be defined by INI config
+
+    # Submit the request to stage the manifest file to S3
+    request = [
+        {
+            "ingress_path": args.manifest_path,
+            "trimmed_path": os.path.join("manifests", os.path.basename(args.manifest_path)),
+            "md5": md5_for_path(args.manifest_path).hexdigest(),
+            "size": os.stat(args.manifest_path).st_size,
+            "last_modified": os.path.getmtime(args.manifest_path),
+        }
+    ]
+
+    api_gateway_resource = "request"
 
     api_gateway_url = api_gateway_template.format(
         id=api_gateway_id, region=api_gateway_region, stage=api_gateway_stage, resource=api_gateway_resource
     )
 
-    payload = {"Message": manifest, "Email": args.email, "Node": args.node}
+    params = {"node": args.node, "node_name": NodeUtil.node_id_to_long_name[args.node]}
+    headers = {
+        "Authorization": bearer_token,
+        "UserGroup": NodeUtil.node_id_to_group_name(args.node),
+        "ForceOverwrite": "1",  # Likely we'll repeat requests using same manifest file names, so always overwrite
+        "ClientVersion": __version__,
+        "content-type": "application/json",
+        "x-amz-docs-region": api_gateway_region,
+    }
+
+    logger.info("Submitting S3 upload request for Manifest file...")
+    response = requests.post(api_gateway_url, params=params, data=json.dumps(request), headers=headers, timeout=600)
+
+    if response.status_code == HTTPStatus.OK:
+        ingress_response = response.json()[0]  # Should only ever be one item in the response
+    else:
+        response.raise_for_status()
+
+    bucket = ingress_response.get("bucket")
+    key = ingress_response.get("key")
+    s3_ingress_url = ingress_response.get("s3_url")
+
+    if any(value is None for value in [bucket, key, s3_ingress_url]):
+        raise RuntimeError("Invalid response from S3 ingress request, missing bucket, key, or s3_url")
+
+    headers = {"Content-MD5": ingress_response.get("base64_md5")}
+
+    logger.info("Uploading Manifest file to S3...")
+    with open(os.path.abspath(args.manifest_path), "r") as infile:
+        response = requests.put(s3_ingress_url, data=infile, headers=headers)
+        response.raise_for_status()
+
+    # Submit the request to the status service, informing it of the S3 location of the manifest file
+    api_gateway_resource = "status"
+
+    api_gateway_url = api_gateway_template.format(
+        id=api_gateway_id, region=api_gateway_region, stage=api_gateway_stage, resource=api_gateway_resource
+    )
+
+    manifest_s3_location = f"s3://{bucket}/{key}"
+    payload = {"Message": manifest_s3_location, "Email": args.email, "Node": args.node}
 
     headers = {
         "Authorization": bearer_token,
@@ -145,11 +190,11 @@ def main(args):
         "x-amz-docs-region": api_gateway_region,
     }
 
-    logger.info("Submitting manifest to Status Service...")
+    logger.info("Submitting request to Status Service...")
     response = requests.post(api_gateway_url, data=json.dumps(payload), headers=headers, timeout=600)
 
     if response.status_code == HTTPStatus.OK:
-        logger.info("Status request successfully submitted.")
+        logger.info("Status request successfully submitted, report will be emailed to %s", args.email)
     else:
         response.raise_for_status()
 
