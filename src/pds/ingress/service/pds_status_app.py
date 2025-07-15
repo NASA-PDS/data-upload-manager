@@ -11,8 +11,11 @@ import json
 import logging
 import os
 import smtplib
+import tempfile
 from email.mime.text import MIMEText
 from os.path import join
+from pathlib import Path
+from urllib.parse import urlparse
 
 import boto3
 from botocore.exceptions import ClientError
@@ -71,7 +74,8 @@ def parse_manifest(record):
     body = record["body"]
 
     try:
-        manifest = json.loads(body)
+        # The client informs us where the manifest is stored in S3
+        manifest_s3_uri = json.loads(body)
     except Exception as err:
         logger.exception(f"Failed to parse manifiest from message body, reason: {str(err)}")
         raise RuntimeError
@@ -84,6 +88,22 @@ def parse_manifest(record):
 
     return_email = json.loads(message_attributes["email"]["stringValue"])
     request_node = json.loads(message_attributes["node"]["stringValue"])
+
+    parsed_s3_url = urlparse(manifest_s3_uri)
+    s3_bucket = parsed_s3_url.netloc
+    s3_key = parsed_s3_url.path
+    local_manifest_path = join(tempfile.gettempdir(), Path(s3_key).name)
+
+    try:
+        s3_client.download_file(s3_bucket, s3_key, local_manifest_path)
+        logger.info(f"Downloaded {manifest_s3_uri} locally to {local_manifest_path}")
+    except Exception as e:
+        logger.error(e)
+        return {"statusCode": 500, "body": json.dumps(f"Error downloading file: {e}")}
+
+    # Read the manifest file contents
+    with open(local_manifest_path) as infile:
+        manifest = json.load(infile)
 
     return request_node, return_email, manifest
 
