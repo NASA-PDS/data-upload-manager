@@ -456,6 +456,7 @@ def lambda_handler(event, context):
                 {
                     "result": HTTPStatus.NOT_FOUND,
                     "trimmed_path": trimmed_path,
+                    "ingress_path": ingress_path,
                     "s3_url": None,
                     "bucket": None,
                     "key": None,
@@ -529,6 +530,7 @@ def lambda_handler(event, context):
                     {
                         "result": HTTPStatus.NO_CONTENT,
                         "trimmed_path": trimmed_path,
+                        "ingress_path": ingress_path,
                         "s3_url": None,
                         "bucket": destination_bucket,
                         "key": object_key,
