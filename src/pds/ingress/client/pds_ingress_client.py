@@ -48,7 +48,6 @@ from pds.ingress.util.report_util import print_ingress_summary
 from pds.ingress.util.report_util import read_manifest_file
 from pds.ingress.util.report_util import update_summary_table
 from pds.ingress.util.report_util import write_manifest_file
-from requests.exceptions import RequestException
 from tqdm.utils import CallbackIOWrapper
 
 BEARER_TOKEN = None
@@ -191,20 +190,17 @@ def _process_batch(batch_index, request_batch, node_id, force_overwrite, api_gat
                     ingress_file_to_s3(ingress_response, batch_index, batch_pbar)
 
                 batch_pbar.update()
-            except RequestException as err:
+            except Exception as err:
                 # If here, the HTTP request error was unrecoverable by a backoff/retry
                 trimmed_path = ingress_response.get("trimmed_path")
                 ingress_path = ingress_response.get("ingress_path")
                 update_summary_table(SUMMARY_TABLE, "failed", ingress_path)
 
-                logger.error(
-                    "Batch %d : Ingress failed for %s, HTTP code: %s\n HTTP response text:\n%s",
-                    batch_index,
-                    trimmed_path,
-                    str(err.response.status_code) if err.response else "None",
-                    err.response.text if err.response else "None",
-                )
+                logger.error("Batch %d : Ingress failed for %s, Reason:\n%s", batch_index, trimmed_path, str(err))
+
+                continue  # Move to next file in the batch
     except Exception as err:
+        # Hit an unrecoverable error while processing the batch
         logger.error("Ingress failed, reason: %s", str(err))
         raise
     finally:
