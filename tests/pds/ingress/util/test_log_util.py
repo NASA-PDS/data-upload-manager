@@ -77,10 +77,10 @@ class LogUtilTest(unittest.TestCase):
 
         # Ensure we see the following message logged when attempting to flush
         # to CloudWatch before the Cognito authentication information is set
-        with self.assertLogs(level="WARNING") as cm:
+        with self.assertLogs(level="DEBUG") as cm:
             log_util.CLOUDWATCH_HANDLER.flush()
             self.assertIn(
-                "WARNING:pds.ingress.util.log_util:Unable to submit to CloudWatch Logs, reason: "
+                "DEBUG:pds.ingress.util.log_util:"
                 "Bearer token and/or Node ID was never set on CloudWatchHandler, "
                 "unable to communicate with API Gateway endpoint for CloudWatch Logs.",
                 cm.output,
