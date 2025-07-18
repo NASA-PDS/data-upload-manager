@@ -27,7 +27,6 @@ except ImportError:
     backoff = MagicMock()
     requests = MagicMock()
 
-from .backoff_util import fatal_code
 from .config_util import ConfigUtil
 from .node_util import NodeUtil
 
@@ -367,12 +366,10 @@ class CloudWatchHandler(BufferingHandler):
             self.release()
 
     @backoff.on_exception(
-        backoff.constant,
-        (requests.exceptions.ConnectionError, requests.exceptions.RequestException),
-        max_time=60,
-        giveup=fatal_code,
+        backoff.expo,
+        Exception,
+        max_time=120,
         logger=__name__,
-        interval=5,
     )
     def send_log_events_to_cloud_watch(self, log_events):
         """
