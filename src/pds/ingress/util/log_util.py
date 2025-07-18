@@ -392,11 +392,14 @@ class CloudWatchHandler(BufferingHandler):
             If the submission to API Gateway fails for any reason.
 
         """
+        console_logger = get_logger(__name__, cloudwatch=False, file=False)
+
         if self.bearer_token is None or self.node_id is None:
-            raise ValueError(
+            console_logger.debug(
                 "Bearer token and/or Node ID was never set on CloudWatchHandler, "
                 "unable to communicate with API Gateway endpoint for CloudWatch Logs."
             )
+            return
 
         # Extract the API Gateway configuration params
         api_gateway_template = self.api_gateway_config["url_template"]
