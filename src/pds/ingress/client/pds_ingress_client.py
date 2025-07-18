@@ -26,7 +26,6 @@ from joblib import Parallel
 from more_itertools import chunked as batched
 from pds.ingress import __version__
 from pds.ingress.util.auth_util import AuthUtil
-from pds.ingress.util.backoff_util import fatal_code
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.hash_util import md5_for_path
 from pds.ingress.util.log_util import get_log_level
@@ -352,12 +351,10 @@ def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pb
 
 
 @backoff.on_exception(
-    backoff.constant,
-    (requests.exceptions.ConnectionError, requests.exceptions.RequestException),
-    max_time=60,
-    giveup=fatal_code,
+    backoff.expo,
+    Exception,
+    max_time=120,
     logger="request_batch_for_ingress",
-    interval=15,
 )
 def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwrite, api_gateway_config):
     """
@@ -430,12 +427,10 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
 
 
 @backoff.on_exception(
-    backoff.constant,
-    (requests.exceptions.ConnectionError, requests.exceptions.RequestException),
-    max_time=60,
-    giveup=fatal_code,
+    backoff.expo,
+    Exception,
+    max_time=120,
     logger="ingress_file_to_s3",
-    interval=15,
 )
 def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
     """
@@ -521,12 +516,10 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
 
 
 @backoff.on_exception(
-    backoff.constant,
-    (requests.exceptions.ConnectionError, requests.exceptions.RequestException),
-    max_time=60,
-    giveup=fatal_code,
+    backoff.expo,
+    Exception,
+    max_time=120,
     logger="ingress_multipart_file_to_s3",
-    interval=15,
 )
 def ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar):
     """
