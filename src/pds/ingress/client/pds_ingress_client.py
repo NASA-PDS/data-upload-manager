@@ -477,7 +477,8 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
         with open(ingress_path, "rb") as infile:
             # Wrap file I/O with our upload bar to automatically track file upload progress
             wrapped_file = CallbackIOWrapper(upload_pbar.update, infile, "read")
-            response = requests.put(s3_ingress_url, data=wrapped_file, headers=headers)
+            files = {"file": (os.path.basename(ingress_path), wrapped_file, "application/octet-stream")}
+            response = requests.put(s3_ingress_url, files=files, headers=headers)
             response.raise_for_status()
 
         logger.info("Batch %d : %s Ingest complete", batch_index, trimmed_path)
