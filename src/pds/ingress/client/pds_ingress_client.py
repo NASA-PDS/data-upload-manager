@@ -164,6 +164,8 @@ def _process_batch(batch_index, request_batch, node_id, force_overwrite, api_gat
         fully processed.
 
     """
+    global SUMMARY_TABLE
+
     logger = get_logger("_process_batch", console=False)
 
     # Get an avaialble Batch progress bar to update while iterating through this
@@ -451,6 +453,8 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
         If an unexpected response is received from the Ingress Lambda app.
 
     """
+    global SUMMARY_TABLE
+
     logger = get_logger("ingress_file_to_s3", console=False)
 
     response_result = int(ingress_response.get("result", -1))
@@ -477,12 +481,14 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
         with open(ingress_path, "rb") as infile:
             # Wrap file I/O with our upload bar to automatically track file upload progress
             wrapped_file = CallbackIOWrapper(upload_pbar.update, infile, "read")
-            files = {"file": (os.path.basename(ingress_path), wrapped_file, "application/octet-stream")}
-            response = requests.put(s3_ingress_url, files=files, headers=headers)
+            #files = {"file": (os.path.basename(ingress_path), wrapped_file, "application/octet-stream")}
+            #response = requests.put(s3_ingress_url, files=files, headers=headers)
+            response = requests.put(s3_ingress_url, data=wrapped_file, headers=headers)
             response.raise_for_status()
 
         logger.info("Batch %d : %s Ingest complete", batch_index, trimmed_path)
         update_summary_table(SUMMARY_TABLE, "uploaded", ingress_path)
+        upload_pbar.reset()
     elif response_result == HTTPStatus.NO_CONTENT:
         logger.info(
             "Batch %d : Skipping ingress for %s, reason %s", batch_index, trimmed_path, ingress_response.get("message")
@@ -529,6 +535,8 @@ def ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar):
         If an unexpected response is received from the Ingress Lambda app.
 
     """
+    global SUMMARY_TABLE
+
     logger = get_logger("ingress_multipart_file_to_s3", console=False)
 
     response_result = int(ingress_response.get("result", -1))
