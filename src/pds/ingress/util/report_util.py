@@ -50,6 +50,8 @@ def update_summary_table(summary_table, key, paths):
         The key in the summary table to update (e.g., "uploaded", "skipped", "failed").
     paths : str or list of str
         The path value (or values) to add to the summary table for the specified key.
+        Note, these paths should be the absolute paths to files that were processed,
+        not the "trimmed" relative paths.
 
     """
     if key not in ("uploaded", "skipped", "failed", "unprocessed"):

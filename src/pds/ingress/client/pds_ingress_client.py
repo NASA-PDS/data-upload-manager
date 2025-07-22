@@ -20,6 +20,7 @@ from threading import Thread
 import backoff
 import pds.ingress.util.log_util as log_util
 import requests
+import requests_mock
 from joblib import delayed
 from joblib import Parallel
 from more_itertools import chunked as batched
@@ -192,7 +193,8 @@ def _process_batch(batch_index, request_batch, node_id, force_overwrite, api_gat
             except Exception as err:
                 # If here, the HTTP request error was unrecoverable by a backoff/retry
                 trimmed_path = ingress_response.get("trimmed_path")
-                update_summary_table(SUMMARY_TABLE, "failed", trimmed_path)
+                ingress_path = ingress_response.get("ingress_path")
+                update_summary_table(SUMMARY_TABLE, "failed", ingress_path)
 
                 logger.error("Batch %d : Ingress failed for %s, Reason:\n%s", batch_index, trimmed_path, str(err))
 
@@ -427,10 +429,11 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
 @backoff.on_exception(
     backoff.expo,
     Exception,
-    max_time=120,
+    max_time=10, # TODO: for testing only, revert to 120
     logger="ingress_file_to_s3",
 )
-def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
+@requests_mock.Mocker(kw='mock_requests')
+def ingress_file_to_s3(ingress_response, batch_index, batch_pbar, **kwargs):
     """
     Copies the local file path using the pre-signed S3 URL returned from the
     Ingress Lambda App.
@@ -477,6 +480,9 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
         upload_pbar = get_upload_progress_bar_for_batch(
             batch_pbar, total=os.stat(ingress_path).st_size, filename=os.path.basename(ingress_path)
         )
+
+        mock_requests = kwargs['mock_requests']
+        mock_requests.register_uri('PUT', s3_ingress_url.split("?")[0], exc=requests.exceptions.HTTPError)
 
         with open(ingress_path, "rb") as infile:
             # Wrap file I/O with our upload bar to automatically track file upload progress
@@ -837,16 +843,22 @@ def main(args):
         try:
             init_batch_progress_bars(args.num_threads)
             perform_ingress(request_batchs, node_id, args.force_overwrite, config["API_GATEWAY"])
+        finally:
+            close_batch_progress_bars()
 
-            logger.info("All batches processed")
+        logger.info("All batches processed")
 
+        try:
             if len(SUMMARY_TABLE["failed"]) > 0:
+                logger.info("----------------------------------------")
                 logger.info("Reattempting ingress for failed files...")
+
                 failed_ingresses = SUMMARY_TABLE["failed"]
                 batched_failed_ingresses = list(batched(failed_ingresses, batch_size))
                 failed_request_batchs = prepare_batches(batched_failed_ingresses, args.prefix)
+
+                init_batch_progress_bars(args.num_threads)
                 perform_ingress(failed_request_batchs, node_id, args.force_overwrite, config["API_GATEWAY"])
-                logger.info("Reattempted ingress complete")
         finally:
             close_batch_progress_bars()
 
