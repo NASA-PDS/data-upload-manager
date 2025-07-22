@@ -847,8 +847,24 @@ def main(args):
         refresh_thread.start()
 
         try:
-            init_batch_progress_bars(args.num_threads)
+            init_batch_progress_bars(min(args.num_threads, len(request_batchs)))
             perform_ingress(request_batchs, node_id, args.force_overwrite, config["API_GATEWAY"])
+        finally:
+            close_batch_progress_bars()
+
+        logger.info("All batches processed")
+
+        try:
+            if len(SUMMARY_TABLE["failed"]) > 0:
+                logger.info("----------------------------------------")
+                logger.info("Reattempting ingress for failed files...")
+
+                failed_ingresses = SUMMARY_TABLE["failed"]
+                batched_failed_ingresses = list(batched(failed_ingresses, batch_size))
+                failed_request_batchs = prepare_batches(batched_failed_ingresses, args.prefix)
+
+                init_batch_progress_bars(min(args.num_threads, len(failed_request_batchs)))
+                perform_ingress(failed_request_batchs, node_id, args.force_overwrite, config["API_GATEWAY"])
         finally:
             close_batch_progress_bars()
 

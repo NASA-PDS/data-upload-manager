@@ -279,7 +279,12 @@ def update_upload_pbar_filename(upload_pbar, filename):
 
 def close_batch_progress_bars():
     """Closes all Batch progress bars and associated Upload sub-bars."""
+    global BATCH_BARS, TOTAL_INGRESS_BAR  # noqa F824
+
     with BATCH_SEMAPHORE:
         for batch_pbar in BATCH_BARS:
             batch_pbar.upload_pbar.close()
             batch_pbar.close()
+
+        BATCH_BARS.clear()
+        TOTAL_INGRESS_BAR = None
