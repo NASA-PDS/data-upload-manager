@@ -474,7 +474,10 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar, **kwargs):
 
         # Include the base64-encoded MD5 hash so AWS can perform its own
         # integrity check on the uploaded file
-        headers = {"Content-MD5": ingress_response.get("base64_md5")}
+        headers = {
+            "Content-Length": str(os.stat(ingress_path).st_size),
+            "Content-MD5": ingress_response.get("base64_md5")
+        }
 
         # Initialize the file upload progress subbar attached to the batch progress bar
         upload_pbar = get_upload_progress_bar_for_batch(

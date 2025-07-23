@@ -211,6 +211,7 @@ def generate_presigned_upload_url(
     object_key,
     md5_digest,
     base64_md5_digest,
+    file_size,
     last_modified,
     client_version,
     service_version,
@@ -231,6 +232,8 @@ def generate_presigned_upload_url(
     base64_md5_digest : str
         Base64 encoded version of the MD5 hash digest corresponding to the file
         to generate a URL for.
+    file_size : int
+        Size in bytes of the incoming version of the file.
     last_modified : float
         Last modified time of the incoming version of the file as a Unix Epoch.
     client_version : str
@@ -252,6 +255,7 @@ def generate_presigned_upload_url(
     method_parameters = {
         "Bucket": bucket_info["name"],
         "Key": object_key,
+        "ContentLength": file_size,
         "ContentMD5": base64_md5_digest,
         "Metadata": {
             "md5": md5_digest,
@@ -503,6 +507,7 @@ def lambda_handler(event, context):
                         object_key,
                         md5_digest,
                         base64_md5_digest,
+                        file_size,
                         float(last_modified),
                         client_version,
                         service_version,
