@@ -119,10 +119,15 @@ class DumIntegrationTest(unittest.TestCase):
         self.test_file_last_modified_time = datetime.fromtimestamp(
             int(os.path.getmtime(self.test_file.name)), tz=timezone.utc).isoformat()
 
+        self.empty_test_file = tempfile.NamedTemporaryFile(prefix="dum_empty_", suffix=".dat", delete=False)
+
     def tearDown(self):
-        """Remove the random test file"""
+        """Remove the test files"""
         if exists(self.test_file.name):
             os.unlink(self.test_file.name)
+
+        if exists(self.empty_test_file.name):
+            os.unlink(self.empty_test_file.name)
 
     def test_ingress(self):
         """Ingress integration test between DUM client and Lambda Service (localstack)"""
@@ -202,3 +207,32 @@ class DumIntegrationTest(unittest.TestCase):
         # but the modified time relative to local file system should not
         self.assertNotEqual(object_metadata['LastModified'], initial_s3_last_modified_time)
         self.assertEqual(object_metadata["Metadata"]["last_modified"], self.test_file_last_modified_time)
+
+        # Test empty file transfer
+        args = pds_ingress_client.setup_argparser().parse_args(
+            [
+                "-c",
+                join(self.config_dir, "localstack.ingress.config.ini"),
+                "-n",
+                "sbn",
+                "--prefix",
+                dirname(self.test_file.name),
+                "--num-threads",
+                "1",
+                self.empty_test_file.name
+            ]
+        )
+
+        pds_ingress_client.main(args)
+
+        result = subprocess.run(
+            ["awslocal", "s3api", "head-object", "--bucket", "pds-sbn-staging-localstack", "--key",
+             f"sbn/{basename(self.empty_test_file.name)}"],
+            check=False, capture_output=True
+        )
+
+        self.assertTrue(result.returncode == 0)
+
+        object_metadata = json.loads(result.stdout.decode().strip())
+
+        self.assertEqual(int(object_metadata["ContentLength"]), 0)
