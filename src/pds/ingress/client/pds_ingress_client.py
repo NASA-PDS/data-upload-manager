@@ -475,9 +475,17 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
         if not ingress_path:
             raise ValueError("No ingress path provided with response for %s", trimmed_path)
 
-        # Include the base64-encoded MD5 hash so AWS can perform its own
-        # integrity check on the uploaded file
-        headers = {"Content-MD5": ingress_response.get("base64_md5")}
+        file_length = os.stat(ingress_path).st_size
+
+        headers = {
+            "Content-Length": str(file_length),
+        }
+
+        # If the file is non-empty, include the base64-encoded MD5 hash so AWS
+        # can perform its own integrity check on the uploaded file (AWS does
+        # not support hash checks for empty files)
+        if file_length > 0:
+            headers["Content-MD5"] = ingress_response.get("base64_md5")
 
         # Initialize the file upload progress subbar attached to the batch progress bar
         upload_pbar = get_upload_progress_bar_for_batch(
@@ -487,7 +495,9 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
         with open(ingress_path, "rb") as infile:
             # Wrap file I/O with our upload bar to automatically track file upload progress
             wrapped_file = CallbackIOWrapper(upload_pbar.update, infile, "read")
-            response = requests.put(s3_ingress_url, data=wrapped_file, headers=headers)
+
+            # Only send the file data if the file is non-empty
+            response = requests.put(s3_ingress_url, data=wrapped_file if file_length > 0 else b"", headers=headers)
             response.raise_for_status()
 
         logger.info("Batch %d : %s Ingest complete", batch_index, trimmed_path)

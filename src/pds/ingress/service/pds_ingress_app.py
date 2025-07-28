@@ -211,6 +211,7 @@ def generate_presigned_upload_url(
     object_key,
     md5_digest,
     base64_md5_digest,
+    file_size,
     last_modified,
     client_version,
     service_version,
@@ -231,6 +232,8 @@ def generate_presigned_upload_url(
     base64_md5_digest : str
         Base64 encoded version of the MD5 hash digest corresponding to the file
         to generate a URL for.
+    file_size : int
+        Size in bytes of the incoming version of the file.
     last_modified : float
         Last modified time of the incoming version of the file as a Unix Epoch.
     client_version : str
@@ -252,7 +255,7 @@ def generate_presigned_upload_url(
     method_parameters = {
         "Bucket": bucket_info["name"],
         "Key": object_key,
-        "ContentMD5": base64_md5_digest,
+        "ContentLength": file_size,
         "Metadata": {
             "md5": md5_digest,
             "last_modified": datetime.fromtimestamp(last_modified, tz=timezone.utc).isoformat(),
@@ -260,6 +263,11 @@ def generate_presigned_upload_url(
             "dum_service_version": service_version,
         },
     }
+
+    # We only want to include an MD5 if the requested file length is non-zero,
+    # AWS will reject the request otherwise.
+    if file_size > 0:
+        method_parameters["ContentMD5"] = base64_md5_digest
 
     if bucket_info.get("storage_class"):
         method_parameters["StorageClass"] = bucket_info["storage_class"]
@@ -456,6 +464,7 @@ def lambda_handler(event, context):
                 {
                     "result": HTTPStatus.NOT_FOUND,
                     "trimmed_path": trimmed_path,
+                    "ingress_path": ingress_path,
                     "s3_url": None,
                     "bucket": None,
                     "key": None,
@@ -502,6 +511,7 @@ def lambda_handler(event, context):
                         object_key,
                         md5_digest,
                         base64_md5_digest,
+                        file_size,
                         float(last_modified),
                         client_version,
                         service_version,
@@ -529,6 +539,7 @@ def lambda_handler(event, context):
                     {
                         "result": HTTPStatus.NO_CONTENT,
                         "trimmed_path": trimmed_path,
+                        "ingress_path": ingress_path,
                         "s3_url": None,
                         "bucket": destination_bucket,
                         "key": object_key,
