@@ -143,14 +143,14 @@ resource "aws_lambda_layer_version" "lambda_ingress_service_pyyaml_layer" {
   s3_bucket           = module.lambda_bucket.bucket_id
   s3_key              = "layer-PyYAML.zip"
   layer_name          = "PyYAML"
-  compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12","python3.13"]
+  compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12"]
 }
 
 resource "aws_lambda_layer_version" "lambda_ingress_service_yamale_layer" {
   s3_bucket           = module.lambda_bucket.bucket_id
   s3_key              = "layer-Yamale.zip"
   layer_name          = "Yamale"
-  compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12","python3.13"]
+  compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12"]
 }
 
 # Create the Ingress Lambda functions using the zips uploaded to S3

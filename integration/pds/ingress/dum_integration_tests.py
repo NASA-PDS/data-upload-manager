@@ -75,12 +75,15 @@ class DumIntegrationTest(unittest.TestCase):
     @classmethod
     def terraform_localstack(cls):
         """Performs the terraform deployment of DUM on the localstack instance"""
-        subprocess.run(["tflocal", "init"],
-                       cwd=cls.terraform_dir, check=True, capture_output=True)
-        subprocess.run(["tflocal", "plan", "-var-file=localstack.tfvars", "-out=localstack.tfplan", "-no-color"],
-                       cwd=cls.terraform_dir, check=True, capture_output=True)
+        result = subprocess.run(["tflocal", "init"],
+                       cwd=cls.terraform_dir, check=False, capture_output=True)
+        assert(result.returncode == 0)
+        result = subprocess.run(["tflocal", "plan", "-var-file=localstack.tfvars", "-out=localstack.tfplan", "-no-color"],
+                       cwd=cls.terraform_dir, check=False, capture_output=True)
+        assert (result.returncode == 0)
         subprocess.run(["tflocal", "apply", "-auto-approve", "-no-color", "localstack.tfplan"],
-                       cwd=cls.terraform_dir, check=True, capture_output=True)
+                       cwd=cls.terraform_dir, check=False, capture_output=True)
+        assert (result.returncode == 0)
 
         # Get the terraform outputs we need to initialze the DUM client config
         api_gateway_id = subprocess.run(["tflocal", "output", "nucleus_dum_api_id"],
@@ -114,7 +117,7 @@ class DumIntegrationTest(unittest.TestCase):
 
         self.test_file_hash = md5.hexdigest()
         self.test_file_last_modified_time = datetime.fromtimestamp(
-            os.path.getmtime(self.test_file.name), tz=timezone.utc).isoformat()
+            int(os.path.getmtime(self.test_file.name)), tz=timezone.utc).isoformat()
 
     def tearDown(self):
         """Remove the random test file"""
@@ -129,7 +132,7 @@ class DumIntegrationTest(unittest.TestCase):
                 "-c",
                 join(self.config_dir, "localstack.ingress.config.ini"),
                 "-n",
-                "eng",
+                "sbn",
                 "--prefix",
                 dirname(self.test_file.name),
                 "--num-threads",
@@ -142,9 +145,9 @@ class DumIntegrationTest(unittest.TestCase):
         pds_ingress_client.main(args)
 
         result = subprocess.run(
-            ["awslocal", "s3api", "head-object", "--bucket", "pds-eng-staging-test", "--key",
-             f"eng/{basename(self.test_file.name)}"],
-            check=True, capture_output=True
+            ["awslocal", "s3api", "head-object", "--bucket", "pds-sbn-staging-localstack", "--key",
+             f"sbn/{basename(self.test_file.name)}"],
+            check=False, capture_output=True
         )
 
         self.assertTrue(result.returncode == 0)
@@ -169,9 +172,9 @@ class DumIntegrationTest(unittest.TestCase):
         pds_ingress_client.main(args)
 
         result = subprocess.run(
-            ["awslocal", "s3api", "head-object", "--bucket", "pds-eng-staging-test", "--key",
-             f"eng/{basename(self.test_file.name)}"],
-            check=True, capture_output=True
+            ["awslocal", "s3api", "head-object", "--bucket", "pds-sbn-staging-localstack", "--key",
+             f"sbn/{basename(self.test_file.name)}"],
+            check=False, capture_output=True
         )
 
         self.assertTrue(result.returncode == 0)
@@ -186,9 +189,9 @@ class DumIntegrationTest(unittest.TestCase):
         pds_ingress_client.main(args)
 
         result = subprocess.run(
-            ["awslocal", "s3api", "head-object", "--bucket", "pds-eng-staging-test", "--key",
-             f"eng/{basename(self.test_file.name)}"],
-            check=True, capture_output=True
+            ["awslocal", "s3api", "head-object", "--bucket", "pds-sbn-staging-localstack", "--key",
+             f"sbn/{basename(self.test_file.name)}"],
+            check=False, capture_output=True
         )
 
         self.assertTrue(result.returncode == 0)

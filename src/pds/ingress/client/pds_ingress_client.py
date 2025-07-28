@@ -7,6 +7,7 @@ pds_ingress_client
 Client side script used to perform ingress request to the DUM service in AWS.
 """
 import argparse
+import calendar
 import json
 import os
 import sched
@@ -316,14 +317,14 @@ def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pb
             manifest_entry = MANIFEST[trimmed_path]
             md5_digest = manifest_entry["md5"]
             file_size = manifest_entry["size"]
-            last_modified_time = time.mktime(datetime.fromisoformat(manifest_entry["last_modified"]).timetuple())
+            last_modified_time = calendar.timegm(datetime.fromisoformat(manifest_entry["last_modified"]).timetuple())
         else:
             # Calculate the MD5 checksum of the file payload
             md5_digest = md5_for_path(ingress_path).hexdigest()
 
             # Get the size and last modified time of the file
             file_size = os.stat(ingress_path).st_size
-            last_modified_time = os.path.getmtime(ingress_path)
+            last_modified_time = int(os.path.getmtime(ingress_path))
 
             # Update manifest with new entry
             MANIFEST[trimmed_path] = {

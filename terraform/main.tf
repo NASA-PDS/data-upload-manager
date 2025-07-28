@@ -46,7 +46,7 @@ module "nucleus_dum_lambda_authorizer" {
   lambda_authorizer_cognito_client_id  = module.nucleus_dum_cognito.nucleus_dum_cognito_user_pool_client_id
   lambda_authorizer_localstack_context = var.localstack_context
 
-  depends_on = [module.nucleus_dum_cognito]
+  depends_on = [module.nucleus_dum_ingress_service_lambda, module.nucleus_dum_cognito]
 }
 
 module "nucleus_dum_api" {
