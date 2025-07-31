@@ -26,6 +26,8 @@ from joblib import Parallel
 from more_itertools import chunked as batched
 from pds.ingress import __version__
 from pds.ingress.util.auth_util import AuthUtil
+from pds.ingress.util.backoff_util import simulate_batch_request_failure
+from pds.ingress.util.backoff_util import simulate_ingress_failure
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.hash_util import md5_for_path
 from pds.ingress.util.log_util import get_log_level
@@ -410,9 +412,12 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
         "x-amz-docs-region": api_gateway_region,
     }
 
-    response = requests.post(
-        api_gateway_url, params=params, data=json.dumps(request_batch), headers=headers, timeout=600
-    )
+    # Simulate a random failure for the batch request if configured to do so
+    with simulate_batch_request_failure(api_gateway_url.split("?")[0]):
+        response = requests.post(
+            api_gateway_url, params=params, data=json.dumps(request_batch), headers=headers, timeout=600
+        )
+
     elapsed_time = time.time() - start_time
 
     # Ingress request successful
@@ -488,13 +493,15 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
             batch_pbar, total=os.stat(ingress_path).st_size, filename=os.path.basename(ingress_path)
         )
 
-        with open(ingress_path, "rb") as infile:
-            # Wrap file I/O with our upload bar to automatically track file upload progress
-            wrapped_file = CallbackIOWrapper(upload_pbar.update, infile, "read")
+        # Simulate a random failure for the S3 ingress request if configured to do so
+        with simulate_ingress_failure(s3_ingress_url.split("?")[0]):
+            with open(ingress_path, "rb") as infile:
+                # Wrap file I/O with our upload bar to automatically track file upload progress
+                wrapped_file = CallbackIOWrapper(upload_pbar.update, infile, "read")
 
-            # Only send the file data if the file is non-empty
-            response = requests.put(s3_ingress_url, data=wrapped_file if file_length > 0 else b"", headers=headers)
-            response.raise_for_status()
+                # Only send the file data if the file is non-empty
+                response = requests.put(s3_ingress_url, data=wrapped_file if file_length > 0 else b"", headers=headers)
+                response.raise_for_status()
 
         logger.info("Batch %d : %s Ingest complete", batch_index, trimmed_path)
         update_summary_table(SUMMARY_TABLE, "uploaded", ingress_path)
@@ -583,9 +590,11 @@ def ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar):
                     upload_pbar, f"{os.path.basename(ingress_path)} (Part {part_number}/{len(s3_ingress_urls)})"
                 )
 
-                # Submit a single chunk to AWS
-                response = requests.put(s3_ingress_url, data=next(chunk_iterator))
-                response.raise_for_status()
+                # Simulate a random failure for the S3 ingress request if configured to do so
+                with simulate_ingress_failure(s3_ingress_url.split("?")[0]):
+                    # Submit a single chunk to AWS
+                    response = requests.put(s3_ingress_url, data=next(chunk_iterator))
+                    response.raise_for_status()
 
                 completed_parts.append({"ETag": response.headers["ETag"], "PartNumber": part_number})
         except Exception as err:
