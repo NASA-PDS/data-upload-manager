@@ -8,13 +8,16 @@ to track status of a DUM upload request.
 
 """
 import json
+import multiprocessing
+import os
 import time
-from collections import defaultdict
 from datetime import datetime
 from datetime import timezone
-from itertools import chain
 
 from pds.ingress.util.log_util import get_logger
+
+REPORT_SEMAPHORE = multiprocessing.Semaphore(1)
+"""Semaphore used to control write access to Batch progress bars"""
 
 EXPECTED_MANIFEST_KEYS = ("ingress_path", "md5", "size", "last_modified")
 """The keys we expect to find assigned to each mapping within a read manifest"""
@@ -23,15 +26,56 @@ EXPECTED_MANIFEST_KEYS = ("ingress_path", "md5", "size", "last_modified")
 def initialize_summary_table():
     """Returns a summary table initialized to its default state."""
     return {
-        "uploaded": defaultdict(set),
-        "skipped": defaultdict(set),
-        "failed": defaultdict(set),
+        "uploaded": set(),
+        "skipped": set(),
+        "failed": set(),
+        "unprocessed": set(),
         "transferred": 0,
         "start_time": time.time(),
         "end_time": None,
         "batch_size": 0,
         "num_batches": 0,
     }
+
+
+def update_summary_table(summary_table, key, paths):
+    """
+    Updates the summary table with the provided key, index, and value.
+
+    Parameters
+    ----------
+    summary_table : dict
+        The summary table to update.
+    key : str
+        The key in the summary table to update (e.g., "uploaded", "skipped", "failed").
+    paths : str or list of str
+        The path value (or values) to add to the summary table for the specified key.
+        Note, these paths should be the absolute paths to files that were processed,
+        not the "trimmed" relative paths.
+
+    """
+    if key not in ("uploaded", "skipped", "failed", "unprocessed"):
+        raise KeyError(f"Invalid key '{key}' provided for summary table update.")
+
+    if key not in summary_table:
+        raise KeyError(f"Key '{key}' not found in summary table.")
+
+    if not isinstance(paths, list):
+        paths = [paths]
+
+    with REPORT_SEMAPHORE:
+        summary_table[key].update(paths)
+
+        if key == "uploaded":
+            # Update total number of bytes transferrred for successful uploads
+            summary_table["transferred"] += sum(os.stat(path).st_size for path in paths)
+
+            # If this file or files previous failed, remove from the failed set
+            summary_table["failed"] -= set(paths)
+
+        # Prune any now-visted paths from the unprocessed set
+        if key != "unprocessed":
+            summary_table["unprocessed"] -= set(paths)
 
 
 def print_ingress_summary(summary_table):
@@ -46,9 +90,10 @@ def print_ingress_summary(summary_table):
     """
     logger = get_logger("print_ingress_summary")
 
-    num_uploaded = sum(len(batch) for batch in summary_table["uploaded"].values())
-    num_skipped = sum(len(batch) for batch in summary_table["skipped"].values())
-    num_failed = sum(len(batch) for batch in summary_table["failed"].values())
+    num_uploaded = len(summary_table["uploaded"])
+    num_skipped = len(summary_table["skipped"])
+    num_failed = len(summary_table["failed"])
+    num_unprocessed = len(summary_table["unprocessed"])
     start_time = summary_table["start_time"]
     end_time = summary_table["end_time"]
     transferred = summary_table["transferred"]
@@ -61,7 +106,8 @@ def print_ingress_summary(summary_table):
     logger.info("Uploaded: %d file(s)", num_uploaded)
     logger.info("Skipped: %d file(s)", num_skipped)
     logger.info("Failed: %d file(s)", num_failed)
-    logger.info("Total: %d files(s)", num_uploaded + num_skipped + num_failed)
+    logger.info("Unprocessed: %d file(s)", num_unprocessed)
+    logger.info("Total: %d files(s)", num_uploaded + num_skipped + num_failed + num_unprocessed)
     logger.info("Time elapsed: %.2f seconds", end_time - start_time)
     logger.info("Bytes tranferred: %d", transferred)
 
@@ -147,9 +193,10 @@ def create_report_file(args, summary_table):
     """
     logger = get_logger("create_report_file")
 
-    uploaded = list(sorted(chain(*summary_table["uploaded"].values())))
-    skipped = list(sorted(chain(*summary_table["skipped"].values())))
-    failed = list(sorted(chain(*summary_table["failed"].values())))
+    uploaded = list(sorted(summary_table["uploaded"]))
+    skipped = list(sorted(summary_table["skipped"]))
+    failed = list(sorted(summary_table["failed"]))
+    unprocessed = list(sorted(summary_table["unprocessed"]))
 
     report = {
         "Arguments": str(args),
@@ -163,10 +210,14 @@ def create_report_file(args, summary_table):
         "Total Skipped": len(skipped),
         "Failed": failed,
         "Total Failed": len(failed),
+        "Unprocessed": unprocessed,
+        "Total Unprocessed": len(unprocessed),
         "Bytes Transferred": summary_table["transferred"],
     }
 
-    report["Total Files"] = report["Total Uploaded"] + report["Total Skipped"] + report["Total Failed"]
+    report["Total Files"] = (
+        report["Total Uploaded"] + report["Total Skipped"] + report["Total Failed"] + report["Total Unprocessed"]
+    )
 
     try:
         logger.info("Writing JSON summary report to %s", args.report_path)

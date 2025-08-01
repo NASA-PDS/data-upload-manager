@@ -26,7 +26,8 @@ from joblib import Parallel
 from more_itertools import chunked as batched
 from pds.ingress import __version__
 from pds.ingress.util.auth_util import AuthUtil
-from pds.ingress.util.backoff_util import fatal_code
+from pds.ingress.util.backoff_util import simulate_batch_request_failure
+from pds.ingress.util.backoff_util import simulate_ingress_failure
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.hash_util import md5_for_path
 from pds.ingress.util.log_util import get_log_level
@@ -47,8 +48,8 @@ from pds.ingress.util.report_util import initialize_summary_table
 from pds.ingress.util.report_util import parts_to_xml
 from pds.ingress.util.report_util import print_ingress_summary
 from pds.ingress.util.report_util import read_manifest_file
+from pds.ingress.util.report_util import update_summary_table
 from pds.ingress.util.report_util import write_manifest_file
-from requests.exceptions import RequestException
 from tqdm.utils import CallbackIOWrapper
 
 BEARER_TOKEN = None
@@ -166,6 +167,8 @@ def _process_batch(batch_index, request_batch, node_id, force_overwrite, api_gat
         fully processed.
 
     """
+    global SUMMARY_TABLE  # noqa: F824
+
     logger = get_logger("_process_batch", console=False)
 
     # Get an avaialble Batch progress bar to update while iterating through this
@@ -189,19 +192,17 @@ def _process_batch(batch_index, request_batch, node_id, force_overwrite, api_gat
                     ingress_file_to_s3(ingress_response, batch_index, batch_pbar)
 
                 batch_pbar.update()
-            except RequestException as err:
+            except Exception as err:
                 # If here, the HTTP request error was unrecoverable by a backoff/retry
                 trimmed_path = ingress_response.get("trimmed_path")
-                SUMMARY_TABLE["failed"][batch_index].add(trimmed_path)
+                ingress_path = ingress_response.get("ingress_path")
+                update_summary_table(SUMMARY_TABLE, "failed", ingress_path)
 
-                logger.error(
-                    "Batch %d : Ingress failed for %s, HTTP code: %s\n HTTP response text:\n%s",
-                    batch_index,
-                    trimmed_path,
-                    str(err.response.status_code) if err.response else "None",
-                    err.response.text if err.response else "None",
-                )
+                logger.error("Batch %d : Ingress failed for %s, Reason:\n%s", batch_index, trimmed_path, str(err))
+
+                continue  # Move to next file in the batch
     except Exception as err:
+        # Hit an unrecoverable error while processing the batch
         logger.error("Ingress failed, reason: %s", str(err))
         raise
     finally:
@@ -352,12 +353,10 @@ def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pb
 
 
 @backoff.on_exception(
-    backoff.constant,
-    (requests.exceptions.ConnectionError, requests.exceptions.RequestException),
-    max_time=60,
-    giveup=fatal_code,
+    backoff.expo,
+    Exception,
+    max_time=120,
     logger="request_batch_for_ingress",
-    interval=15,
 )
 def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwrite, api_gateway_config):
     """
@@ -413,9 +412,12 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
         "x-amz-docs-region": api_gateway_region,
     }
 
-    response = requests.post(
-        api_gateway_url, params=params, data=json.dumps(request_batch), headers=headers, timeout=600
-    )
+    # Simulate a random failure for the batch request if configured to do so
+    with simulate_batch_request_failure(api_gateway_url.split("?")[0]):
+        response = requests.post(
+            api_gateway_url, params=params, data=json.dumps(request_batch), headers=headers, timeout=600
+        )
+
     elapsed_time = time.time() - start_time
 
     # Ingress request successful
@@ -430,12 +432,10 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
 
 
 @backoff.on_exception(
-    backoff.constant,
-    (requests.exceptions.ConnectionError, requests.exceptions.RequestException),
-    max_time=60,
-    giveup=fatal_code,
+    backoff.expo,
+    Exception,
+    max_time=120,
     logger="ingress_file_to_s3",
-    interval=15,
 )
 def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
     """
@@ -460,17 +460,18 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
         If an unexpected response is received from the Ingress Lambda app.
 
     """
+    global SUMMARY_TABLE  # noqa: F824
+
     logger = get_logger("ingress_file_to_s3", console=False)
 
     response_result = int(ingress_response.get("result", -1))
     trimmed_path = ingress_response.get("trimmed_path")
+    ingress_path = ingress_response.get("ingress_path")
 
     if response_result == HTTPStatus.OK:
         s3_ingress_url = ingress_response.get("s3_url")
 
         logger.info("Batch %d : Ingesting %s to %s", batch_index, trimmed_path, s3_ingress_url.split("?")[0])
-
-        ingress_path = ingress_response.get("ingress_path")
 
         if not ingress_path:
             raise ValueError("No ingress path provided with response for %s", trimmed_path)
@@ -492,41 +493,40 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
             batch_pbar, total=os.stat(ingress_path).st_size, filename=os.path.basename(ingress_path)
         )
 
-        with open(ingress_path, "rb") as infile:
-            # Wrap file I/O with our upload bar to automatically track file upload progress
-            wrapped_file = CallbackIOWrapper(upload_pbar.update, infile, "read")
+        # Simulate a random failure for the S3 ingress request if configured to do so
+        with simulate_ingress_failure(s3_ingress_url.split("?")[0]):
+            with open(ingress_path, "rb") as infile:
+                # Wrap file I/O with our upload bar to automatically track file upload progress
+                wrapped_file = CallbackIOWrapper(upload_pbar.update, infile, "read")
 
-            # Only send the file data if the file is non-empty
-            response = requests.put(s3_ingress_url, data=wrapped_file if file_length > 0 else b"", headers=headers)
-            response.raise_for_status()
+                # Only send the file data if the file is non-empty
+                response = requests.put(s3_ingress_url, data=wrapped_file if file_length > 0 else b"", headers=headers)
+                response.raise_for_status()
 
         logger.info("Batch %d : %s Ingest complete", batch_index, trimmed_path)
-        SUMMARY_TABLE["uploaded"][batch_index].add(trimmed_path)
-
-        # Update total number of bytes transferrred
-        SUMMARY_TABLE["transferred"] += os.stat(ingress_path).st_size
+        update_summary_table(SUMMARY_TABLE, "uploaded", ingress_path)
+        upload_pbar.reset()
     elif response_result == HTTPStatus.NO_CONTENT:
         logger.info(
             "Batch %d : Skipping ingress for %s, reason %s", batch_index, trimmed_path, ingress_response.get("message")
         )
-        SUMMARY_TABLE["skipped"][batch_index].add(trimmed_path)
+        update_summary_table(SUMMARY_TABLE, "skipped", ingress_path)
     elif response_result == HTTPStatus.NOT_FOUND:
         logger.warning(
             "Batch %d : Ingress failed for %s, reason: %s", batch_index, trimmed_path, ingress_response.get("message")
         )
-        SUMMARY_TABLE["failed"][batch_index].add(trimmed_path)
+        update_summary_table(SUMMARY_TABLE, "failed", ingress_path)
     else:
         logger.error("Batch %d : Unexepected response code (%d) from Ingress service", batch_index, response_result)
         raise RuntimeError
 
 
+# noinspection PyUnreachableCode
 @backoff.on_exception(
-    backoff.constant,
-    (requests.exceptions.ConnectionError, requests.exceptions.RequestException),
-    max_time=60,
-    giveup=fatal_code,
+    backoff.expo,
+    Exception,
+    max_time=120,
     logger="ingress_multipart_file_to_s3",
-    interval=15,
 )
 def ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar):
     """
@@ -552,15 +552,17 @@ def ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar):
         If an unexpected response is received from the Ingress Lambda app.
 
     """
+    global SUMMARY_TABLE  # noqa: F824
+
     logger = get_logger("ingress_multipart_file_to_s3", console=False)
 
     response_result = int(ingress_response.get("result", -1))
     trimmed_path = ingress_response.get("trimmed_path")
+    ingress_path = ingress_response.get("ingress_path")
 
     if response_result == HTTPStatus.OK:
         logger.info("Batch %d : Performing Multipart Upload for %s", batch_index, trimmed_path)
 
-        ingress_path = ingress_response.get("ingress_path")
         s3_ingress_urls = ingress_response.get("s3_urls", [])
         upload_complete_url = ingress_response.get("upload_complete_url")
         upload_abort_url = ingress_response.get("upload_abort_url")
@@ -588,9 +590,11 @@ def ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar):
                     upload_pbar, f"{os.path.basename(ingress_path)} (Part {part_number}/{len(s3_ingress_urls)})"
                 )
 
-                # Submit a single chunk to AWS
-                response = requests.put(s3_ingress_url, data=next(chunk_iterator))
-                response.raise_for_status()
+                # Simulate a random failure for the S3 ingress request if configured to do so
+                with simulate_ingress_failure(s3_ingress_url.split("?")[0]):
+                    # Submit a single chunk to AWS
+                    response = requests.put(s3_ingress_url, data=next(chunk_iterator))
+                    response.raise_for_status()
 
                 completed_parts.append({"ETag": response.headers["ETag"], "PartNumber": part_number})
         except Exception as err:
@@ -608,20 +612,17 @@ def ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar):
         response.raise_for_status()
 
         logger.info("Batch %d : %s Multipart Upload complete", batch_index, trimmed_path)
-        SUMMARY_TABLE["uploaded"][batch_index].add(trimmed_path)
-
-        # Update total number of bytes transferrred
-        SUMMARY_TABLE["transferred"] += os.stat(ingress_path).st_size
+        update_summary_table(SUMMARY_TABLE, "uploaded", ingress_path)
     elif response_result == HTTPStatus.NO_CONTENT:
         logger.info(
             "Batch %d : Skipping ingress for %s, reason %s", batch_index, trimmed_path, ingress_response.get("message")
         )
-        SUMMARY_TABLE["skipped"][batch_index].add(trimmed_path)
+        update_summary_table(SUMMARY_TABLE, "skipped", ingress_path)
     elif response_result == HTTPStatus.NOT_FOUND:
         logger.warning(
             "Batch %d : Ingress failed for %s, reason: %s", batch_index, trimmed_path, ingress_response.get("message")
         )
-        SUMMARY_TABLE["failed"][batch_index].add(trimmed_path)
+        update_summary_table(SUMMARY_TABLE, "failed", ingress_path)
     else:
         logger.error("Batch %d : Unexepected response code (%d) from Ingress service", batch_index, response_result)
         raise RuntimeError
@@ -796,6 +797,11 @@ def main(args):
     with get_path_progress_bar(args.ingress_paths) as pbar:
         resolved_ingress_paths = PathUtil.resolve_ingress_paths(args.ingress_paths, pbar)
 
+    # Initialize the summary table, and populate the "unprocessed" table the set
+    # of resolved ingress paths
+    SUMMARY_TABLE = initialize_summary_table()
+    update_summary_table(SUMMARY_TABLE, "unprocessed", resolved_ingress_paths)
+
     node_id = args.node
 
     # Set the joblib pool size based on the number of "threads" requested
@@ -803,10 +809,12 @@ def main(args):
 
     # Break the set of ingress paths into batches based on configured size
     batch_size = int(config["OTHER"].get("batch_size", fallback=1))
+    SUMMARY_TABLE["batch_size"] = batch_size
 
     batched_ingress_paths = list(batched(resolved_ingress_paths, batch_size))
     logger.info("Using batch size of %d", batch_size)
     logger.info("Request (%d files) split into %d batches", len(resolved_ingress_paths), len(batched_ingress_paths))
+    SUMMARY_TABLE["num_batches"] = len(batched_ingress_paths)
 
     if args.manifest_path and os.path.exists(args.manifest_path):
         logger.info("Reading existing manifest file %s", args.manifest_path)
@@ -820,8 +828,6 @@ def main(args):
         write_manifest_file(MANIFEST, os.path.abspath(args.manifest_path))
 
     if not args.dry_run:
-        SUMMARY_TABLE = initialize_summary_table()
-
         cognito_config = config["COGNITO"]
 
         # TODO: add support for command-line username/password?
@@ -850,27 +856,41 @@ def main(args):
         refresh_thread.start()
 
         try:
-            init_batch_progress_bars(args.num_threads)
+            init_batch_progress_bars(min(args.num_threads, len(request_batchs)))
             perform_ingress(request_batchs, node_id, args.force_overwrite, config["API_GATEWAY"])
         finally:
             close_batch_progress_bars()
 
-            # Capture completion time of transfer and batch configuration
-            SUMMARY_TABLE["end_time"] = time.time()
-            SUMMARY_TABLE["batch_size"] = batch_size
-            SUMMARY_TABLE["num_batches"] = len(batched_ingress_paths)
+        logger.info("All batches processed")
 
-            # Create the JSON report file, if requested
-            if args.report_path:
-                create_report_file(args, SUMMARY_TABLE)
+        try:
+            if len(SUMMARY_TABLE["failed"]) > 0:
+                logger.info("----------------------------------------")
+                logger.info("Reattempting ingress for failed files...")
 
-            # Print the summary table
-            print_ingress_summary(SUMMARY_TABLE)
+                failed_ingresses = SUMMARY_TABLE["failed"]
+                batched_failed_ingresses = list(batched(failed_ingresses, batch_size))
+                failed_request_batchs = prepare_batches(batched_failed_ingresses, args.prefix)
+
+                init_batch_progress_bars(min(args.num_threads, len(failed_request_batchs)))
+                perform_ingress(failed_request_batchs, node_id, args.force_overwrite, config["API_GATEWAY"])
+        finally:
+            close_batch_progress_bars()
 
             # Flush all logged statements to CloudWatch Logs
             log_util.CLOUDWATCH_HANDLER.flush()
     else:
         logger.info("Dry run requested, skipping ingress request submission.")
+
+    # Capture completion time
+    SUMMARY_TABLE["end_time"] = time.time()
+
+    # Create the JSON report file, if requested
+    if args.report_path:
+        create_report_file(args, SUMMARY_TABLE)
+
+    # Print the summary table
+    print_ingress_summary(SUMMARY_TABLE)
 
 
 def console_main():

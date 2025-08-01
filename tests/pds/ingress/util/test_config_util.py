@@ -12,6 +12,7 @@ from pds.ingress.util.config_util import bucket_for_path
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.config_util import initialize_bucket_map
 from pds.ingress.util.config_util import SanitizingConfigParser
+from pds.ingress.util.config_util import strtobool
 from pds.ingress.util.node_util import NodeUtil
 
 
@@ -85,6 +86,8 @@ class ConfigUtilTest(unittest.TestCase):
         cls.test_dir = str(files("tests.pds.ingress").joinpath("util"))
 
     def setUp(self) -> None:
+        pds.ingress.util.config_util.CONFIG = None
+
         os.environ["BUCKET_MAP_LOCATION"] = "config"
         os.environ["BUCKET_MAP_SCHEMA_LOCATION"] = "config"
         os.environ["BUCKET_MAP_FILE"] = "bucket-map.yaml"
@@ -121,6 +124,13 @@ class ConfigUtilTest(unittest.TestCase):
         self.assertEqual(parser["OTHER"]["log_group_name"], "/pds/nucleus/dum/client-log-group")
         self.assertEqual(parser["OTHER"]["log_file_path"], "")
 
+        self.assertEqual(parser["DEBUG"]["simulate_batch_request_failures"], "false")
+        self.assertEqual(parser["DEBUG"]["batch_request_failure_rate"], "0")
+        self.assertEqual(parser["DEBUG"]["batch_request_failure_class"], "requests.exceptions.HTTPError")
+        self.assertEqual(parser["DEBUG"]["simulate_ingress_failures"], "false")
+        self.assertEqual(parser["DEBUG"]["ingress_failure_rate"], "0")
+        self.assertEqual(parser["DEBUG"]["ingress_failure_class"], "requests.exceptions.HTTPError")
+
         # Ensure the sanitizing config parser removed any quotes surrounding
         # values within the config
         self.assertFalse(parser["OTHER"]["cloudwatch_format"].startswith("'"))
@@ -148,6 +158,44 @@ class ConfigUtilTest(unittest.TestCase):
 
         # Reset cached config
         pds.ingress.util.config_util.CONFIG = None
+
+    def mock_nodebug_ini_config_path(self):
+        return join(self.test_dir, "data", "mock.nodebug.config.ini")
+
+    def test_missing_debug_section(self):
+        """Test parsing and use of a config that does not have a [DEBUG] section"""
+        # Reset cached config
+        pds.ingress.util.config_util.CONFIG = None
+
+        with patch.object(
+            pds.ingress.util.config_util.ConfigUtil, "default_config_path", self.mock_nodebug_ini_config_path
+        ):
+            config = ConfigUtil.get_config()
+
+            self.assertIsInstance(config, SanitizingConfigParser)
+
+            # Ensure the [DEBUG] section is not present
+            self.assertNotIn("DEBUG", config.sections())
+
+            self.assertEqual(
+                config.get("DEBUG", "simulate_batch_request_failures", fallback="expected_fallback"),
+                "expected_fallback",
+            )
+            self.assertEqual(
+                config.get("DEBUG", "batch_request_failure_rate", fallback="expected_fallback"), "expected_fallback"
+            )
+            self.assertEqual(
+                config.get("DEBUG", "batch_request_failure_class", fallback="expected_fallback"), "expected_fallback"
+            )
+            self.assertEqual(
+                config.get("DEBUG", "simulate_ingress_failures", fallback="expected_fallback"), "expected_fallback"
+            )
+            self.assertEqual(
+                config.get("DEBUG", "ingress_failure_rate", fallback="expected_fallback"), "expected_fallback"
+            )
+            self.assertEqual(
+                config.get("DEBUG", "ingress_failure_class", fallback="expected_fallback"), "expected_fallback"
+            )
 
     def test_default_bucket_map(self):
         """Test parsing of the default bucket map bundled with the Lambda function"""
@@ -300,6 +348,22 @@ class ConfigUtilTest(unittest.TestCase):
         self.assertIsInstance(bucket, dict)
         self.assertIn("name", bucket)
         self.assertEqual(bucket["name"], "default_path_bucket")
+
+    def test_strtobool(self):
+        """Tests for config_util.strtobool()"""
+        self.assertTrue(strtobool("true"))
+        self.assertTrue(strtobool("True"))
+        self.assertTrue(strtobool("t"))
+        self.assertTrue(strtobool("1"))
+        self.assertTrue(strtobool("Yes"))
+        self.assertFalse(strtobool("false"))
+        self.assertFalse(strtobool("False"))
+        self.assertFalse(strtobool("f"))
+        self.assertFalse(strtobool("0"))
+        self.assertFalse(strtobool("NO"))
+
+        with self.assertRaises(ValueError):
+            strtobool("invalid")
 
 
 if __name__ == "__main__":

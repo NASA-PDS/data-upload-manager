@@ -27,7 +27,6 @@ except ImportError:
     backoff = MagicMock()
     requests = MagicMock()
 
-from .backoff_util import fatal_code
 from .config_util import ConfigUtil
 from .node_util import NodeUtil
 
@@ -367,12 +366,10 @@ class CloudWatchHandler(BufferingHandler):
             self.release()
 
     @backoff.on_exception(
-        backoff.constant,
-        (requests.exceptions.ConnectionError, requests.exceptions.RequestException),
-        max_time=60,
-        giveup=fatal_code,
+        backoff.expo,
+        Exception,
+        max_time=120,
         logger=__name__,
-        interval=5,
     )
     def send_log_events_to_cloud_watch(self, log_events):
         """
@@ -395,11 +392,14 @@ class CloudWatchHandler(BufferingHandler):
             If the submission to API Gateway fails for any reason.
 
         """
+        console_logger = get_logger(__name__, cloudwatch=False, file=False)
+
         if self.bearer_token is None or self.node_id is None:
-            raise ValueError(
+            console_logger.debug(
                 "Bearer token and/or Node ID was never set on CloudWatchHandler, "
                 "unable to communicate with API Gateway endpoint for CloudWatch Logs."
             )
+            return
 
         # Extract the API Gateway configuration params
         api_gateway_template = self.api_gateway_config["url_template"]
