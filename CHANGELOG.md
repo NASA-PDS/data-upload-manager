@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-07-15)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-08-01)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.1.2...«unknown»)
 
@@ -15,8 +15,13 @@
 
 - Develop Ingress Lambda Logging Conventions [\#6](https://github.com/NASA-PDS/data-upload-manager/issues/6)
 
+**Defects:**
+
+- When DUM crashes, the report it generates falsely indicates success [\#241](https://github.com/NASA-PDS/data-upload-manager/issues/241) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
+
 **Other closed issues:**
 
+- Incorporate simulated failure mechanism into the DUM client [\#254](https://github.com/NASA-PDS/data-upload-manager/issues/254)
 - Add HTTP 104 Error to Backoff/Retry Logic [\#222](https://github.com/NASA-PDS/data-upload-manager/issues/222)
 - DUM set up with IMG node [\#211](https://github.com/NASA-PDS/data-upload-manager/issues/211)
 - Develop prototype Ingress Status utility [\#203](https://github.com/NASA-PDS/data-upload-manager/issues/203)
