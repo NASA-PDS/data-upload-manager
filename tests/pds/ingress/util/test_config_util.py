@@ -12,6 +12,7 @@ from pds.ingress.util.config_util import bucket_for_path
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.config_util import initialize_bucket_map
 from pds.ingress.util.config_util import SanitizingConfigParser
+from pds.ingress.util.config_util import strtobool
 from pds.ingress.util.node_util import NodeUtil
 
 
@@ -347,6 +348,22 @@ class ConfigUtilTest(unittest.TestCase):
         self.assertIsInstance(bucket, dict)
         self.assertIn("name", bucket)
         self.assertEqual(bucket["name"], "default_path_bucket")
+
+    def test_strtobool(self):
+        """Tests for config_util.strtobool()"""
+        self.assertTrue(strtobool("true"))
+        self.assertTrue(strtobool("True"))
+        self.assertTrue(strtobool("t"))
+        self.assertTrue(strtobool("1"))
+        self.assertTrue(strtobool("Yes"))
+        self.assertFalse(strtobool("false"))
+        self.assertFalse(strtobool("False"))
+        self.assertFalse(strtobool("f"))
+        self.assertFalse(strtobool("0"))
+        self.assertFalse(strtobool("NO"))
+
+        with self.assertRaises(ValueError):
+            strtobool("invalid")
 
 
 if __name__ == "__main__":

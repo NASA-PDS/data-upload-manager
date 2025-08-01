@@ -21,6 +21,41 @@ import yaml
 CONFIG = None
 
 
+def strtobool(val: str) -> bool:
+    """
+    Convert a string representation of truth to a boolean.
+
+    True values are 'y', 'yes', 't', 'true', 'on', and '1';
+    false values are 'n', 'no', 'f', 'false', 'off', and '0'.
+
+    Note this behavior differs slightly from distutils.strtobool,
+    which returns 1 for true and 0 for false.
+
+    Parameters
+    ----------
+    val : str
+        The truth value to convert to boolean, case-insensitive.
+
+    Returns
+    -------
+    bool
+        Boolean representation of the input string.
+
+    Raises
+    ------
+    ValueError
+        If 'val' is anything else.
+    """
+    val = val.lower()
+
+    if val in {"y", "yes", "t", "true", "on", "1"}:
+        return True
+    elif val in {"n", "no", "f", "false", "off", "0"}:
+        return False
+    else:
+        raise ValueError(f"Invalid truth value: {val}")
+
+
 class SanitizingConfigParser(configparser.RawConfigParser):
     """
     Customized implementation of a ConfigParser object which sanitizes undesireable

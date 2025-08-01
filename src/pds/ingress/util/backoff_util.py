@@ -14,8 +14,8 @@ from contextlib import contextmanager
 from http import HTTPStatus
 
 import requests_mock
-from distutils.util import strtobool
 from pds.ingress.util.config_util import ConfigUtil
+from pds.ingress.util.config_util import strtobool
 
 # When leveraging this module with the Lambda service functions, the requests
 # module will not be available within the Python runtime.
@@ -137,7 +137,7 @@ def _simulate_requests_failure(mock_requests, url, http_method, enable_key, fail
 
     # Check if simulated failures are enabled, and if so, if we should simulate
     # a failure via mock_requests based on the configured failure chance
-    if bool(strtobool(config.get("DEBUG", enable_key, fallback="false"))):
+    if strtobool(config.get("DEBUG", enable_key, fallback="false")):
         if check_failure_chance(int(config.get("DEBUG", failure_rate_key, fallback="0"))):
             # Dynamically import the exception class to raise
             failure_class_str = config.get("DEBUG", failure_class_key, fallback="builtins.RuntimeError")
