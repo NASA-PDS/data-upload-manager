@@ -686,6 +686,36 @@ def setup_argparser():
         "overwrite any existing versions of files within the PDS Cloud.",
     )
     parser.add_argument(
+        "--include",
+        "-i",
+        type=str,
+        action="append",
+        default=list(),
+        dest="includes",
+        metavar="PATTERN",
+        help="Specify a file path pattern to match against when determining "
+        "which files should be included with an Ingress request. "
+        "Unix-style wildcard patterns are supported. "
+        "Include patterns are always applied prior to any Exclude patterns. "
+        "This argument can be specified multiple times to configure multiple "
+        "include patterns. Include patterns are evaluated in the order they provided.",
+    )
+    parser.add_argument(
+        "--exclude",
+        "-e",
+        type=str,
+        action="append",
+        default=list(),
+        dest="excludes",
+        metavar="PATTERN",
+        help="Specify a file path pattern to match against when determining "
+        "which files should be excluded from an Ingress request. "
+        "Unix-style wildcard patterns are supported. "
+        "Exclude patterns are always applied after any Include patterns. "
+        "This argument can be specified multiple times to configure multiple "
+        "exclude patterns. Exclude patterns are evaluated in the order they provided.",
+    )
+    parser.add_argument(
         "--num-threads",
         "-t",
         type=int,
@@ -795,7 +825,7 @@ def main(args):
     # by the user
     logger.info("Determining paths for ingress...")
     with get_path_progress_bar(args.ingress_paths) as pbar:
-        resolved_ingress_paths = PathUtil.resolve_ingress_paths(args.ingress_paths, pbar)
+        resolved_ingress_paths = PathUtil.resolve_ingress_paths(args.ingress_paths, args.includes, args.excludes, pbar)
 
     # Initialize the summary table, and populate the "unprocessed" table the set
     # of resolved ingress paths

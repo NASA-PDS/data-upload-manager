@@ -6,6 +6,7 @@ path_util.py
 Module containing functions for working with local file system paths.
 
 """
+import fnmatch
 import os
 
 from .log_util import get_logger
@@ -15,7 +16,7 @@ class PathUtil:
     """Provides methods for working with local file system paths."""
 
     @staticmethod
-    def resolve_ingress_paths(user_paths, pbar, resolved_paths=None):
+    def resolve_ingress_paths(user_paths, includes, excludes, pbar, resolved_paths=None):
         """
         Iterates over the list of user-provided paths to derive the final
         set of file paths to request ingress for.
@@ -25,6 +26,10 @@ class PathUtil:
         user_paths : list of str
             The collection of user-requested paths to include with the ingress
             request. Can be any combination of file and directory paths.
+        includes : list of str
+            List of patterns defining which files to include for ingress.
+        excludes : list of str
+            List of patterns defining which files to exclude from ingress.
         pbar : tqdm.tqdm
             Progress bar instance used to track path resolution.
         resolved_paths : list of str, optional
@@ -53,8 +58,13 @@ class PathUtil:
                 continue
 
             if os.path.isfile(abs_user_path):
-                resolved_paths.append(abs_user_path)
                 pbar.update()
+
+                if PathUtil.filter_file(abs_user_path, includes, excludes):
+                    logger.debug("Filtering path %s based on include/exclude filters", abs_user_path)
+                    continue
+
+                resolved_paths.append(abs_user_path)
             elif os.path.isdir(abs_user_path):
                 for grouping in os.walk(abs_user_path, topdown=True, followlinks=True):
                     dirpath, _, filenames = grouping
@@ -66,7 +76,9 @@ class PathUtil:
                         for filename in filter(lambda name: not name.startswith("."), filenames)
                     ]
 
-                    resolved_paths = PathUtil.resolve_ingress_paths(product_paths, pbar, resolved_paths)
+                    resolved_paths = PathUtil.resolve_ingress_paths(
+                        product_paths, includes, excludes, pbar, resolved_paths
+                    )
             else:
                 logger.warning("Encountered path (%s) that is neither a file nor directory, skipping...", abs_user_path)
                 pbar.update()
@@ -111,3 +123,37 @@ class PathUtil:
             logger.debug("Removed prefix %s, new path: %s", prefix, trimmed_ingress_path)
 
         return trimmed_ingress_path
+
+    @staticmethod
+    def filter_file(file_path, includes, excludes):
+        """
+        Determines if the provided file path should be filtered out based on
+        the provided include and exclude patterns. Include patterns are always
+        applied prior to exclude patterns.
+
+        Parameters
+        ----------
+        file_path : str
+            The file path to filter.
+        includes : list of str
+            List of include patterns to apply.
+        excludes : list of str
+            List of exclude patterns to apply.
+
+        Returns
+        -------
+        bool
+            True if the file path should be filtered out based on the
+            configuration of the provided include and exclude patterns,
+            False otherwise.
+
+        """
+        result = False
+
+        if includes and not any(fnmatch.fnmatch(file_path, pattern) for pattern in includes):
+            result = True
+
+        if excludes and any(fnmatch.fnmatch(file_path, pattern) for pattern in excludes):
+            result = True
+
+        return result
