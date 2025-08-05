@@ -96,6 +96,10 @@ This requirement is not impacted by the current version
 
 
 This requirement is not impacted by the current version
+## As a user, I want to specify in include/exclude filters for the set of input file paths ([#262](https://github.com/NASA-PDS/data-upload-manager/issues/262)) 
+
+
+This requirement is not impacted by the current version
 # data-integrity
 
 ## As a user, I want to verify all my data has been uploaded to the cloud successfully ([#121](https://github.com/NASA-PDS/data-upload-manager/issues/121)) 
