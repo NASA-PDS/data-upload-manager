@@ -44,7 +44,7 @@ class PathUtilTest(unittest.TestCase):
 
         # Test with fully resolved paths
         with get_path_progress_bar([self.working_dir.name]) as pbar:
-            resolved_ingress_paths = PathUtil.resolve_ingress_paths([self.working_dir.name], pbar)
+            resolved_ingress_paths = PathUtil.resolve_ingress_paths([self.working_dir.name], [], [], pbar)
 
         self.assertIsInstance(resolved_ingress_paths, list)
         self.assertGreater(len(resolved_ingress_paths), 0)
@@ -58,10 +58,86 @@ class PathUtilTest(unittest.TestCase):
 
         # Test with a non-existent path
         with get_path_progress_bar(["/fake/path"]) as pbar:
-            resolved_ingress_paths = PathUtil.resolve_ingress_paths(["/fake/path"], pbar)
+            resolved_ingress_paths = PathUtil.resolve_ingress_paths(["/fake/path"], [], [], pbar)
 
         self.assertIsInstance(resolved_ingress_paths, list)
         self.assertEqual(len(resolved_ingress_paths), 0)
+
+    def test_ingress_path_filtering(self):
+        """Test the resolve_ingress_paths() function with include and exclude filters"""
+        # Create some dummy files to test with
+        os.system(f"touch {join(self.working_dir.name, 'file.txt')}")
+        os.system(f"touch {join(self.working_dir.name, 'file.xml')}")
+        os.system(f"touch {join(self.working_dir.name, 'file.dat')}")
+        os.system(f"touch {join(self.working_dir.name, 'data.txt')}")
+        os.system(f"touch {join(self.working_dir.name, 'data.xml')}")
+        os.system(f"touch {join(self.working_dir.name, 'data.dat')}")
+
+        # Test with no filters
+        includes = []
+        excludes = []
+
+        with get_path_progress_bar([self.working_dir.name]) as pbar:
+            resolved_ingress_paths = PathUtil.resolve_ingress_paths([self.working_dir.name], includes, excludes, pbar)
+
+        self.assertEqual(len(resolved_ingress_paths), 6)
+        self.assertIn(abspath(join(self.working_dir.name, "file.txt")), resolved_ingress_paths)
+        self.assertIn(abspath(join(self.working_dir.name, "file.xml")), resolved_ingress_paths)
+        self.assertIn(abspath(join(self.working_dir.name, "file.dat")), resolved_ingress_paths)
+        self.assertIn(abspath(join(self.working_dir.name, "data.txt")), resolved_ingress_paths)
+        self.assertIn(abspath(join(self.working_dir.name, "data.xml")), resolved_ingress_paths)
+        self.assertIn(abspath(join(self.working_dir.name, "data.dat")), resolved_ingress_paths)
+
+        # Test with include filters
+        includes = ["*file.*"]
+        excludes = []
+
+        with get_path_progress_bar([self.working_dir.name]) as pbar:
+            resolved_ingress_paths = PathUtil.resolve_ingress_paths([self.working_dir.name], includes, excludes, pbar)
+
+        self.assertEqual(len(resolved_ingress_paths), 3)
+        self.assertIn(abspath(join(self.working_dir.name, "file.txt")), resolved_ingress_paths)
+        self.assertIn(abspath(join(self.working_dir.name, "file.xml")), resolved_ingress_paths)
+        self.assertIn(abspath(join(self.working_dir.name, "file.dat")), resolved_ingress_paths)
+        self.assertNotIn(abspath(join(self.working_dir.name, "data.txt")), resolved_ingress_paths)
+        self.assertNotIn(abspath(join(self.working_dir.name, "data.xml")), resolved_ingress_paths)
+        self.assertNotIn(abspath(join(self.working_dir.name, "data.dat")), resolved_ingress_paths)
+
+        # Test with exclude filters
+        includes = []
+        excludes = ["*file.*"]
+
+        with get_path_progress_bar([self.working_dir.name]) as pbar:
+            resolved_ingress_paths = PathUtil.resolve_ingress_paths([self.working_dir.name], includes, excludes, pbar)
+
+        self.assertEqual(len(resolved_ingress_paths), 3)
+        self.assertNotIn(abspath(join(self.working_dir.name, "file.txt")), resolved_ingress_paths)
+        self.assertNotIn(abspath(join(self.working_dir.name, "file.xml")), resolved_ingress_paths)
+        self.assertNotIn(abspath(join(self.working_dir.name, "file.dat")), resolved_ingress_paths)
+        self.assertIn(abspath(join(self.working_dir.name, "data.txt")), resolved_ingress_paths)
+        self.assertIn(abspath(join(self.working_dir.name, "data.xml")), resolved_ingress_paths)
+        self.assertIn(abspath(join(self.working_dir.name, "data.dat")), resolved_ingress_paths)
+
+        # Test with both include and exclude filters
+        includes = ["*file.*"]
+        excludes = ["*"]
+
+        with get_path_progress_bar([self.working_dir.name]) as pbar:
+            resolved_ingress_paths = PathUtil.resolve_ingress_paths([self.working_dir.name], includes, excludes, pbar)
+
+        self.assertEqual(len(resolved_ingress_paths), 0)
+
+        includes = ["*.txt", "*.xml"]
+        excludes = ["*data.*"]
+
+        with get_path_progress_bar([self.working_dir.name]) as pbar:
+            resolved_ingress_paths = PathUtil.resolve_ingress_paths([self.working_dir.name], includes, excludes, pbar)
+
+        self.assertEqual(len(resolved_ingress_paths), 2)
+        self.assertIn(abspath(join(self.working_dir.name, "file.txt")), resolved_ingress_paths)
+        self.assertIn(abspath(join(self.working_dir.name, "file.xml")), resolved_ingress_paths)
+        self.assertNotIn(abspath(join(self.working_dir.name, "data.txt")), resolved_ingress_paths)
+        self.assertNotIn(abspath(join(self.working_dir.name, "data.xml")), resolved_ingress_paths)
 
     def test_trim_ingress_path(self):
         """Test the trim_ingress_path() function"""
