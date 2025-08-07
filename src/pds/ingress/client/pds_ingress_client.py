@@ -35,6 +35,7 @@ from pds.ingress.util.log_util import get_logger
 from pds.ingress.util.node_util import NodeUtil
 from pds.ingress.util.path_util import PathUtil
 from pds.ingress.util.progress_util import close_batch_progress_bars
+from pds.ingress.util.progress_util import close_ingress_total_progress_bar
 from pds.ingress.util.progress_util import get_available_batch_progress_bar
 from pds.ingress.util.progress_util import get_ingress_total_progress_bar
 from pds.ingress.util.progress_util import get_manifest_progress_bar
@@ -427,6 +428,27 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
         logger.info("Batch %d : Ingress request completed in %.2f seconds", batch_index, elapsed_time)
 
         return response_batch
+    elif response.status_code == HTTPStatus.FORBIDDEN:
+        # Tidy up progress bars so they don't interfere with the message we're
+        # about to log to the console
+        close_ingress_total_progress_bar()
+        close_batch_progress_bars()
+
+        # If we're here, it's our first indication that a user can authentiate with Cognito,
+        # but the API Gateway is denying access to any requests. This is typicaly due to IP restrictions
+        # set by the WAF allocated to the API Gateway
+        logger = get_logger("request_batch_for_ingress", cloudwatch=False, console=True, file=True)
+        logger.error("------------------------------------------------------")
+        logger.error("Ingress request failed due to 403 Forbidden error.")
+        logger.error("This is typically caused by IP restrictions on the API Gateway.")
+        logger.error(
+            "If you have not already, please contact a PDS Engineering Node "
+            "administrator with the desired IP address ranges for your local "
+            "network to ensure they are white-listed for access to the DUM service."
+        )
+
+        # This is a fatal error, so we should not continue processing or attempt to backoff/retry
+        sys.exit(1)
     else:
         response.raise_for_status()
 
