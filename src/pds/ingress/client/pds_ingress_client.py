@@ -35,6 +35,7 @@ from pds.ingress.util.log_util import get_logger
 from pds.ingress.util.node_util import NodeUtil
 from pds.ingress.util.path_util import PathUtil
 from pds.ingress.util.progress_util import close_batch_progress_bars
+from pds.ingress.util.progress_util import close_ingress_total_progress_bar
 from pds.ingress.util.progress_util import get_available_batch_progress_bar
 from pds.ingress.util.progress_util import get_ingress_total_progress_bar
 from pds.ingress.util.progress_util import get_manifest_progress_bar
@@ -431,12 +432,16 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
         # If we're here, it's our first indication that a user can authentiate with Cognito,
         # but the API Gateway is denying access to any requests. This is typicaly due to IP restrictions
         # set by the WAF allocated to the API Gateway
-        logger.error("Ingress request failed due to authentication error.")
-        logger.error("This could be caused by IP restrictions on the API Gateway.")
+        close_ingress_total_progress_bar()
+        close_batch_progress_bars()
+        logger = get_logger("request_batch_for_ingress", cloudwatch=False, console=True, file=False)
+        logger.error("------------------------------------------------------")
+        logger.error("Ingress request failed due to 403 Forbidden error.")
+        logger.error("This is typically caused by IP restrictions on the API Gateway.")
         logger.error(
-            "Please contact a PDS administrator with the desired IP "
-            "address ranges for your local network to ensure they are "
-            "whitelisted for access."
+            "If you have not already, please contact a PDS Engineering Node "
+            "administrator with the desired IP address ranges for your local "
+            "network to ensure they are white-listed for access to the DUM service."
         )
 
         # This is a fatal error, so we should not continue processing or attempt to backoff/retry
