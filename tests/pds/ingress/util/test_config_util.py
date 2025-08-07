@@ -126,10 +126,10 @@ class ConfigUtilTest(unittest.TestCase):
 
         self.assertEqual(parser["DEBUG"]["simulate_batch_request_failures"], "false")
         self.assertEqual(parser["DEBUG"]["batch_request_failure_rate"], "0")
-        self.assertEqual(parser["DEBUG"]["batch_request_failure_class"], "requests.exceptions.HTTPError")
+        self.assertEqual(parser["DEBUG"]["batch_request_failure_status_code"], "500")
         self.assertEqual(parser["DEBUG"]["simulate_ingress_failures"], "false")
         self.assertEqual(parser["DEBUG"]["ingress_failure_rate"], "0")
-        self.assertEqual(parser["DEBUG"]["ingress_failure_class"], "requests.exceptions.HTTPError")
+        self.assertEqual(parser["DEBUG"]["ingress_failure_status_code"], "500")
 
         # Ensure the sanitizing config parser removed any quotes surrounding
         # values within the config
@@ -188,6 +188,10 @@ class ConfigUtilTest(unittest.TestCase):
                 config.get("DEBUG", "batch_request_failure_class", fallback="expected_fallback"), "expected_fallback"
             )
             self.assertEqual(
+                config.get("DEBUG", "batch_request_failure_status_code", fallback="expected_fallback"),
+                "expected_fallback",
+            )
+            self.assertEqual(
                 config.get("DEBUG", "simulate_ingress_failures", fallback="expected_fallback"), "expected_fallback"
             )
             self.assertEqual(
@@ -195,6 +199,9 @@ class ConfigUtilTest(unittest.TestCase):
             )
             self.assertEqual(
                 config.get("DEBUG", "ingress_failure_class", fallback="expected_fallback"), "expected_fallback"
+            )
+            self.assertEqual(
+                config.get("DEBUG", "ingress_failure_status_code", fallback="expected_fallback"), "expected_fallback"
             )
 
     def test_default_bucket_map(self):
