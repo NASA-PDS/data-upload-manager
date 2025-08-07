@@ -427,6 +427,20 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
         logger.info("Batch %d : Ingress request completed in %.2f seconds", batch_index, elapsed_time)
 
         return response_batch
+    elif response.status_code == HTTPStatus.FORBIDDEN:
+        # If we're here, it's our first indication that a user can authentiate with Cognito,
+        # but the API Gateway is denying access to any requests. This is typicaly due to IP restrictions
+        # set by the WAF allocated to the API Gateway
+        logger.error("Ingress request failed due to authentication error.")
+        logger.error("This could be caused by IP restrictions on the API Gateway.")
+        logger.error(
+            "Please contact a PDS administrator with the desired IP "
+            "address ranges for your local network to ensure they are "
+            "whitelisted for access."
+        )
+
+        # This is a fatal error, so we should not continue processing or attempt to backoff/retry
+        sys.exit(1)
     else:
         response.raise_for_status()
 
