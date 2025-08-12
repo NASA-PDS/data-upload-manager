@@ -104,7 +104,9 @@ def check_failure_chance(percentage: int) -> bool:
     return random_number < chance_threshold
 
 
-def _simulate_requests_failure(mock_requests, url, http_method, enable_key, failure_rate_key, failure_class_key):
+def _simulate_requests_failure(
+    mock_requests, url, http_method, enable_key, failure_rate_key, failure_class_key, failure_status_code_key
+):
     """
     Simulates a random failure for S3 ingress by registering the provided
     ingress URL with the requests mocker to raise an HTTPError exception.
@@ -139,15 +141,25 @@ def _simulate_requests_failure(mock_requests, url, http_method, enable_key, fail
     # a failure via mock_requests based on the configured failure chance
     if strtobool(config.get("DEBUG", enable_key, fallback="false")):
         if check_failure_chance(int(config.get("DEBUG", failure_rate_key, fallback="0"))):
-            # Dynamically import the exception class to raise
-            failure_class_str = config.get("DEBUG", failure_class_key, fallback="builtins.RuntimeError")
-            failure_class_module, failure_exception_name = failure_class_str.rsplit(".", 1)
+            # Check if we're simulating a failure by raising an exception
+            failure_class_str = config.get("DEBUG", failure_class_key, fallback=None)
 
-            module = importlib.import_module(failure_class_module)
-            exception_klass = getattr(module, failure_exception_name)
+            if failure_class_str is not None:
+                # Dynamically import the exception class to raise
+                failure_class_module, failure_exception_name = failure_class_str.rsplit(".", 1)
 
-            # Register the URL with the mock_requests to raise the specified exception
-            mock_requests.register_uri(http_method, url, exc=exception_klass)
+                module = importlib.import_module(failure_class_module)
+                exception_klass = getattr(module, failure_exception_name)
+
+                kwargs = {"exc": exception_klass}
+            # Otherwise, fall back to raising an HTTPError with a status code
+            else:
+                failure_status_code = int(config.get("DEBUG", failure_status_code_key, fallback="500"))
+
+                kwargs = {"status_code": failure_status_code}
+
+            # Register the URL with the mock_requests to raise the specified exception w/ status code
+            mock_requests.register_uri(http_method, url, **kwargs)
 
     return mock_requests
 
@@ -174,6 +186,7 @@ def simulate_batch_request_failure(api_gateway_url):
                     "simulate_batch_request_failures",
                     "batch_request_failure_rate",
                     "batch_request_failure_class",
+                    "batch_request_failure_status_code",
                 )
             finally:
                 # Remove any previously registered URL(s)
@@ -202,6 +215,7 @@ def simulate_ingress_failure(s3_ingress_url):
                     "simulate_ingress_failures",
                     "ingress_failure_rate",
                     "ingress_failure_class",
+                    "ingress_failure_status_code",
                 )
             finally:
                 # Remove any previously registered URL(s)

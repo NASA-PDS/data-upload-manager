@@ -277,9 +277,21 @@ def update_upload_pbar_filename(upload_pbar, filename):
     upload_pbar.refresh()
 
 
+def close_ingress_total_progress_bar():
+    """Closes the Total Ingress progress bar."""
+    global TOTAL_INGRESS_BAR  # noqa F824
+
+    if TOTAL_INGRESS_BAR:
+        TOTAL_INGRESS_BAR.close()
+        TOTAL_INGRESS_BAR = None
+
+
 def close_batch_progress_bars():
     """Closes all Batch progress bars and associated Upload sub-bars."""
     global BATCH_BARS, TOTAL_INGRESS_BAR  # noqa F824
+
+    if not BATCH_BARS:
+        return
 
     with BATCH_SEMAPHORE:
         for batch_pbar in BATCH_BARS:

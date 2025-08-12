@@ -1,11 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-08-01)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-08-12)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.1.2...«unknown»)
 
 **Requirements:**
 
+- As a user, I want to specify in include/exclude filters for the set of input file paths [\#262](https://github.com/NASA-PDS/data-upload-manager/issues/262)
 - As a user, I want to support upload of files \>5GB [\#221](https://github.com/NASA-PDS/data-upload-manager/issues/221)
 - As a user, I want to upload files to S3 Glacier directly via DUM [\#205](https://github.com/NASA-PDS/data-upload-manager/issues/205)
 - As a user, I want timestamps to the ongoing logs that are printed to stdout while running the job [\#118](https://github.com/NASA-PDS/data-upload-manager/issues/118)
@@ -22,6 +23,7 @@
 **Other closed issues:**
 
 - Incorporate simulated failure mechanism into the DUM client [\#254](https://github.com/NASA-PDS/data-upload-manager/issues/254)
+- Improve error reporting when encountering 403 errors [\#253](https://github.com/NASA-PDS/data-upload-manager/issues/253)
 - Add HTTP 104 Error to Backoff/Retry Logic [\#222](https://github.com/NASA-PDS/data-upload-manager/issues/222)
 - DUM set up with IMG node [\#211](https://github.com/NASA-PDS/data-upload-manager/issues/211)
 - Develop prototype Ingress Status utility [\#203](https://github.com/NASA-PDS/data-upload-manager/issues/203)

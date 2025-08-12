@@ -58,9 +58,10 @@ class BackoffUtilTest(unittest.TestCase):
             self.assertTrue(mock_requests.real_http)
 
             # Ensure an attempt to submit a PUT request to the configured URL
-            # raises the error class specified in the INI config (HTTPError)
-            with self.assertRaises(requests.exceptions.HTTPError):
-                requests.put(s3_ingress_url, data=b"")
+            # returns a response with a 403 status code, simulating access denied error
+            response = requests.put(s3_ingress_url, data=b"")
+
+            self.assertEqual(response.status_code, 403)
 
             # Check if the URL was registered with the mock_requests
             registered_urls = [req.url for req in mock_requests.request_history]
