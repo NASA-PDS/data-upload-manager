@@ -72,6 +72,10 @@ class SingleLogFilter(logging.Filter):
         return False
 
 
+SINGLE_LOG_FILTER = SingleLogFilter()
+"""Singleton instance for the filter used to ensure duplicate messages are only logged once"""
+
+
 def get_log_level(log_level):
     """Translates name of a log level to the constant used by the logging module"""
     if log_level is not None:
@@ -199,6 +203,7 @@ def setup_console_log(logger, config, log_level):
 
     """
     global CONSOLE_HANDLER
+    global SINGLE_LOG_FILTER  # noqa F824
 
     # Prioritize the provided log level. If it is None, use the value from the INI
     log_level = log_level or get_log_level(config["OTHER"]["log_level"])
@@ -210,7 +215,7 @@ def setup_console_log(logger, config, log_level):
         CONSOLE_HANDLER = logging.StreamHandler(stream=sys.stdout)
         CONSOLE_HANDLER.setLevel(log_level)
         CONSOLE_HANDLER.setFormatter(log_format)
-        CONSOLE_HANDLER.addFilter(SingleLogFilter())
+        CONSOLE_HANDLER.addFilter(SINGLE_LOG_FILTER)
 
     if CONSOLE_HANDLER not in logger.handlers:
         logger.addHandler(CONSOLE_HANDLER)
