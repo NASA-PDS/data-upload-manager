@@ -134,7 +134,9 @@ def bucket_exists(destination_bucket):
     return True
 
 
-def should_overwrite_file(destination_bucket, object_key, md5_digest, file_size, last_modified, force_overwrite):
+def should_overwrite_file(
+    destination_bucket, object_key, md5_digest, base64_md5_digest, file_size, last_modified, force_overwrite
+):
     """
     Determines if the file requested for ingress already exists in the S3
     location we plan to upload to, and whether it should be overwritten with a
@@ -148,6 +150,8 @@ def should_overwrite_file(destination_bucket, object_key, md5_digest, file_size,
         Object key location within the S3 bucket to be uploaded to.
     md5_digest : str
         MD5 hash digest of the incoming version of the file.
+    base64_md5_digest : str
+        Base64 encoded version of the MD5 hash digest corresponding to the file.
     file_size : int
         Size in bytes of the incoming version of the file.
     last_modified : float
@@ -180,12 +184,20 @@ def should_overwrite_file(destination_bucket, object_key, md5_digest, file_size,
     object_length = int(object_head["ContentLength"])
     object_last_modified = object_head["LastModified"]
 
-    # Pull the MD5 we assign as custom metaata, if it's missing fallback to the Etag
-    try:
+    # Pull the Base64 MD5 we assign as custom metadata
+    if "md5chksum" in object_head["Metadata"]:
+        object_md5 = object_head["Metadata"]["md5chksum"]
+        request_md5 = base64_md5_digest
+    # If the Base64 MD5 is not present, check for the hex MD5
+    elif "md5" in object_head["Metadata"]:
+        logger.warning("Missing Base64 MD5 for %s/%s, falling back to Hex MD5", destination_bucket, object_key)
         object_md5 = object_head["Metadata"]["md5"]
-    except KeyError:
+        request_md5 = md5_digest
+    # If neither is present, fall back to the ETag value, which should be the same as the hex MD5
+    else:
         logger.warning("Missing MD5 for %s/%s, falling back to ETag", destination_bucket, object_key)
         object_md5 = object_head["ETag"][1:-1]  # strip embedded quotes
+        request_md5 = md5_digest
 
     logger.debug("object_length=%d", object_length)
     logger.debug("object_last_modified=%s", object_last_modified)
@@ -193,7 +205,6 @@ def should_overwrite_file(destination_bucket, object_key, md5_digest, file_size,
 
     request_length = file_size
     request_last_modified = datetime.fromtimestamp(last_modified, tz=timezone.utc)
-    request_md5 = md5_digest
 
     logger.debug("request_length=%d", request_length)
     logger.debug("request_last_modified=%s", request_last_modified)
@@ -261,6 +272,9 @@ def generate_presigned_upload_url(
             "last_modified": datetime.fromtimestamp(last_modified, tz=timezone.utc).isoformat(),
             "dum_client_version": client_version,
             "dum_service_version": service_version,
+            # The following fields are included for rclone compatibility
+            "md5chksum": base64_md5_digest,
+            "mtime": str(last_modified),
         },
     }
 
@@ -286,7 +300,15 @@ def generate_presigned_upload_url(
 
 
 def process_multipart_upload(
-    bucket_info, object_key, file_size, md5_digest, last_modified, client_version, service_version, expires_in=3600
+    bucket_info,
+    object_key,
+    file_size,
+    md5_digest,
+    base64_md5_digest,
+    last_modified,
+    client_version,
+    service_version,
+    expires_in=3600,
 ):
     """
     Initiates a multipart upload request for the provided S3 bucket/key location.
@@ -303,7 +325,10 @@ def process_multipart_upload(
     file_size : int
         Size of the file to be multipart uploaded, in bytes.
     md5_digest : str
-        MD5 hash digest corresponding to the file to generate a URL for.
+        MD5 hash digest corresponding to the file to generate URLs for.
+    base64_md5_digest : str
+        Base64 encoded version of the MD5 hash digest corresponding to the file
+        to generate URLs for.
     last_modified : float
         Last modified time of the incoming version of the file as a Unix Epoch.
     client_version : str
@@ -335,6 +360,9 @@ def process_multipart_upload(
             "last_modified": datetime.fromtimestamp(last_modified, tz=timezone.utc).isoformat(),
             "dum_client_version": client_version,
             "dum_service_version": service_version,
+            # The following fields are included for rclone compatibility
+            "md5chksum": base64_md5_digest,
+            "mtime": str(last_modified),
         },
     )
 
@@ -475,7 +503,13 @@ def lambda_handler(event, context):
             object_key = join(request_node.lower(), trimmed_path)
 
             if should_overwrite_file(
-                destination_bucket, object_key, md5_digest, int(file_size), float(last_modified), force_overwrite
+                destination_bucket,
+                object_key,
+                md5_digest,
+                base64_md5_digest,
+                int(file_size),
+                float(last_modified),
+                force_overwrite,
             ):
                 if file_size >= MAX_UPLOAD_SIZE:
                     logger.info("%s exceeds maximum upload size, initiating Multi-part upload", object_key)
@@ -485,6 +519,7 @@ def lambda_handler(event, context):
                         object_key,
                         file_size,
                         md5_digest,
+                        base64_md5_digest,
                         float(last_modified),
                         client_version,
                         service_version,
