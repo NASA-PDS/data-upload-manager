@@ -74,7 +74,12 @@ class PDSIngressAppTest(unittest.TestCase):
         self.assertIn(f"Version mismatch between client (0.0.0) and service ({__version__})", cm.output[0])
 
     def mock_make_api_call(self, operation_name, kwarg):
-        return {"ContentLength": 2, "LastModified": datetime.now(), "ETag": "0hashfakehashfakehashfake0"}
+        return {
+            "ContentLength": 2,
+            "LastModified": datetime.now(),
+            "ETag": "0hashfakehashfakehashfake0",
+            "Metadata": {},
+        }
 
     @patch.object(botocore.client.BaseClient, "_make_api_call", mock_make_api_call)
     def test_lambda_handler(self):
@@ -225,10 +230,15 @@ class PDSIngressAppTest(unittest.TestCase):
         bucket = "sample_bucket"
         key = "path/to/sample_file"
         md5_digest = "validhash"
+        base64_md5_digest = "validbase64hash"
         file_size = os.stat(os.path.abspath(__file__)).st_size
         last_modified = os.path.getmtime(os.path.abspath(__file__))
 
-        self.assertTrue(should_overwrite_file(bucket, key, md5_digest, file_size, last_modified, force_overwrite=True))
+        self.assertTrue(
+            should_overwrite_file(
+                bucket, key, md5_digest, base64_md5_digest, file_size, last_modified, force_overwrite=True
+            )
+        )
 
         # Setup mock return values for head_object, one which matches the requested
         # file exactly, and one that does not
@@ -236,20 +246,30 @@ class PDSIngressAppTest(unittest.TestCase):
             "ContentLength": file_size,
             "ETag": "0validhash0",
             "LastModified": datetime.fromtimestamp(last_modified, tz=timezone.utc),
+            "Metadata": {"md5": md5_digest, "md5chksum": base64_md5_digest},
         }
-        mismatch = {"ContentLength": 2, "LastModified": datetime.now(tz=timezone.utc), "ETag": "0mismatchhash0"}
+        mismatch = {
+            "ContentLength": 2,
+            "ETag": "0mismatchhash0",
+            "LastModified": datetime.now(tz=timezone.utc),
+            "Metadata": {"md5": "mismatchhash", "md5chksum": "mismatchbase64hash"},
+        }
 
         mock_head_object = MagicMock(side_effect=[mismatch, match])
 
         with patch.object(botocore.client.BaseClient, "_make_api_call", mock_head_object):
             # First call should not match, meaning file should be overwritten
             self.assertTrue(
-                should_overwrite_file(bucket, key, md5_digest, file_size, last_modified, force_overwrite=False)
+                should_overwrite_file(
+                    bucket, key, md5_digest, base64_md5_digest, file_size, last_modified, force_overwrite=False
+                )
             )
 
             # Second call should match, meaning file should not be overwritten
             self.assertFalse(
-                should_overwrite_file(bucket, key, md5_digest, file_size, last_modified, force_overwrite=False)
+                should_overwrite_file(
+                    bucket, key, md5_digest, base64_md5_digest, file_size, last_modified, force_overwrite=False
+                )
             )
 
         err = {"Error": {"Code": "404"}}
@@ -258,7 +278,9 @@ class PDSIngressAppTest(unittest.TestCase):
         with patch.object(botocore.client.BaseClient, "_make_api_call", mock_head_object):
             # File not existing should always result in True
             self.assertTrue(
-                should_overwrite_file(bucket, key, md5_digest, file_size, last_modified, force_overwrite=False)
+                should_overwrite_file(
+                    bucket, key, md5_digest, base64_md5_digest, file_size, last_modified, force_overwrite=False
+                )
             )
 
         err = {"Error": {"Code": "403"}}
