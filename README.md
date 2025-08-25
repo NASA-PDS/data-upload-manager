@@ -6,7 +6,7 @@ The PDS Data Upload Manager provides the client application and server interface
 
 The PDS Data Delivery Manager has the following prerequisties:
 
-- `python3` for running the client application and unit tests
+- `python3` for running the client application and unit tests (Python 3.13 or later)
 - `terraform` for creating and deploying DUM server components to AWS
 
 ## User Quickstart
@@ -127,8 +127,7 @@ Configure the `pre-commit` hooks:
 To isolate and be able to re-produce the environment for this package, you should use a [Python Virtual Environment](https://docs.python.org/3/tutorial/venv.html). To do so, run:
 
     python -m venv venv
-
-Then exclusively use `venv/bin/python`, `venv/bin/pip`, etc. (It is no longer recommended to use `venv/bin/activate`.)
+    source bin/venv/activate  # Substitute with `source bin/venv/activate.csh` for csh/tcsh users
 
 If you have `tox` installed and would like it to create your environment and install dependencies for you run:
 
@@ -160,7 +159,7 @@ Our unit tests are launched with the command:
 
 You can build this projects' docs with:
 
-    sphinx-build docs/source docs/build
+    sphinx-build -b html docs/source docs/build
 
 You can access the build files in the following directory relative to the project root:
 

@@ -9,7 +9,7 @@ Requirements
 Prior to installing this software, ensure your system meets the following
 requirements:
 
-* Python_ 3.9 or above. Python 2 is *not* supported.
+* Python_ 3.13 or above. Python 2 is *not* supported.
 * Terraform 1.0.11 or above. Note that Terraform is only required when deploying
   the server side components. It is not required to run the client-side script.
   For more information on deploying the server side components via Terraform,

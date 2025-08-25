@@ -1,5 +1,5 @@
- 🌎  Terraform
-==================
+🌎  Terraform
+=============
 
 This section describes how to deploy the server side components of the DUM to
 AWS via Terraform_. These instructions are intended for PDS Engineering Node
