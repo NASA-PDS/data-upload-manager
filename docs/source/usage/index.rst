@@ -27,7 +27,7 @@ Specifying the node ID of the requestor is accomplished via the ``--node`` argum
 specifying one of the following node name values: ``atm,eng,geo,img,naif,ppi,rs,rms,sbn``
 
 The ``--dry-run`` flag can be used to have ``pds-ingress-client`` determine the
-full set of files and directories to  be processed without actually submitting
+full set of files and directories to be processed without actually submitting
 anything for ingest to PDS Cloud. This feature can be useful to ensure the correct
 set of files are being included for a request before performing any communication
 with the Server side of DUM.
