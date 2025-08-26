@@ -7,8 +7,7 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from os.path import abspath, basename, dirname, exists, join
-
-from pkg_resources import resource_filename
+from importlib import resources
 
 from pds.ingress import __version__
 from pds.ingress.util.hash_util import md5_for_path
@@ -23,7 +22,7 @@ class DumIntegrationTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.test_dir = resource_filename(__name__, "")
+        cls.test_dir = str(resources.files(__name__).parent)
         cls.scripts_dir = abspath(join(cls.test_dir, os.pardir, os.pardir, 'scripts'))
         cls.config_dir = abspath(join(cls.test_dir, os.pardir, os.pardir, 'config'))
         cls.terraform_dir = abspath(join(cls.test_dir, os.pardir, os.pardir, os.pardir, 'terraform'))
