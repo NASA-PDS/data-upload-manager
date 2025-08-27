@@ -68,7 +68,7 @@ Skipped: 0 file(s)
 Failed: 0 file(s)
 Total: 200 files(s)
 Time elapsed: 3019.00 seconds
-Bytes tranferred: 3087368895
+Bytes transferred: 3087368895
 ```
 
 A more detailed JSON-format report, containing full listings of all uploaded/skipped/failed paths,
