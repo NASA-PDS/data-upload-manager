@@ -25,6 +25,16 @@ data "archive_file" "lambda_status_service" {
                  "${path.root}/../src/pds/ingress/service/pds_ingress_app.py"]
 }
 
+data "archive_file" "metadata_sync_service" {
+  type        = "zip"
+  source_dir  = "${path.root}/../src/pds/ingress/service"
+  output_path = "${path.module}/files/metadata-sync-service.zip"
+  excludes    = ["${path.root}/../src/pds/ingress/service/config",
+                 "${path.root}/../src/pds/ingress/service/util",
+                 "${path.root}/../src/pds/ingress/service/pds_status_app.py",
+                 "${path.root}/../src/pds/ingress/service/pds_ingress_app.py"]
+}
+
 data "aws_caller_identity" "current" {}
 
 # Deploy the zips to S3
@@ -91,6 +101,13 @@ module "lambda_status_service_s3_object" {
   source_path = data.archive_file.lambda_status_service.output_path
 }
 
+module "metadata_sync_service_s3_object" {
+  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object"  # pragma: allowlist secret
+  bucket      = module.lambda_bucket.bucket_id
+  key         = "metadata-sync-service.zip"
+  source_path = data.archive_file.metadata_sync_service.output_path
+}
+
 # Create the Yaml package layers needed by the Ingress Service Lambda to parse
 # and validate the bucket map, then deploy the zips to S3
 # Note that the creation of the zip files are included here to ensure the
@@ -150,7 +167,7 @@ resource "aws_lambda_layer_version" "lambda_ingress_service_yamale_layer" {
   s3_bucket           = module.lambda_bucket.bucket_id
   s3_key              = "layer-Yamale.zip"
   layer_name          = "Yamale"
-  compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12","python3.13]
+  compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12","python3.13"]
 }
 
 # Create the Ingress Lambda functions using the zips uploaded to S3
@@ -221,6 +238,24 @@ resource "aws_lambda_function" "lambda_status_service" {
 
   # Timeout value set to match current upper limit of API Gateway integration response timeout
   timeout = 60
+}
+
+resource "aws_lambda_function" "metadata_sync_service" {
+  function_name = var.lambda_metadata_sync_service_function_name
+  description   = var.lambda_metadata_sync_service_function_description
+
+  s3_bucket = module.lambda_bucket.bucket_id
+  s3_key    = module.metadata_sync_service_s3_object.s3_object_key
+
+  runtime = "python3.13"
+  handler = "sync_s3_metadata.lambda_handler"
+
+  source_code_hash = data.archive_file.metadata_sync_service.output_base64sha256
+
+  role = var.lambda_ingress_service_iam_role_arn
+
+  memory_size = 4096
+  timeout = 900
 }
 
 resource "aws_cloudwatch_log_group" "lambda_ingress_service" {
