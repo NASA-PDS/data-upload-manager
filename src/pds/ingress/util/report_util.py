@@ -109,7 +109,7 @@ def print_ingress_summary(summary_table):
     logger.info("Unprocessed: %d file(s)", num_unprocessed)
     logger.info("Total: %d files(s)", num_uploaded + num_skipped + num_failed + num_unprocessed)
     logger.info("Time elapsed: %.2f seconds", end_time - start_time)
-    logger.info("Bytes tranferred: %d", transferred)
+    logger.info("Bytes transferred: %d", transferred)
 
 
 def read_manifest_file(manifest_path):
