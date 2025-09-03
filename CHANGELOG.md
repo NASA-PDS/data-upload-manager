@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-08-26)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-09-03)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.1.2...«unknown»)
 
@@ -18,6 +18,7 @@
 
 **Defects:**
 
+- DUM output has typo [\#271](https://github.com/NASA-PDS/data-upload-manager/issues/271) [[s.low](https://github.com/NASA-PDS/data-upload-manager/labels/s.low)]
 - When DUM crashes, the report it generates falsely indicates success [\#241](https://github.com/NASA-PDS/data-upload-manager/issues/241) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 
 **Other closed issues:**
