@@ -273,7 +273,6 @@ def generate_presigned_upload_url(
             "dum_client_version": client_version,
             "dum_service_version": service_version,
             # The following fields are included for rclone compatibility
-            "md5chksum": base64_md5_digest,
             "mtime": str(last_modified),
         },
     }
@@ -361,6 +360,7 @@ def process_multipart_upload(
             "dum_client_version": client_version,
             "dum_service_version": service_version,
             # The following fields are included for rclone compatibility
+            # Note that md5chksum is required for multipart objects only
             "md5chksum": base64_md5_digest,
             "mtime": str(last_modified),
         },
