@@ -6,7 +6,6 @@ sync_s3_metadata.py
 Lambda function which updates existing objects in S3 with metdata typically
 added by the rclone utility.
 """
-import base64
 import calendar
 import concurrent.futures
 import logging
@@ -31,23 +30,20 @@ def update_s3_object_metadata(metadata_dict):
     Parameters
     ----------
     metadata_dict : dict
-        Dictionary of existing metadata for an S3 object. Must include 'md5'
-        and 'last_modified' fields.
+        Dictionary of existing metadata for an S3 object. Must include
+        'last_modified' field.
 
     Returns
     -------
     updated_metadata : dict
-        Updated metadata dictionary including 'md5chksum' and 'mtime' fields.
+        Updated metadata dictionary including 'mtime' field.
 
     """
-    md5_digest = metadata_dict["md5"]
     last_modified = metadata_dict["last_modified"]
 
-    base64_md5_digest = base64.b64encode(bytes.fromhex(md5_digest)).decode()
     epoch_last_modified = calendar.timegm(datetime.fromisoformat(last_modified).timetuple())
 
     updated_metadata = metadata_dict.copy()
-    updated_metadata["md5chksum"] = base64_md5_digest
     updated_metadata["mtime"] = str(epoch_last_modified)
 
     return updated_metadata
@@ -76,7 +72,7 @@ def process_s3_object(bucket_name, key):
         head = s3.head_object(Bucket=bucket_name, Key=key)
         metadata_dict = head.get("Metadata", {})
 
-        if metadata_dict and "md5chksum" in metadata_dict and "mtime" in metadata_dict:
+        if "mtime" in metadata_dict:
             logger.debug(f"Object {key} already has required metadata. Skipping.")
             return key, "skipped"
 
@@ -86,7 +82,7 @@ def process_s3_object(bucket_name, key):
             logger.error(f"Missing expected metadata key for object {key}: {err}")
             return key, "failed"
 
-        logger.debug(f"Updating object {key} with {updated_metadata['md5chksum']=}, {updated_metadata['mtime']=}")
+        logger.debug(f"Updating object {key} with {updated_metadata['mtime']=}")
 
         s3.copy_object(
             Bucket=bucket_name,
