@@ -203,6 +203,9 @@ resource "aws_lambda_function" "lambda_ingress_service" {
 
   # Timeout value set to match current upper limit of API Gateway integration response timeout
   timeout = 60
+
+  # Memory value set to 4096MB so we should get 3 vCPUs allocated to the function
+  memory_size = 4096
 }
 
 resource "aws_lambda_function" "lambda_status_service" {
@@ -238,6 +241,9 @@ resource "aws_lambda_function" "lambda_status_service" {
 
   # Timeout value set to match current upper limit of API Gateway integration response timeout
   timeout = 60
+
+  # Memory value set to 4096MB so we should get 3 vCPUs allocated to the function
+  memory_size = 4096
 }
 
 resource "aws_lambda_function" "metadata_sync_service" {
@@ -254,8 +260,11 @@ resource "aws_lambda_function" "metadata_sync_service" {
 
   role = var.lambda_ingress_service_iam_role_arn
 
-  memory_size = 4096
+  # Use maximum available timeout
   timeout = 900
+
+  # Memory value set to 4096MB so we should get 3 vCPUs allocated to the function
+  memory_size = 4096
 }
 
 resource "aws_cloudwatch_log_group" "lambda_ingress_service" {
