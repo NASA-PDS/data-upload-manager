@@ -7,6 +7,7 @@ Lambda function which acts as the PDS Ingress Service, mapping local file paths
 to their destinations in S3.
 """
 import base64
+import concurrent.futures
 import json
 import logging
 import os
@@ -273,7 +274,6 @@ def generate_presigned_upload_url(
             "dum_client_version": client_version,
             "dum_service_version": service_version,
             # The following fields are included for rclone compatibility
-            "md5chksum": base64_md5_digest,
             "mtime": str(last_modified),
         },
     }
@@ -361,6 +361,7 @@ def process_multipart_upload(
             "dum_client_version": client_version,
             "dum_service_version": service_version,
             # The following fields are included for rclone compatibility
+            # Note that md5chksum is required for multipart objects only
             "md5chksum": base64_md5_digest,
             "mtime": str(last_modified),
         },
@@ -420,6 +421,143 @@ def process_multipart_upload(
     return signed_urls, complete_upload_url, abort_upload_url, num_parts
 
 
+def process_ingress_request(ingress_request, request_index, node_bucket_map, request_event):
+    """
+    Processes a single ingress request, deriving the appropriate S3 upload URL
+    based on the contents of the request and the bucket map configuration.
+
+    Parameters
+    ----------
+    ingress_request : dict
+        Dictionary containing details of the ingress request to be processed.
+    request_index : int
+        Index of the request within the batch of requests being processed.
+    node_bucket_map : dict
+        Dictionary containing the bucket map configuration for the requestor node.
+    request_event : dict
+        Dictionary containing details of the event that triggered the Lambda.
+
+    Returns
+    -------
+    result : dict
+        JSON-compliant dictionary containing the results of processing the
+        ingress request.
+
+    """
+    ingress_path = ingress_request.get("ingress_path")
+    trimmed_path = ingress_request.get("trimmed_path")
+    md5_digest = ingress_request.get("md5")
+    file_size = ingress_request.get("size")
+    last_modified = ingress_request.get("last_modified")
+
+    request_headers = request_event["headers"]
+    request_node = request_event["queryStringParameters"]["node"]
+    client_version = request_headers.get("ClientVersion", None)
+    service_version = get_dum_version()
+    force_overwrite = bool(int(request_headers.get("ForceOverwrite", False)))
+
+    # Convert MD5 from hex to base64, since this is how AWS represents it
+    base64_md5_digest = base64.b64encode(bytes.fromhex(md5_digest)).decode()
+
+    if not all(field is not None for field in (ingress_path, trimmed_path, md5_digest, file_size, last_modified)):
+        logger.error("One or more missing fields in request index %d", request_index)
+        raise RuntimeError
+
+    logger.info("Processing request for %s (index %d)", trimmed_path, request_index)
+
+    bucket_info = bucket_for_path(node_bucket_map, trimmed_path, logger)
+    destination_bucket = bucket_info["name"]
+
+    if not bucket_exists(destination_bucket):
+        result = {
+            "result": HTTPStatus.NOT_FOUND,
+            "trimmed_path": trimmed_path,
+            "ingress_path": ingress_path,
+            "s3_url": None,
+            "bucket": None,
+            "key": None,
+            "message": f"Mapped bucket {destination_bucket} does not exist or has insufficient access permisisons",
+        }
+    else:
+        object_key = join(request_node.lower(), trimmed_path)
+
+        if should_overwrite_file(
+            destination_bucket,
+            object_key,
+            md5_digest,
+            base64_md5_digest,
+            int(file_size),
+            float(last_modified),
+            force_overwrite,
+        ):
+            if file_size >= MAX_UPLOAD_SIZE:
+                logger.info("%s exceeds maximum upload size, initiating Multi-part upload", object_key)
+
+                signed_urls, complete_url, abort_url, num_parts = process_multipart_upload(
+                    bucket_info,
+                    object_key,
+                    file_size,
+                    md5_digest,
+                    base64_md5_digest,
+                    float(last_modified),
+                    client_version,
+                    service_version,
+                )
+
+                result = {
+                    "result": HTTPStatus.OK,
+                    "trimmed_path": trimmed_path,
+                    "ingress_path": ingress_path,
+                    "s3_urls": signed_urls,
+                    "bucket": destination_bucket,
+                    "key": object_key,
+                    "upload_complete_url": complete_url,
+                    "upload_abort_url": abort_url,
+                    "num_parts": num_parts,
+                    "chunk_size": CHUNK_SIZE,
+                    "message": "Multipart Upload Request initiated",
+                }
+            else:
+                s3_url = generate_presigned_upload_url(
+                    bucket_info,
+                    object_key,
+                    md5_digest,
+                    base64_md5_digest,
+                    file_size,
+                    float(last_modified),
+                    client_version,
+                    service_version,
+                )
+
+                result = {
+                    "result": HTTPStatus.OK,
+                    "trimmed_path": trimmed_path,
+                    "ingress_path": ingress_path,
+                    "md5": md5_digest,
+                    "base64_md5": base64_md5_digest,
+                    "s3_url": s3_url,
+                    "bucket": destination_bucket,
+                    "key": object_key,
+                    "message": "Request success",
+                }
+        else:
+            logger.info(
+                "File %s already exists in bucket %s and should not be overwritten", object_key, destination_bucket
+            )
+
+            result = {
+                "result": HTTPStatus.NO_CONTENT,
+                "trimmed_path": trimmed_path,
+                "ingress_path": ingress_path,
+                "s3_url": None,
+                "bucket": destination_bucket,
+                "key": object_key,
+                "message": "File already exists",
+            }
+
+    return result
+
+
 def lambda_handler(event, context):
     """
     Entrypoint for this Lambda function. Derives the appropriate S3 upload URI
@@ -448,7 +586,7 @@ def lambda_handler(event, context):
     # Parse request details from event object
     body = json.loads(event["body"])
     headers = event["headers"]
-    force_overwrite = bool(int(headers.get("ForceOverwrite", False)))
+
     request_node = event["queryStringParameters"].get("node")
 
     if not request_node:
@@ -465,121 +603,20 @@ def lambda_handler(event, context):
         logger.exception("No bucket map entries configured for node ID %s", request_node)
         raise RuntimeError
 
-    result = []
+    results = []
 
-    # Iterate over all batched requests
-    for request_index, ingress_request in enumerate(body):
-        ingress_path = ingress_request.get("ingress_path")
-        trimmed_path = ingress_request.get("trimmed_path")
-        md5_digest = ingress_request.get("md5")
-        file_size = ingress_request.get("size")
-        last_modified = ingress_request.get("last_modified")
+    num_cores = max(os.cpu_count(), 1)
 
-        # Convert MD5 from hex to base64, since this is how AWS represents it
-        base64_md5_digest = base64.b64encode(bytes.fromhex(md5_digest)).decode()
+    logger.info(f"Available CPU cores: {num_cores}")
 
-        if not all(field is not None for field in (ingress_path, trimmed_path, md5_digest, file_size, last_modified)):
-            logger.error("One or more missing fields in request index %d", request_index)
-            raise RuntimeError
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_cores) as executor:
+        # Iterate over all batched requests
+        futures = {
+            executor.submit(process_ingress_request, ingress_request, request_index, node_bucket_map, event)
+            for request_index, ingress_request in enumerate(body)
+        }
 
-        logger.info("Processing request for %s (index %d)", trimmed_path, request_index)
+        for future in concurrent.futures.as_completed(futures):
+            results.append(future.result())
 
-        bucket_info = bucket_for_path(node_bucket_map, trimmed_path, logger)
-        destination_bucket = bucket_info["name"]
-
-        if not bucket_exists(destination_bucket):
-            result.append(
-                {
-                    "result": HTTPStatus.NOT_FOUND,
-                    "trimmed_path": trimmed_path,
-                    "ingress_path": ingress_path,
-                    "s3_url": None,
-                    "bucket": None,
-                    "key": None,
-                    "message": f"Mapped bucket {destination_bucket} does not exist or has insufficient access permisisons",
-                }
-            )
-        else:
-            object_key = join(request_node.lower(), trimmed_path)
-
-            if should_overwrite_file(
-                destination_bucket,
-                object_key,
-                md5_digest,
-                base64_md5_digest,
-                int(file_size),
-                float(last_modified),
-                force_overwrite,
-            ):
-                if file_size >= MAX_UPLOAD_SIZE:
-                    logger.info("%s exceeds maximum upload size, initiating Multi-part upload", object_key)
-
-                    signed_urls, complete_url, abort_url, num_parts = process_multipart_upload(
-                        bucket_info,
-                        object_key,
-                        file_size,
-                        md5_digest,
-                        base64_md5_digest,
-                        float(last_modified),
-                        client_version,
-                        service_version,
-                    )
-
-                    result.append(
-                        {
-                            "result": HTTPStatus.OK,
-                            "trimmed_path": trimmed_path,
-                            "ingress_path": ingress_path,
-                            "s3_urls": signed_urls,
-                            "bucket": destination_bucket,
-                            "key": object_key,
-                            "upload_complete_url": complete_url,
-                            "upload_abort_url": abort_url,
-                            "num_parts": num_parts,
-                            "chunk_size": CHUNK_SIZE,
-                            "message": "Multipart Upload Request initiated",
-                        }
-                    )
-                else:
-                    s3_url = generate_presigned_upload_url(
-                        bucket_info,
-                        object_key,
-                        md5_digest,
-                        base64_md5_digest,
-                        file_size,
-                        float(last_modified),
-                        client_version,
-                        service_version,
-                    )
-
-                    result.append(
-                        {
-                            "result": HTTPStatus.OK,
-                            "trimmed_path": trimmed_path,
-                            "ingress_path": ingress_path,
-                            "md5": md5_digest,
-                            "base64_md5": base64_md5_digest,
-                            "s3_url": s3_url,
-                            "bucket": destination_bucket,
-                            "key": object_key,
-                            "message": "Request success",
-                        }
-                    )
-            else:
-                logger.info(
-                    "File %s already exists in bucket %s and should not be overwritten", object_key, destination_bucket
-                )
-
-                result.append(
-                    {
-                        "result": HTTPStatus.NO_CONTENT,
-                        "trimmed_path": trimmed_path,
-                        "ingress_path": ingress_path,
-                        "s3_url": None,
-                        "bucket": destination_bucket,
-                        "key": object_key,
-                        "message": "File already exists",
-                    }
-                )
-
-    return {"statusCode": HTTPStatus.OK, "body": json.dumps(result)}
+    return {"statusCode": HTTPStatus.OK, "body": json.dumps(results)}

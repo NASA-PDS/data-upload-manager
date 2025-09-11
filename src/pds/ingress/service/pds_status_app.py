@@ -7,6 +7,7 @@ Lambda function used to status an Ingress request based on a user-provided
 manifest. For each file included in a provided manifest, this function will
 derive the Ingress status of said file in S3 and return a report to the user.
 """
+import concurrent.futures
 import json
 import logging
 import os
@@ -77,35 +78,67 @@ def parse_manifest(record):
         # The client informs us where the manifest is stored in S3
         manifest_s3_uri = json.loads(body)
     except Exception as err:
-        logger.exception(f"Failed to parse manifiest from message body, reason: {str(err)}")
-        raise RuntimeError
+        raise RuntimeError(f"Failed to parse manifiest from message body, reason: {str(err)}")
 
     message_attributes = record["messageAttributes"]
 
     if not all(expected_key in message_attributes for expected_key in EXPECTED_ATTRIBUTE_KEYS):
-        logger.exception(f"One or more missing keys from messageAttributes: {str(message_attributes.keys())}")
-        raise RuntimeError
+        raise RuntimeError(f"One or more missing keys from messageAttributes: {str(message_attributes.keys())}")
 
     return_email = json.loads(message_attributes["email"]["stringValue"])
     request_node = json.loads(message_attributes["node"]["stringValue"])
 
     parsed_s3_url = urlparse(manifest_s3_uri)
     s3_bucket = parsed_s3_url.netloc
-    s3_key = parsed_s3_url.path
+    s3_key = parsed_s3_url.path[1:]  # Trim leading '/'
     local_manifest_path = join(tempfile.gettempdir(), Path(s3_key).name)
 
     try:
         s3_client.download_file(s3_bucket, s3_key, local_manifest_path)
         logger.info(f"Downloaded {manifest_s3_uri} locally to {local_manifest_path}")
-    except Exception as e:
-        logger.error(e)
-        return {"statusCode": 500, "body": json.dumps(f"Error downloading file: {e}")}
+    except Exception as err:
+        raise RuntimeError(f"Error downloading file, reason: {str(err)}")
 
     # Read the manifest file contents
     with open(local_manifest_path) as infile:
         manifest = json.load(infile)
 
     return request_node, return_email, manifest
+
+
+def process_path(trimmed_path, file_info, request_node, node_bucket_map):
+    """
+    Processes a single path from the manifest to derive its ingress status.
+
+    Parameters
+    ----------
+    trimmed_path : str
+        The path to process, relative to the node's bucket.
+    file_info : dict
+        Dictionary containing file metadata dervied from the provided manifest.
+    request_node : str
+        PDS node identifier associated to the provided manifest.
+    node_bucket_map : dict
+        The parsed bucket map configuration used to determine where to look for
+        files in S3.
+
+    Returns
+    -------
+    trimmed_path : str
+        The path that was processed, relative to the node's bucket.
+    ingress_status : str
+        The derived ingress status for the provided path.
+
+    """
+    bucket_info = bucket_for_path(node_bucket_map, trimmed_path, logger)
+
+    destination_bucket = bucket_info["name"]
+
+    object_key = join(request_node.lower(), trimmed_path)
+
+    ingress_status = get_ingress_status(destination_bucket, object_key, file_info)
+
+    return trimmed_path, ingress_status
 
 
 def process_manifest(request_node, manifest, bucket_map):
@@ -136,19 +169,22 @@ def process_manifest(request_node, manifest, bucket_map):
     node_bucket_map = bucket_map["MAP"]["NODES"].get(request_node.upper())
 
     if not node_bucket_map:
-        logger.exception("No bucket map entries configured for node ID %s", request_node)
-        raise RuntimeError
+        raise RuntimeError(f"No bucket map entries configured for node ID {request_node}")
 
-    for trimmed_path, file_info in manifest.items():
-        bucket_info = bucket_for_path(node_bucket_map, trimmed_path, logger)
+    num_cores = max(os.cpu_count(), 1)
 
-        destination_bucket = bucket_info["name"]
+    logger.info(f"Available CPU cores: {num_cores}")
 
-        object_key = join(request_node.lower(), trimmed_path)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_cores) as executor:
+        futures = [
+            executor.submit(process_path, trimmed_path, file_info, request_node, node_bucket_map)
+            for trimmed_path, file_info in manifest.items()
+        ]
 
-        ingress_status = get_ingress_status(destination_bucket, object_key, file_info)
+        for future in concurrent.futures.as_completed(futures):
+            trimmed_path, ingress_status = future.result()
 
-        results[trimmed_path] = ingress_status
+            results[trimmed_path] = ingress_status
 
     return results
 
