@@ -16,6 +16,7 @@ from http import HTTPStatus
 import requests_mock
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.config_util import strtobool
+from pds.ingress.util.log_util import get_logger
 
 # When leveraging this module with the Lambda service functions, the requests
 # module will not be available within the Python runtime.
@@ -71,6 +72,26 @@ def fatal_code(err: requests.exceptions.RequestException) -> bool:
     else:
         # No response to interrogate, so default to no retry
         return True
+
+
+def backoff_handler(details):
+    """
+    Handler function for logging backoff events though our logging framework.
+    Backoff events are only logged to CloudWatch and file, not to console.
+
+    Parameters
+    ----------
+    details : dict
+        Dictionary containing details about the backoff event.
+
+    """
+    function_name = details["target"].__name__
+    exception_name = type(details["exception"]).__name__
+    logger = get_logger(function_name, console=False)
+    logger.warning(
+        f"Backing off {function_name}() for {details['wait']:0.1f} seconds after "
+        f"{details['tries']} tries, reason: {exception_name}"
+    )
 
 
 def check_failure_chance(percentage: int) -> bool:

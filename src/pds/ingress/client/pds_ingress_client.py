@@ -26,6 +26,7 @@ from joblib import Parallel
 from more_itertools import chunked as batched
 from pds.ingress import __version__
 from pds.ingress.util.auth_util import AuthUtil
+from pds.ingress.util.backoff_util import backoff_handler
 from pds.ingress.util.backoff_util import simulate_batch_request_failure
 from pds.ingress.util.backoff_util import simulate_ingress_failure
 from pds.ingress.util.config_util import ConfigUtil
@@ -353,12 +354,7 @@ def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pb
     return request_batch
 
 
-@backoff.on_exception(
-    backoff.expo,
-    Exception,
-    max_time=120,
-    logger="request_batch_for_ingress",
-)
+@backoff.on_exception(backoff.expo, Exception, max_time=120, on_backoff=backoff_handler, logger=None)
 def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwrite, api_gateway_config):
     """
     Submits a batch of ingress requests to the PDS Ingress App API.
@@ -453,12 +449,7 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
         response.raise_for_status()
 
 
-@backoff.on_exception(
-    backoff.expo,
-    Exception,
-    max_time=120,
-    logger="ingress_file_to_s3",
-)
+@backoff.on_exception(backoff.expo, Exception, max_time=120, on_backoff=backoff_handler, logger=None)
 def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
     """
     Copies the local file path using the pre-signed S3 URL returned from the
@@ -544,12 +535,7 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
 
 
 # noinspection PyUnreachableCode
-@backoff.on_exception(
-    backoff.expo,
-    Exception,
-    max_time=120,
-    logger="ingress_multipart_file_to_s3",
-)
+@backoff.on_exception(backoff.expo, Exception, max_time=120, on_backoff=backoff_handler, logger=None)
 def ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar):
     """
     Performs an ingress request for a file that is too large to be uploaded
