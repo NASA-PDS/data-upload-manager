@@ -199,7 +199,7 @@ def _process_batch(batch_index, request_batch, node_id, force_overwrite, api_gat
                 ingress_path = ingress_response.get("ingress_path")
                 update_summary_table(SUMMARY_TABLE, "failed", ingress_path)
 
-                logger.error("Batch %d : Ingress failed for %s, Reason:\n%s", batch_index, trimmed_path, str(err))
+                logger.error("Batch %d : Ingress failed for %s, Reason: %s", batch_index, trimmed_path, str(err))
 
                 continue  # Move to next file in the batch
     except Exception as err:
