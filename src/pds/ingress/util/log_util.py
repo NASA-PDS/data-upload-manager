@@ -291,6 +291,7 @@ class CloudWatchHandler(BufferingHandler):
         self._bearer_token = None
         self._node_id = None
         self._stream_created = False
+        self._next_sequence_token = None
 
     @property
     def bearer_token(self):
@@ -453,3 +454,8 @@ class CloudWatchHandler(BufferingHandler):
 
         response = requests.post(api_gateway_url, data=json.dumps(payload), headers=headers)
         response.raise_for_status()
+
+        result = response.json()
+
+        if "__type" in result and result["__type"] == "SerializationException":
+            console_logger.warning("CloudWatch Logs rejected the submitted log events, reason: SerializationException")
