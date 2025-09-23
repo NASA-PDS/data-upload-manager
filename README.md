@@ -66,6 +66,7 @@ Ingress Summary Report for 2025-02-25 11:41:29.507022
 Uploaded: 200 file(s)
 Skipped: 0 file(s)
 Failed: 0 file(s)
+Unprocessed: 0 file(s)
 Total: 200 files(s)
 Time elapsed: 3019.00 seconds
 Bytes transferred: 3087368895
@@ -91,6 +92,8 @@ can be written to disk via the `--report-path` command-line argument:
     "Total Skipped": 0,
     "Failed": [],
     "Total Failed": 0,
+    "Unprocessed": [],
+    "Total Unprocessed": 0,
     "Bytes Transferred": 3087368895,
     "Total Files": 200
 }
