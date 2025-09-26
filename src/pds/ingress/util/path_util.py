@@ -95,9 +95,9 @@ class PathUtil:
         ----------
         ingress_path : str
             The ingress path to trim
-        prefix : str, optional
-            A string prefix to trim from the ingress path, if the path starts
-            with it.
+        prefix : dict, optional
+            A prefix dictionary mapping the prefix to trim from the ingress path
+            with the value to replace it.
 
         Returns
         -------
@@ -113,14 +113,14 @@ class PathUtil:
         trimmed_ingress_path = ingress_path
 
         # Remove path prefix if one was configured
-        if prefix and ingress_path.startswith(prefix):
-            trimmed_ingress_path = ingress_path.replace(prefix, "")
+        if prefix and prefix.get("old") and ingress_path.startswith(prefix["old"]):
+            trimmed_ingress_path = ingress_path.replace(prefix["old"], prefix.get("new", ""), 1)
 
-            # Trim any leading slash if one was left after removing prefix
+            # Trim any leading slash if one was left after trimming prefix
             if trimmed_ingress_path.startswith("/"):
                 trimmed_ingress_path = trimmed_ingress_path[1:]
 
-            logger.debug("Removed prefix %s, new path: %s", prefix, trimmed_ingress_path)
+            logger.debug("Trimmed prefix %s, new path: %s", prefix, trimmed_ingress_path)
 
         return trimmed_ingress_path
 
