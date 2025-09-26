@@ -77,9 +77,10 @@ def prepare_batches(batched_ingress_paths, prefix):
     ----------
     batched_ingress_paths : list of lists
         List containing all ingress file requests separated into equal batches.
-    prefix : str
+    prefix : dict
         Path prefix value to trim from each ingress path to derive the path
-        structure to be used in S3.
+        structure to be used in S3. May be optionally mapped to a replacement value
+        for the old prefix.
 
     Returns
     -------
@@ -286,8 +287,10 @@ def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pb
     ----------
     ingress_path_batch : list of str
         List of the files to gather information on prior to ingress request.
-    prefix : str
-        Path prefix to remove from each path in the provided batch.
+    prefix : dict
+        Path prefix value to trim from each ingress path to derive the path
+        structure to be used in S3. May be optionally mapped to a replacement value
+        for the old prefix.
     batch_index : int
         Index of the current batch within the full list of batched paths.
     batch_pbar : tqdm.tqdm_asyncio
@@ -699,6 +702,18 @@ def setup_argparser():
         "by the Ingress Service.",
     )
     parser.add_argument(
+        "--weblogs",
+        "-w",
+        type=str,
+        default=None,
+        metavar="LOG_TYPE",
+        help="Denotes the upload request as being for LOG_TYPE web logs. "
+        "All uploaded files will be routed to a special S3 location reserved "
+        "for web log files. LOG_TYPE denotes the type of web logs being "
+        "uploaded, and becomes part of the destination upload path. "
+        "If provided, --prefix must be provided as well.",
+    )
+    parser.add_argument(
         "--force-overwrite",
         "-f",
         action="store_true",
@@ -873,7 +888,24 @@ def main(args):
         MANIFEST = read_manifest_file(args.manifest_path)
 
     logger.info("Preparing batches for ingress...")
-    request_batchs = prepare_batches(batched_ingress_paths, args.prefix)
+
+    # Set up the prefix mapping
+    if args.weblogs:
+        if not args.prefix:
+            raise ValueError("When --weblogs is specified, --prefix must also be provided.")
+
+        replacement_value = f"weblogs/{args.node}-{args.weblogs.lower()}"
+
+        # Preserve trailing slash if one was provided in the original prefix
+        if args.prefix.endswith("/"):
+            replacement_value += "/"
+
+        prefix = {"old": args.prefix, "new": replacement_value}
+    else:
+        # Replace prefix with empty string to remove it from the S3 path
+        prefix = {"old": args.prefix, "new": ""}
+
+    request_batchs = prepare_batches(batched_ingress_paths, prefix)
 
     if args.manifest_path:
         logger.info("Writing manifest file to %s", os.path.abspath(args.manifest_path))
@@ -922,7 +954,7 @@ def main(args):
 
                 failed_ingresses = SUMMARY_TABLE["failed"]
                 batched_failed_ingresses = list(batched(failed_ingresses, batch_size))
-                failed_request_batchs = prepare_batches(batched_failed_ingresses, args.prefix)
+                failed_request_batchs = prepare_batches(batched_failed_ingresses, prefix)
 
                 init_batch_progress_bars(min(args.num_threads, len(failed_request_batchs)))
                 perform_ingress(failed_request_batchs, node_id, args.force_overwrite, config["API_GATEWAY"])
