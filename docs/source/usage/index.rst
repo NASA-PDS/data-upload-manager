@@ -23,6 +23,13 @@ within the directory will be included in the set uploaded to PDS Cloud. Any
 sub-directories will be similarly recursed to find any additional files within,
 until the entire directory tree is traversed.
 
+The client script provides ``--include`` and ``--exclude`` arguments which can
+be used to filter the set of files included in the upload request. Both arguments
+support Unix shell-style wildcards (e.g. ``*.xml``), and can be specified multiple
+times to include or exclude multiple patterns. The ``--include`` argument is applied
+first, followed by the ``--exclude`` argument. If no ``--include`` arguments are
+provided, all files are included by default.
+
 Specifying the node ID of the requestor is accomplished via the ``--node`` argument,
 specifying one of the following node name values: ``atm,eng,geo,img,naif,ppi,rs,rms,sbn``
 
@@ -47,6 +54,13 @@ prefix that will be trimmed from all file paths discovered by ``pds-ingress-clie
 For example, if the file ``/home/user/bundle/file.xml`` were to be uploaded, and
 ``--prefix /home/user`` were also provided, the path provided to the ingress service
 in AWS would resolve to ``bundle/file.xml``.
+
+The ``--weblogs LOG_TYPE`` argument can be used to indicate that weblog files are being uploaded.
+The type of log files (e.g. ``apache``, ``nginx``, etc.) should be specified as the
+``LOG_TYPE`` argument. When this flag is provided, the client will automatically adjust
+the "trimmed" path for each ingested file to replace the specified path prefix with ``weblog/``,
+ensuring that all weblog files are routed to a specific S3 bucket used for web analytics.
+Because of this, the ``--prefix`` argument must be provided when using the ``--weblogs`` argument.
 
 The ``pds-ingress-client`` by default utilizes all available CPUs on the
 local machine to perform parallelized ingress requests to the ingress service. The exact
