@@ -141,6 +141,10 @@ The format of the file is a simple YAML_ format file. An example bucket map is s
             bucket:
               name: bucket-for-2022
               storage_class: STANDARD
+          - prefix: weblogs/*
+            bucket:
+              name: pds-nucleus-weblogs
+              storage_class: STANDARD
           default:
             bucket:
               name: pds-nucleus-dum

@@ -147,14 +147,21 @@ class PathUtilTest(unittest.TestCase):
             join(abspath(self.working_dir.name), "dir_one", "dir_two", "low_level_file.txt"),
         ]
 
-        trimmed_paths = [
-            PathUtil.trim_ingress_path(ingress_path, prefix=abspath(self.working_dir.name))
-            for ingress_path in ingress_paths
-        ]
+        prefix = {"old": abspath(self.working_dir.name), "new": ""}
+
+        trimmed_paths = [PathUtil.trim_ingress_path(ingress_path, prefix=prefix) for ingress_path in ingress_paths]
 
         self.assertIn("top_level_file.txt", trimmed_paths)
         self.assertIn(join("dir_one", "mid_level_file.txt"), trimmed_paths)
         self.assertIn(join("dir_one", "dir_two", "low_level_file.txt"), trimmed_paths)
+
+        prefix = {"old": abspath(self.working_dir.name), "new": "replacement"}
+
+        trimmed_paths = [PathUtil.trim_ingress_path(ingress_path, prefix=prefix) for ingress_path in ingress_paths]
+
+        self.assertIn("replacement/top_level_file.txt", trimmed_paths)
+        self.assertIn(join("replacement", "dir_one", "mid_level_file.txt"), trimmed_paths)
+        self.assertIn(join("replacement", "dir_one", "dir_two", "low_level_file.txt"), trimmed_paths)
 
         untrimmed_paths = [PathUtil.trim_ingress_path(ingress_path) for ingress_path in ingress_paths]
 
