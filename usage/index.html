@@ -1,181 +1,95 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🏃‍ ️Usage &mdash; PDS Data Upload Manager  documentation</title>
-  
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=0c24fe83" />
 
   
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/theme_overrides.css" type="text/css" />
-
-  
-  
-  
-  
-
-  
-  <!--[if lt IE 9]>
-    <script src="../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/doctools.js"></script>
-        <script src="../_static/language_data.js"></script>
-    
-    <script type="text/javascript" src="../_static/js/theme.js"></script>
-
-    
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Deployment Scripts" href="../terraform/index.html" />
+    <link rel="next" title="🌎 Terraform" href="../terraform/index.html" />
     <link rel="prev" title="👩‍💻 Development" href="../development/index.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
-
-   
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-          
 
           
-            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> PDS Data Upload Manager
           
-
-          
-            
-            <img src="../_static/PDS_Planets.png" class="logo" alt="Logo"/>
-          
+          <a href="../index.html" class="icon icon-home">
+            PDS Data Upload Manager
+              <img src="../_static/PDS_Planets.png" class="logo" alt="Logo"/>
           </a>
-
-          
-            
-            
-          
-
-          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-
-          
-        </div>
-
-        
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-              
-            
-            
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation/index.html">📦 Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../development/index.html">👩‍💻 Development</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">🏃‍ ️Usage</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#pds-ingress-client-description">pds-ingress-client Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#data-upload-manager-client-workflow">Data Upload Manager Client Workflow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#automatic-retry-of-failed-uploads">Automatic Retry of Failed Uploads</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html">Deployment Scripts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html#creating-the-deployment-tfvars-file">Creating the deployment .tfvars file</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html#deploying-the-terraform">Deploying the Terraform</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html#utilizing-terraform-outputs">Utilizing Terraform Outputs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html#destroying-a-deployment">Destroying a Deployment</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/index.html">️Command Line API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html">🌎  Terraform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">Command Line API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../support/contact.html">Contact Us</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../support/contribute.html">Contribute</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../support/contribute.html#report-a-bug-or-new-feature-request">Report a Bug or New Feature Request</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../support/help.html">Help</a></li>
 </ul>
 
-            
-          
         </div>
-        
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" aria-label="top navigation">
-        
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../index.html">PDS Data Upload Manager</a>
-        
       </nav>
 
-
       <div class="wy-nav-content">
-        
         <div class="rst-content">
-        
-          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
+          <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-    
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-        
-      <li>🏃‍ ️Usage</li>
-    
-    
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">🏃‍ ️Usage</li>
       <li class="wy-breadcrumbs-aside">
-        
-            
-            
               <a href="https://github.com/nasa-pds/template-repo-python/blob/main/docs/source/usage/index.rst" class="fa fa-github"> Edit on GitHub</a>
-            
-          
-        
       </li>
-    
   </ul>
-
-  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-            
-  <div class="section" id="usage">
-<h1>🏃‍ ️Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
+             
+  <section id="usage">
+<h1>🏃‍ ️Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h1>
 <p>This section describes how to use the PDS DUM client script.</p>
-<div class="section" id="pds-ingress-client-description">
-<h2>pds-ingress-client Description<a class="headerlink" href="#pds-ingress-client-description" title="Permalink to this headline">¶</a></h2>
+<section id="pds-ingress-client-description">
+<h2>pds-ingress-client Description<a class="headerlink" href="#pds-ingress-client-description" title="Link to this heading"></a></h2>
 <p>Upon installation of the DUM application, the <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code> script will
 be available for use on the command-line.</p>
 <p>To see the usage documentation, you can run the following:</p>
@@ -190,10 +104,16 @@ directories will be automatically recursed by the client script, and each file
 within the directory will be included in the set uploaded to PDS Cloud. Any
 sub-directories will be similarly recursed to find any additional files within,
 until the entire directory tree is traversed.</p>
+<p>The client script provides <code class="docutils literal notranslate"><span class="pre">--include</span></code> and <code class="docutils literal notranslate"><span class="pre">--exclude</span></code> arguments which can
+be used to filter the set of files included in the upload request. Both arguments
+support Unix shell-style wildcards (e.g. <code class="docutils literal notranslate"><span class="pre">*.xml</span></code>), and can be specified multiple
+times to include or exclude multiple patterns. The <code class="docutils literal notranslate"><span class="pre">--include</span></code> argument is applied
+first, followed by the <code class="docutils literal notranslate"><span class="pre">--exclude</span></code> argument. If no <code class="docutils literal notranslate"><span class="pre">--include</span></code> arguments are
+provided, all files are included by default.</p>
 <p>Specifying the node ID of the requestor is accomplished via the <code class="docutils literal notranslate"><span class="pre">--node</span></code> argument,
 specifying one of the following node name values: <code class="docutils literal notranslate"><span class="pre">atm,eng,geo,img,naif,ppi,rs,rms,sbn</span></code></p>
 <p>The <code class="docutils literal notranslate"><span class="pre">--dry-run</span></code> flag can be used to have <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code> determine the
-full set of files and directories to  be processed without actually submitting
+full set of files and directories to be processed without actually submitting
 anything for ingest to PDS Cloud. This feature can be useful to ensure the correct
 set of files are being included for a request before performing any communication
 with the Server side of DUM.</p>
@@ -210,6 +130,12 @@ prefix that will be trimmed from all file paths discovered by <code class="docut
 <p>For example, if the file <code class="docutils literal notranslate"><span class="pre">/home/user/bundle/file.xml</span></code> were to be uploaded, and
 <code class="docutils literal notranslate"><span class="pre">--prefix</span> <span class="pre">/home/user</span></code> were also provided, the path provided to the ingress service
 in AWS would resolve to <code class="docutils literal notranslate"><span class="pre">bundle/file.xml</span></code>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">--weblogs</span> <span class="pre">LOG_TYPE</span></code> argument can be used to indicate that weblog files are being uploaded.
+The type of log files (e.g. <code class="docutils literal notranslate"><span class="pre">apache</span></code>, <code class="docutils literal notranslate"><span class="pre">nginx</span></code>, etc.) should be specified as the
+<code class="docutils literal notranslate"><span class="pre">LOG_TYPE</span></code> argument. When this flag is provided, the client will automatically adjust
+the “trimmed” path for each ingested file to replace the specified path prefix with <code class="docutils literal notranslate"><span class="pre">weblog/</span></code>,
+ensuring that all weblog files are routed to a specific S3 bucket used for web analytics.
+Because of this, the <code class="docutils literal notranslate"><span class="pre">--prefix</span></code> argument must be provided when using the <code class="docutils literal notranslate"><span class="pre">--weblogs</span></code> argument.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code> by default utilizes all available CPUs on the
 local machine to perform parallelized ingress requests to the ingress service. The exact
 number of threads can be controlled via the <code class="docutils literal notranslate"><span class="pre">--num-threads</span></code> argument.</p>
@@ -220,63 +146,160 @@ number of threads can be controlled via the <code class="docutils literal notran
 <li><p><code class="docutils literal notranslate"><span class="pre">--log-path</span></code> : Specifies a path to write a trace log of the ingress request which does not go to the console. Can be useful for troubleshooting tranfer failures.</p></li>
 </ul>
 <p>Lastly, the <code class="docutils literal notranslate"><span class="pre">--version</span></code> option may be used to verify the version number of installed DUM client.</p>
+</section>
+<section id="data-upload-manager-client-workflow">
+<h2>Data Upload Manager Client Workflow<a class="headerlink" href="#data-upload-manager-client-workflow" title="Link to this heading"></a></h2>
+<p>When utilizing the DUM Client script (<cite>pds-ingress-client</cite>), the following workflow is executed:</p>
+<ol class="arabic simple">
+<li><p>Indexing of the requested input files/paths to determine the full input file set</p></li>
+<li><p>Generation of a Manifest file, containing information, including MD5 checksums, of each file to be ingested</p></li>
+<li><p>Batch ingress requesting of input file set to the DUM Ingress Service in AWS</p></li>
+<li><p>Batch upload of input file set to AWS S3</p></li>
+<li><p>Ingress report creation</p></li>
+</ol>
+<p>Determination of the input file set is determined in Step 1 by resolving the paths providing on
+the command-line to the DUM client. Any directories provided are recursed to determine the full set
+of files within. Any paths provided are included as-is into the input file set.</p>
+<p>Depending on the size of the input file set, the Manifest file creation in Step 2 can become
+time-consuming due to the hashing of each file in the input file set. To save time, the <cite>–manifest-path</cite>
+command-line option should be leveraged to write the contents of the Manifest to local disk. Specifying
+the same path via <cite>–manifest-path</cite> on subsequent executions of the DUM client will result in
+a read of the existing Manifest from disk. Any files within the input set referenced within the
+read Manifest will reuse the precomputed values within, saving upfront time prior to start of upload
+to S3. The Manifest will then be re-written to the path specified by <cite>–manifest-path</cite> to include
+any new files encountered. In this way, a Manifest file can expand across executions of DUM to serve
+as a sort of cache for file information.</p>
+<p>The batch size utilized by Steps 3 and 4 can be configured within the INI config provided to the
+DUM client. The number of batches processed in parallel can be controlled via the <cite>–num-threads</cite>
+command-line argument.</p>
+<p>By default, at completion of an ingress request (Step 5), the DUM client provides a summary of the
+results of the transfer:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Ingress</span> <span class="n">Summary</span> <span class="n">Report</span> <span class="k">for</span> <span class="mi">2025</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">25</span> <span class="mi">11</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span><span class="mf">29.507022</span>
+<span class="o">-----------------------------------------------------</span>
+<span class="n">Uploaded</span><span class="p">:</span> <span class="mi">200</span> <span class="n">file</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="n">Skipped</span><span class="p">:</span> <span class="mi">0</span> <span class="n">file</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="n">Failed</span><span class="p">:</span> <span class="mi">0</span> <span class="n">file</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="n">Unprocessed</span><span class="p">:</span> <span class="mi">0</span> <span class="n">file</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="n">Total</span><span class="p">:</span> <span class="mi">200</span> <span class="n">files</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="n">Time</span> <span class="n">elapsed</span><span class="p">:</span> <span class="mf">3019.00</span> <span class="n">seconds</span>
+<span class="n">Bytes</span> <span class="n">transferred</span><span class="p">:</span> <span class="mi">3087368895</span>
+</pre></div>
 </div>
+<p>A more detailed JSON-format report, containing full listings of all uploaded/skipped/failed paths,
+can be written to disk via the <cite>–report-path</cite> command-line argument:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;Arguments&quot;</span><span class="p">:</span> <span class="s2">&quot;Namespace(config_path=&#39;mcp.test.ingress.config.ini&#39;, node=&#39;sbn&#39;, prefix=&#39;/PDS/SBN/&#39;, force_overwrite=True, num_threads=4, log_path=&#39;/tmp/dum_log.txt&#39;, manifest_path=&#39;/tmp/dum_manifest.json&#39;, report_path=&#39;/tmp/dum_report.json&#39;, dry_run=False, log_level=&#39;info&#39;, ingress_paths=[&#39;/PDS/SBN/gbo.ast.catalina.survey/&#39;])&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Batch Size&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="s2">&quot;Total Batches&quot;</span><span class="p">:</span> <span class="mi">67</span><span class="p">,</span>
+    <span class="s2">&quot;Start Time&quot;</span><span class="p">:</span> <span class="s2">&quot;2025-02-25 18:51:10.507562+00:00&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Finish Time&quot;</span><span class="p">:</span> <span class="s2">&quot;2025-02-25 19:41:29.504806+00:00&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Uploaded&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;gbo.ast.catalina.survey/data_calibrated/703/2020/20Apr02/703_20200402_2B_F48FC1_01_0001.arch.fz&quot;</span><span class="p">,</span>
+        <span class="o">...</span>
+        <span class="s2">&quot;gbo.ast.catalina.survey/data_calibrated/703/2020/20Apr02/703_20200402_2B_N02055_01_0001.arch.xml&quot;</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;Total Uploaded&quot;</span><span class="p">:</span> <span class="mi">200</span><span class="p">,</span>
+    <span class="s2">&quot;Skipped&quot;</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="s2">&quot;Total Skipped&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;Failed&quot;</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="s2">&quot;Total Failed&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;Unprocessed&quot;</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="s2">&quot;Total Unprocessed&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;Bytes Transferred&quot;</span><span class="p">:</span> <span class="mi">3087368895</span><span class="p">,</span>
+    <span class="s2">&quot;Total Files&quot;</span><span class="p">:</span> <span class="mi">200</span>
+<span class="p">}</span>
+</pre></div>
 </div>
+<p>Lastly, a detailed log file containing trace statements for each file/batch uploaded can be written
+to disk via the <cite>–log-path</cite> command-line argument. The log file path may also be specifed within
+the INI config.</p>
+</section>
+<section id="automatic-retry-of-failed-uploads">
+<h2>Automatic Retry of Failed Uploads<a class="headerlink" href="#automatic-retry-of-failed-uploads" title="Link to this heading"></a></h2>
+<p>The DUM client script is configured to automatically retry any failed uploads to S3 using exponential
+<a class="reference external" href="https://pypi.org/project/backoff/">backoff</a> and retry. When an intermittent failure occurs during upload, messages pertaining to the
+backoff and retry are logged to the log file (which can be specified via the <cite>–log-path</cite> argument).</p>
+<p>Here is an example of such log messages:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">...</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">21</span><span class="p">:</span><span class="mi">24</span><span class="p">,</span><span class="mi">491</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">9</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">ingress_file_to_s3</span> <span class="p">:</span> <span class="n">Batch</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">Ingesting</span> <span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">xml</span> <span class="n">to</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">pds</span><span class="o">-</span><span class="n">staging</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">amazonaws</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">xml</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">21</span><span class="p">:</span><span class="mi">24</span><span class="p">,</span><span class="mi">493</span><span class="p">]</span> <span class="n">WARNING</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">9</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">backoff_handler</span> <span class="p">:</span> <span class="n">Backing</span> <span class="n">off</span> <span class="n">ingress_file_to_s3</span><span class="p">()</span> <span class="k">for</span> <span class="mf">0.2</span> <span class="n">seconds</span> <span class="n">after</span> <span class="mi">1</span> <span class="n">tries</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="n">HTTPError</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">21</span><span class="p">:</span><span class="mi">24</span><span class="p">,</span><span class="mi">665</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">9</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">ingress_file_to_s3</span> <span class="p">:</span> <span class="n">Batch</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">Ingesting</span> <span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">xml</span> <span class="n">to</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">pds</span><span class="o">-</span><span class="n">staging</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">amazonaws</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">xml</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">21</span><span class="p">:</span><span class="mi">24</span><span class="p">,</span><span class="mi">667</span><span class="p">]</span> <span class="n">WARNING</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">9</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">backoff_handler</span> <span class="p">:</span> <span class="n">Backing</span> <span class="n">off</span> <span class="n">ingress_file_to_s3</span><span class="p">()</span> <span class="k">for</span> <span class="mf">1.2</span> <span class="n">seconds</span> <span class="n">after</span> <span class="mi">2</span> <span class="n">tries</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="n">HTTPError</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">21</span><span class="p">:</span><span class="mi">25</span><span class="p">,</span><span class="mi">832</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">9</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">ingress_file_to_s3</span> <span class="p">:</span> <span class="n">Batch</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">Ingesting</span> <span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">xml</span> <span class="n">to</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">pds</span><span class="o">-</span><span class="n">staging</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">amazonaws</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">xml</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">21</span><span class="p">:</span><span class="mi">25</span><span class="p">,</span><span class="mi">833</span><span class="p">]</span> <span class="n">WARNING</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">9</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">backoff_handler</span> <span class="p">:</span> <span class="n">Backing</span> <span class="n">off</span> <span class="n">ingress_file_to_s3</span><span class="p">()</span> <span class="k">for</span> <span class="mf">1.8</span> <span class="n">seconds</span> <span class="n">after</span> <span class="mi">3</span> <span class="n">tries</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="n">HTTPError</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">21</span><span class="p">:</span><span class="mi">27</span><span class="p">,</span><span class="mi">644</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">9</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">ingress_file_to_s3</span> <span class="p">:</span> <span class="n">Batch</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">Ingesting</span> <span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">xml</span> <span class="n">to</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">pds</span><span class="o">-</span><span class="n">staging</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">amazonaws</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">xml</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">21</span><span class="p">:</span><span class="mi">27</span><span class="p">,</span><span class="mi">720</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">9</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">ingress_file_to_s3</span> <span class="p">:</span> <span class="n">Batch</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">xml</span> <span class="n">Ingest</span> <span class="n">complete</span>
+</pre></div>
+</div>
+<p>Typically, log messages pertaining to backoff and retry can be safely ignored if upload is eventually succesful, as in the above example.
+However, if an upload ultimately fails after all retries are exhausted it could indicate a more serious problem that needs to be investigated:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">...</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">31</span><span class="p">:</span><span class="mi">47</span><span class="p">,</span><span class="mi">231</span><span class="p">]</span> <span class="n">WARNING</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">9</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">backoff_handler</span> <span class="p">:</span> <span class="n">Backing</span> <span class="n">off</span> <span class="n">ingress_file_to_s3</span><span class="p">()</span> <span class="k">for</span> <span class="mf">30.9</span> <span class="n">seconds</span> <span class="n">after</span> <span class="mi">6</span> <span class="n">tries</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="n">HTTPError</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">32</span><span class="p">:</span><span class="mi">18</span><span class="p">,</span><span class="mi">099</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">9</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">ingress_file_to_s3</span> <span class="p">:</span> <span class="n">Batch</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">Ingesting</span> <span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">fz</span> <span class="n">to</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">pds</span><span class="o">-</span><span class="n">staging</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">amazonaws</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">fz</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">32</span><span class="p">:</span><span class="mi">18</span><span class="p">,</span><span class="mi">101</span><span class="p">]</span> <span class="n">WARNING</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">9</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">backoff_handler</span> <span class="p">:</span> <span class="n">Backing</span> <span class="n">off</span> <span class="n">ingress_file_to_s3</span><span class="p">()</span> <span class="k">for</span> <span class="mf">23.2</span> <span class="n">seconds</span> <span class="n">after</span> <span class="mi">7</span> <span class="n">tries</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="n">HTTPError</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">32</span><span class="p">:</span><span class="mi">41</span><span class="p">,</span><span class="mi">324</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">9</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">ingress_file_to_s3</span> <span class="p">:</span> <span class="n">Batch</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">Ingesting</span> <span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">fz</span> <span class="n">to</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">pds</span><span class="o">-</span><span class="n">staging</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">amazonaws</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">fz</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">32</span><span class="p">:</span><span class="mi">41</span><span class="p">,</span><span class="mi">326</span><span class="p">]</span> <span class="n">WARNING</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">9</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">backoff_handler</span> <span class="p">:</span> <span class="n">Backing</span> <span class="n">off</span> <span class="n">ingress_file_to_s3</span><span class="p">()</span> <span class="k">for</span> <span class="mf">54.8</span> <span class="n">seconds</span> <span class="n">after</span> <span class="mi">8</span> <span class="n">tries</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="n">HTTPError</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">33</span><span class="p">:</span><span class="mi">36</span><span class="p">,</span><span class="mi">086</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">9</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">ingress_file_to_s3</span> <span class="p">:</span> <span class="n">Batch</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">Ingesting</span> <span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">fz</span> <span class="n">to</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">pds</span><span class="o">-</span><span class="n">staging</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">amazonaws</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">fz</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">33</span><span class="p">:</span><span class="mi">36</span><span class="p">,</span><span class="mi">087</span><span class="p">]</span> <span class="n">ERROR</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">9</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">_process_batch</span> <span class="p">:</span> <span class="n">Batch</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">Ingress</span> <span class="n">failed</span> <span class="k">for</span> <span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">fz</span><span class="p">,</span> <span class="n">Reason</span><span class="p">:</span> <span class="mi">403</span> <span class="n">Client</span> <span class="n">Error</span>
+</pre></div>
+</div>
+<p>Any files that fail to upload after all retries are exhausted are reattempted in one final attempt at the end of DUM client execution:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">...</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">33</span><span class="p">:</span><span class="mi">36</span><span class="p">,</span><span class="mi">094</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">MainThread</span> <span class="n">main</span> <span class="p">:</span> <span class="n">All</span> <span class="n">batches</span> <span class="n">processed</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">33</span><span class="p">:</span><span class="mi">36</span><span class="p">,</span><span class="mi">094</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">MainThread</span> <span class="n">main</span> <span class="p">:</span> <span class="o">----------------------------------------</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">33</span><span class="p">:</span><span class="mi">36</span><span class="p">,</span><span class="mi">094</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">MainThread</span> <span class="n">main</span> <span class="p">:</span> <span class="n">Reattempting</span> <span class="n">ingress</span> <span class="k">for</span> <span class="n">failed</span> <span class="n">files</span><span class="o">...</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">33</span><span class="p">:</span><span class="mi">36</span><span class="p">,</span><span class="mi">096</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">16</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">_prepare_batch_for_ingress</span> <span class="p">:</span> <span class="n">Batch</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">Preparing</span> <span class="k">for</span> <span class="n">ingress</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">33</span><span class="p">:</span><span class="mi">36</span><span class="p">,</span><span class="mi">096</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">16</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">_prepare_batch_for_ingress</span> <span class="p">:</span> <span class="n">Batch</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">Prep</span> <span class="n">completed</span> <span class="ow">in</span> <span class="mf">0.00</span> <span class="n">seconds</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">33</span><span class="p">:</span><span class="mi">36</span><span class="p">,</span><span class="mi">108</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">23</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">request_batch_for_ingress</span> <span class="p">:</span> <span class="n">Batch</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">Requesting</span> <span class="n">ingress</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">33</span><span class="p">:</span><span class="mi">36</span><span class="p">,</span><span class="mi">732</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">23</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">request_batch_for_ingress</span> <span class="p">:</span> <span class="n">Batch</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">Ingress</span> <span class="n">request</span> <span class="n">completed</span> <span class="ow">in</span> <span class="mf">0.62</span> <span class="n">seconds</span>
+<span class="p">[</span><span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">33</span><span class="p">:</span><span class="mi">36</span><span class="p">,</span><span class="mi">734</span><span class="p">]</span> <span class="n">INFO</span> <span class="n">Thread</span><span class="o">-</span><span class="mi">23</span> <span class="p">(</span><span class="n">worker</span><span class="p">)</span> <span class="n">ingress_file_to_s3</span> <span class="p">:</span> <span class="n">Batch</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">Ingesting</span> <span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">fz</span> <span class="n">to</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">pds</span><span class="o">-</span><span class="n">sbn</span><span class="o">-</span><span class="n">staging</span><span class="o">-</span><span class="n">dev</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">amazonaws</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">mflat</span><span class="mf">.703.19</span><span class="n">Dec20</span><span class="o">.</span><span class="n">fits</span><span class="o">.</span><span class="n">fz</span>
+</pre></div>
+</div>
+<p>Files that still fail to upload during this final attempt are recorded in the final summary report:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Ingress</span> <span class="n">Summary</span> <span class="n">Report</span> <span class="k">for</span> <span class="mi">2025</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">23</span> <span class="mi">16</span><span class="p">:</span><span class="mi">35</span><span class="p">:</span><span class="mf">37.532468</span>
+<span class="o">-----------------------------------------------------</span>
+<span class="n">Uploaded</span><span class="p">:</span> <span class="mi">0</span> <span class="n">file</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="n">Skipped</span><span class="p">:</span> <span class="mi">0</span> <span class="n">file</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="n">Failed</span><span class="p">:</span> <span class="mi">1</span> <span class="n">file</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="n">Unprocessed</span><span class="p">:</span> <span class="mi">0</span> <span class="n">file</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="n">Total</span><span class="p">:</span> <span class="mi">1</span> <span class="n">files</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="n">Time</span> <span class="n">elapsed</span><span class="p">:</span> <span class="mf">244.87</span> <span class="n">seconds</span>
+<span class="n">Bytes</span> <span class="n">transferred</span><span class="p">:</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<p>Should persistent failures like this occur, they should be communicated to the PDS Operations team for investigation.</p>
+</section>
+</section>
 
 
            </div>
-           
           </div>
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="../terraform/index.html" class="btn btn-neutral float-right" title="Deployment Scripts" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="../development/index.html" class="btn btn-neutral float-left" title="👩‍💻 Development" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../development/index.html" class="btn btn-neutral float-left" title="👩‍💻 Development" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../terraform/index.html" class="btn btn-neutral float-right" title="🌎 Terraform" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
-    <p>
-        
-        &copy; Copyright 2023 California Institute of Technology
-
-    </p>
+    <p>&#169; Copyright 2023 California Institute of Technology.</p>
   </div>
-    
-    
-    
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
-    
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
-    
-    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
 
 </footer>
-
         </div>
       </div>
-
     </section>
-
   </div>
-  
-
-  <script type="text/javascript">
+  <script>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>

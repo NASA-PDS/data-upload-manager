@@ -9,7 +9,7 @@ To obtain a copy of the code and work on a new branch::
     git clone https://github.com/NASA-PDS/data-upload-manager.git
     git checkout -b "<issue number>_<issue name>"
 
-Create a virtual environment in ``venv`` using Python 3.9 or later::
+Create a virtual environment in ``venv`` using Python 3.13 or later::
 
     python3 -m venv venv
 
@@ -31,7 +31,7 @@ The code base includes unit tests. Once you've installed the service, you can
 run the unit tests with the following command (assuming the virtual environment
 has been activated, see above)::
 
-    tox py39
+    tox -e py313
 
 
 Making Releases

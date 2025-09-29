@@ -1,238 +1,205 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <title>️Command Line API &mdash; PDS Data Upload Manager  documentation</title>
-  
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Command Line API &mdash; PDS Data Upload Manager  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=0c24fe83" />
 
   
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/theme_overrides.css" type="text/css" />
-
-  
-  
-  
-  
-
-  
-  <!--[if lt IE 9]>
-    <script src="../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/doctools.js"></script>
-        <script src="../_static/language_data.js"></script>
-    
-    <script type="text/javascript" src="../_static/js/theme.js"></script>
-
-    
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Contact Us" href="../support/contact.html" />
-    <link rel="prev" title="Deployment Scripts" href="../terraform/index.html" /> 
+    <link rel="prev" title="🌎 Terraform" href="../terraform/index.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
-
-   
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-          
 
           
-            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> PDS Data Upload Manager
           
-
-          
-            
-            <img src="../_static/PDS_Planets.png" class="logo" alt="Logo"/>
-          
+          <a href="../index.html" class="icon icon-home">
+            PDS Data Upload Manager
+              <img src="../_static/PDS_Planets.png" class="logo" alt="Logo"/>
           </a>
-
-          
-            
-            
-          
-
-          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-
-          
-        </div>
-
-        
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-              
-            
-            
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation/index.html">📦 Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../development/index.html">👩‍💻 Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usage/index.html">🏃‍ ️Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html">Deployment Scripts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html#creating-the-deployment-tfvars-file">Creating the deployment .tfvars file</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html#deploying-the-terraform">Deploying the Terraform</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html#utilizing-terraform-outputs">Utilizing Terraform Outputs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html#destroying-a-deployment">Destroying a Deployment</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">️Command Line API</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#pds-ingress-client">pds-ingress-client</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html">🌎  Terraform</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Command Line API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#pds-ingress-client">pds-ingress-client</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pds.ingress.client.pds_ingress_client-setup_argparser-positional-arguments">Positional Arguments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pds.ingress.client.pds_ingress_client-setup_argparser-named-arguments">Named Arguments</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../support/contact.html">Contact Us</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../support/contribute.html">Contribute</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../support/contribute.html#report-a-bug-or-new-feature-request">Report a Bug or New Feature Request</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../support/help.html">Help</a></li>
 </ul>
 
-            
-          
         </div>
-        
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" aria-label="top navigation">
-        
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../index.html">PDS Data Upload Manager</a>
-        
       </nav>
 
-
       <div class="wy-nav-content">
-        
         <div class="rst-content">
-        
-          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
+          <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-    
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-        
-      <li>️Command Line API</li>
-    
-    
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Command Line API</li>
       <li class="wy-breadcrumbs-aside">
-        
-            
-            
               <a href="https://github.com/nasa-pds/template-repo-python/blob/main/docs/source/api/index.rst" class="fa fa-github"> Edit on GitHub</a>
-            
-          
-        
       </li>
-    
   </ul>
-
-  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-            
-  <div class="section" id="command-line-api">
-<h1>️Command Line API<a class="headerlink" href="#command-line-api" title="Permalink to this headline">¶</a></h1>
+             
+  <section id="command-line-api">
+<h1>Command Line API<a class="headerlink" href="#command-line-api" title="Link to this heading"></a></h1>
 <p>This section contains details on the interfaces for the command line tools.</p>
-<div class="section" id="pds-ingress-client">
-<h2>pds-ingress-client<a class="headerlink" href="#pds-ingress-client" title="Permalink to this headline">¶</a></h2>
+<section id="pds-ingress-client">
+<h2>pds-ingress-client<a class="headerlink" href="#pds-ingress-client" title="Link to this heading"></a></h2>
+<p><p>Client side script used to perform ingress request to the DUM service in AWS.</p>
+</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">usage</span><span class="p">:</span> <span class="n">pds</span><span class="o">-</span><span class="n">ingress</span><span class="o">-</span><span class="n">client</span> <span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">c</span> <span class="n">CONFIG_PATH</span><span class="p">]</span>
+                          <span class="o">-</span><span class="n">n</span> <span class="p">{</span><span class="n">atm</span><span class="p">,</span><span class="n">eng</span><span class="p">,</span><span class="n">geo</span><span class="p">,</span><span class="n">img</span><span class="p">,</span><span class="n">naif</span><span class="p">,</span><span class="n">ppi</span><span class="p">,</span><span class="n">rs</span><span class="p">,</span><span class="n">rms</span><span class="p">,</span><span class="n">sbn</span><span class="p">}</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">prefix</span> <span class="n">PREFIX</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">weblogs</span> <span class="n">LOG_TYPE</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">force</span><span class="o">-</span><span class="n">overwrite</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">include</span> <span class="n">PATTERN</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">exclude</span> <span class="n">PATTERN</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">num</span><span class="o">-</span><span class="n">threads</span> <span class="n">NUM_THREADS</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">log</span><span class="o">-</span><span class="n">path</span> <span class="n">LOG_PATH</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">manifest</span><span class="o">-</span><span class="n">path</span> <span class="n">MANIFEST_PATH</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">report</span><span class="o">-</span><span class="n">path</span> <span class="n">REPORT_PATH</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">dry</span><span class="o">-</span><span class="n">run</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">log</span><span class="o">-</span><span class="n">level</span> <span class="p">{</span><span class="n">warn</span><span class="p">,</span><span class="n">warning</span><span class="p">,</span><span class="n">info</span><span class="p">,</span><span class="n">debug</span><span class="p">}]</span> <span class="p">[</span><span class="o">--</span><span class="n">version</span><span class="p">]</span>
+                          <span class="n">file_or_dir</span> <span class="p">[</span><span class="n">file_or_dir</span> <span class="o">...</span><span class="p">]</span>
+</pre></div>
 </div>
-</div>
+<section id="pds.ingress.client.pds_ingress_client-setup_argparser-positional-arguments">
+<h3>Positional Arguments<a class="headerlink" href="#pds.ingress.client.pds_ingress_client-setup_argparser-positional-arguments" title="Link to this heading"></a></h3>
+<dl class="option-list">
+<dt><kbd>file_or_dir</kbd></dt>
+<dd><p>One or more paths to the files to ingest to S3. For each directory path is provided, this script will automatically derive all sub-paths for inclusion with the ingress request.</p>
+</dd>
+</dl>
+</section>
+<section id="pds.ingress.client.pds_ingress_client-setup_argparser-named-arguments">
+<h3>Named Arguments<a class="headerlink" href="#pds.ingress.client.pds_ingress_client-setup_argparser-named-arguments" title="Link to this heading"></a></h3>
+<dl class="option-list">
+<dt><kbd>-c, --config-path</kbd></dt>
+<dd><p>Path to the INI config for use with this client. If not provided, the default config (/github/workspace/.tox/docs/lib/python3.13/site-packages/pds/ingress/conf.default.ini) is used.</p>
+</dd>
+<dt><kbd>-n, --node</kbd></dt>
+<dd><p>Possible choices: atm, eng, geo, img, naif, ppi, rs, rms, sbn</p>
+<p>PDS node identifier of the ingress requestor. This value is used by the Ingress service to derive the S3 upload location. Argument is case-insensitive.</p>
+</dd>
+<dt><kbd>--prefix, -p</kbd></dt>
+<dd><p>Specify a path prefix to be trimmed from each resolved ingest path such that is is not included with the request to the Ingress Service. For example, specifying –prefix “/home/user” would modify paths such as “/home/user/bundle/file.xml” to just “bundle/file.xml”. This can be useful for controlling which parts of a directory structure should be included with the S3 upload location returned by the Ingress Service.</p>
+</dd>
+<dt><kbd>--weblogs, -w</kbd></dt>
+<dd><p>Denotes the upload request as being for LOG_TYPE web logs. All uploaded files will be routed to a special S3 location reserved for web log files. LOG_TYPE denotes the type of web logs being uploaded, and becomes part of the destination upload path. If provided, –prefix must be provided as well.</p>
+</dd>
+<dt><kbd>--force-overwrite, -f</kbd></dt>
+<dd><p>By default, the DUM service determines if a given file has already been ingested to the PDS Cloud and has not changed. If so, ingress of the file is skipped. Use this flag to override this behavior and forcefully overwrite any existing versions of files within the PDS Cloud.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+<dt><kbd>--include, -i</kbd></dt>
+<dd><p>Specify a file path pattern to match against when determining which files should be included with an Ingress request. Unix-style wildcard patterns are supported. Include patterns are always applied prior to any Exclude patterns. This argument can be specified multiple times to configure multiple include patterns. Include patterns are evaluated in the order they provided.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">[]</span></code></p>
+</dd>
+<dt><kbd>--exclude, -e</kbd></dt>
+<dd><p>Specify a file path pattern to match against when determining which files should be excluded from an Ingress request. Unix-style wildcard patterns are supported. Exclude patterns are always applied after any Include patterns. This argument can be specified multiple times to configure multiple exclude patterns. Exclude patterns are evaluated in the order they provided.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">[]</span></code></p>
+</dd>
+<dt><kbd>--num-threads, -t</kbd></dt>
+<dd><p>Specify the number of threads to use when uploading files to S3 in parallel. By default, all available cores are used.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">-1</span></code></p>
+</dd>
+<dt><kbd>--log-path</kbd></dt>
+<dd><p>Specify a file path to write logging statements to. These will include some of the messages logged to the console, as well as additional messages about the status of each file/batch transfer. By default, the log file is created in a temporary location if this parameter is not provided. If provided, this argument takes precedence over what is provided for OTHER.log_file_path in the INI config.</p>
+</dd>
+<dt><kbd>--manifest-path</kbd></dt>
+<dd><p>Specify a file path to a JSON manifiest of all files indexed for inclusion in the current ingress request. If the provided path is not an existing file, then the manifest will be written to that location. If the path already exists, this script will read the manifiest, and skip checksum generation for any paths that are already specified. If not provided, no manifiest is written or read.</p>
+</dd>
+<dt><kbd>--report-path, -r</kbd></dt>
+<dd><p>Specify a path to write a JSON summary report containing the full listing of all files ingressed, skipped or failed. By default, no report is created.</p>
+</dd>
+<dt><kbd>--dry-run</kbd></dt>
+<dd><p>Derive the full set of ingress paths without performing any submission requests to the server.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+<dt><kbd>--log-level, -l</kbd></dt>
+<dd><p>Possible choices: warn, warning, info, debug</p>
+<p>Sets the Logging level for logged messages. If not provided, the logging level set in the INI config is used instead.</p>
+</dd>
+<dt><kbd>--version</kbd></dt>
+<dd><p>Print the Data Upload Manager release version and exit.</p>
+</dd>
+</dl>
+</section>
+</section>
+</section>
 
 
            </div>
-           
           </div>
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="../support/contact.html" class="btn btn-neutral float-right" title="Contact Us" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="../terraform/index.html" class="btn btn-neutral float-left" title="Deployment Scripts" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../terraform/index.html" class="btn btn-neutral float-left" title="🌎 Terraform" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../support/contact.html" class="btn btn-neutral float-right" title="Contact Us" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
-    <p>
-        
-        &copy; Copyright 2023 California Institute of Technology
-
-    </p>
+    <p>&#169; Copyright 2023 California Institute of Technology.</p>
   </div>
-    
-    
-    
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
-    
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
-    
-    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
 
 </footer>
-
         </div>
       </div>
-
     </section>
-
   </div>
-  
-
-  <script type="text/javascript">
+  <script>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>

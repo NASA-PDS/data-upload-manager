@@ -1,177 +1,95 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <title>Deployment Scripts &mdash; PDS Data Upload Manager  documentation</title>
-  
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌎 Terraform &mdash; PDS Data Upload Manager  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=0c24fe83" />
 
   
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/theme_overrides.css" type="text/css" />
-
-  
-  
-  
-  
-
-  
-  <!--[if lt IE 9]>
-    <script src="../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/doctools.js"></script>
-        <script src="../_static/language_data.js"></script>
-    
-    <script type="text/javascript" src="../_static/js/theme.js"></script>
-
-    
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="️Command Line API" href="../api/index.html" />
+    <link rel="next" title="Command Line API" href="../api/index.html" />
     <link rel="prev" title="🏃‍ ️Usage" href="../usage/index.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
-
-   
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-          
 
           
-            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> PDS Data Upload Manager
           
-
-          
-            
-            <img src="../_static/PDS_Planets.png" class="logo" alt="Logo"/>
-          
+          <a href="../index.html" class="icon icon-home">
+            PDS Data Upload Manager
+              <img src="../_static/PDS_Planets.png" class="logo" alt="Logo"/>
           </a>
-
-          
-            
-            
-          
-
-          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-
-          
-        </div>
-
-        
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-              
-            
-            
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation/index.html">📦 Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../development/index.html">👩‍💻 Development</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usage/index.html">🏃‍ ️Usage</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Deployment Scripts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#creating-the-deployment-tfvars-file">Creating the deployment .tfvars file</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#deploying-the-terraform">Deploying the Terraform</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#utilizing-terraform-outputs">Utilizing Terraform Outputs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#destroying-a-deployment">Destroying a Deployment</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/index.html">️Command Line API</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">🌎  Terraform</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#deployment-scripts">Deployment Scripts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#creating-the-deployment-tfvars-file">Creating the deployment .tfvars file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#setting-up-the-s3-backend">Setting up the S3 Backend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#deploying-the-terraform">Deploying the Terraform</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#utilizing-terraform-outputs">Utilizing Terraform Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#destroying-a-deployment">Destroying a Deployment</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">Command Line API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../support/contact.html">Contact Us</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../support/contribute.html">Contribute</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../support/contribute.html#report-a-bug-or-new-feature-request">Report a Bug or New Feature Request</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../support/help.html">Help</a></li>
 </ul>
 
-            
-          
         </div>
-        
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" aria-label="top navigation">
-        
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../index.html">PDS Data Upload Manager</a>
-        
       </nav>
 
-
       <div class="wy-nav-content">
-        
         <div class="rst-content">
-        
-          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
+          <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-    
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-        
-      <li>Deployment Scripts</li>
-    
-    
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">🌎  Terraform</li>
       <li class="wy-breadcrumbs-aside">
-        
-            
-            
               <a href="https://github.com/nasa-pds/template-repo-python/blob/main/docs/source/terraform/index.rst" class="fa fa-github"> Edit on GitHub</a>
-            
-          
-        
       </li>
-    
   </ul>
-
-  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-            
-  <blockquote>
-<div><p>🌎  Terraform</p>
-</div></blockquote>
-<hr class="docutils" />
+             
+  <section id="terraform">
+<h1>🌎  Terraform<a class="headerlink" href="#terraform" title="Link to this heading"></a></h1>
 <p>This section describes how to deploy the server side components of the DUM to
 AWS via <a class="reference external" href="https://www.terraform.io/">Terraform</a>. These instructions are intended for PDS Engineering Node
 operators who will be in charge of deploying and maintaining new instances of the
@@ -179,8 +97,8 @@ DUM server components. For submitters of data to PDS Cloud, consult the <a class
 section for details on running the client-side script.</p>
 <p>Prior to utilizing this documentation, ensure Terraform 1.0.11 or greater has
 been installed on the same machine that the DUM repository has been cloned to.</p>
-<div class="section" id="deployment-scripts">
-<h1>Deployment Scripts<a class="headerlink" href="#deployment-scripts" title="Permalink to this headline">¶</a></h1>
+<section id="deployment-scripts">
+<h2>Deployment Scripts<a class="headerlink" href="#deployment-scripts" title="Link to this heading"></a></h2>
 <p>The DUM repository maintains a set of Terraform deployment scripts within the
 <cite>terraform</cite> directory at the root of the repository. These scripts define the
 AWS service components and their various inter-connections which Terraform
@@ -192,9 +110,9 @@ sets up automatically on a deployment.</p>
 <li><p>A submodule for deploying the API Gateway used to communicate with the client script (under <cite>terraform/modules/api_gateway</cite>)</p></li>
 <li><p>A main module which composes each of the submodues together to form the entire deployment (<cite>terraform/main.tf</cite>)</p></li>
 </ul>
-</div>
-<div class="section" id="creating-the-deployment-tfvars-file">
-<h1>Creating the deployment .tfvars file<a class="headerlink" href="#creating-the-deployment-tfvars-file" title="Permalink to this headline">¶</a></h1>
+</section>
+<section id="creating-the-deployment-tfvars-file">
+<h2>Creating the deployment .tfvars file<a class="headerlink" href="#creating-the-deployment-tfvars-file" title="Link to this heading"></a></h2>
 <p>By default, the Terraform scripts/modules described above are parameterized such that the service
 can be easily deployed to different AWS environments without hardcoding any sensitive or account-specific
 information within.</p>
@@ -202,6 +120,9 @@ information within.</p>
 to define the account-specific informations pertaining to the environment to deploy to. The following
 template can be used when creating a new <cite>tfvars</cite> file for use with a specific AWS environment:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Terraform override variables for use with the MCP AWS environment</span>
+<span class="n">localstack_context</span> <span class="o">=</span> <span class="n">false</span>
+<span class="n">venue</span> <span class="o">=</span> <span class="s2">&quot;&lt;dev|test|prod&gt;&quot;</span>
+
 <span class="n">profile</span>         <span class="o">=</span> <span class="s2">&quot;&lt;AWS_Profile_Name&gt;&quot;</span>
 <span class="n">credential_file</span> <span class="o">=</span> <span class="s2">&quot;&lt;Path_to_local_aws_credentials_file&gt;&quot;</span>
 
@@ -224,11 +145,20 @@ template can be used when creating a new <cite>tfvars</cite> file for use with a
   <span class="p">},</span>
   <span class="o">...</span>
 <span class="p">]</span>
+
+<span class="n">lambda_ingress_service_default_buckets</span> <span class="o">=</span> <span class="p">[</span>
+  <span class="p">{</span>
+    <span class="n">name</span>        <span class="o">=</span> <span class="s2">&quot;pds-sbn-staging&quot;</span><span class="p">,</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Default staging bucket for PDS Small Bodies Node&quot;</span>
+  <span class="p">},</span>
+  <span class="o">...</span>
+<span class="p">]</span>
 </pre></div>
 </div>
 <p>Each of the bracketed values above must be filled in with an appropriate value
 prior to deployment. Descriptions of each field follow:</p>
 <ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;dev|test|prod&gt;</span></code>: Name of the MCP venue to deploy to</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">&lt;AWS_Profile_Name&gt;</span></code>: The AWS Profile/Account name of the environment to deploy to.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">&lt;Path_to_local_aws_credentials_file&gt;</span></code>: Path to a local file (such as <code class="docutils literal notranslate"><span class="pre">~/.aws/credentials</span></code>) containing a valid set of AWS <a class="reference external" href="https://docs.aws.amazon.com/cli/latest/userguide/cli-authentication-short-term.html">credentials</a> for the specifed profile.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">&lt;S3_Bucket_Name&gt;</span></code>: Name of an S3 bucket which Terraform will use to stage intermediate build products. The bucket will be created by Terraform and should not already exist.</p></li>
@@ -243,26 +173,57 @@ prior to deployment. Descriptions of each field follow:</p>
 <li><p>The policy attached to the Role(s) must also grant adequate permissions for the following services: API Gateway, Cloudwatch, Cloudwatch Logs, Lambda, and S3</p></li>
 </ul>
 </div>
-<ul class="simple">
+<ul>
 <li><p>The <cite>nucleus_dum_cognito_initial_users</cite> can be populated with a list of dictionaries defining a set of user accounts to
-populate the Cognito user pool with upon creation. An arbitrary number of initial users can be provided.
-* The <code class="docutils literal notranslate"><span class="pre">&lt;Username&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;Password&gt;</span></code> fields can be anything, but the password must conform to the Password policy set on the Cognito user pool.
-* For <code class="docutils literal notranslate"><span class="pre">&lt;PDS_Group_Name&gt;</span></code>, one of the following may be used: <code class="docutils literal notranslate"><span class="pre">PDS_ATM_USERS,</span> <span class="pre">PDS_ENG_USERS,</span> <span class="pre">PDS_GEO_USERS,</span> <span class="pre">PDS_IMG_NODE,</span> <span class="pre">PDS_NAIF_USERS,</span> <span class="pre">PDS_PPI_USERS,</span> <span class="pre">PDS_RS_USERS,</span> <span class="pre">PDS_RMS_USERS,</span> <span class="pre">PDS_SBN_USERS</span></code>
-* <code class="docutils literal notranslate"><span class="pre">&lt;Email</span> <span class="pre">address&gt;</span></code> should be a valid email address for the user, as this is where things such as password resets will be sent.</p></li>
+populate the Cognito user pool with upon creation. An arbitrary number of initial users can be provided.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">&lt;Username&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;Password&gt;</span></code> fields can be anything, but the password must conform to the Password policy set on the Cognito user pool.</p></li>
+<li><p>For <code class="docutils literal notranslate"><span class="pre">&lt;PDS_Group_Name&gt;</span></code>, one of the following may be used: <code class="docutils literal notranslate"><span class="pre">PDS_ATM_USERS,</span> <span class="pre">PDS_ENG_USERS,</span> <span class="pre">PDS_GEO_USERS,</span> <span class="pre">PDS_IMG_NODE,</span> <span class="pre">PDS_NAIF_USERS,</span> <span class="pre">PDS_PPI_USERS,</span> <span class="pre">PDS_RS_USERS,</span> <span class="pre">PDS_RMS_USERS,</span> <span class="pre">PDS_SBN_USERS</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;Email</span> <span class="pre">address&gt;</span></code> should be a valid email address for the user, as this is where things such as password resets will be sent.</p></li>
 </ul>
+</div></blockquote>
+</li>
+<li><p>The <cite>lambda_ingress_service_default_buckets</cite> can be populated with a list of the default S3 buckets that should be created
+by Terraform for use with the bucket map of the Lambda Ingress Service.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Typically, there should be an entry for each PDS node that is expected to utilize DUM.</p></li>
+<li><p>Each bucket name provided will be appended with the name of selected venue to ensure uniqueness across accounts. For example, an entry with the name “pds-sbn-staging” will result in a bucket named “pds-sbn-staging-prod” if the venue is set to “prod”.</p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</section>
+<section id="setting-up-the-s3-backend">
+<h2>Setting up the S3 Backend<a class="headerlink" href="#setting-up-the-s3-backend" title="Link to this heading"></a></h2>
+<p>The Terraform scripts for DUM expect to utilize an S3 bucket as a “backend” to store the state of the Terraform-managed
+deployment. The <code class="docutils literal notranslate"><span class="pre">backend.tf</span></code> file holds the configuration for where the backend <code class="docutils literal notranslate"><span class="pre">.tfstate</span></code> file should be stored and read on
+subsequent deployments.</p>
+<p>Below is the default state of <code class="docutils literal notranslate"><span class="pre">backend.tf</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">terraform</span> <span class="p">{</span>
+  <span class="n">backend</span> <span class="s2">&quot;s3&quot;</span> <span class="p">{</span>
+    <span class="n">bucket</span> <span class="o">=</span> <span class="s2">&quot;pds-infra&quot;</span>
+    <span class="n">key</span>    <span class="o">=</span> <span class="s2">&quot;dev/dum_infra.tfstate&quot;</span>
+    <span class="n">region</span> <span class="o">=</span> <span class="s2">&quot;us-west-2&quot;</span>
+  <span class="p">}</span>
+</pre></div>
 </div>
-<div class="section" id="deploying-the-terraform">
-<h1>Deploying the Terraform<a class="headerlink" href="#deploying-the-terraform" title="Permalink to this headline">¶</a></h1>
-<p>Once the user <cite>.tfvars</cite> is created and saved locally, run the following commands to deploy the DUM service with terraform:</p>
+<p>If the <code class="docutils literal notranslate"><span class="pre">.tfstate</span></code> file is to reside in some other location within the venue, make sure this file is updated accordingly
+before runnint <code class="docutils literal notranslate"><span class="pre">terraform</span> <span class="pre">init</span></code>.</p>
+</section>
+<section id="deploying-the-terraform">
+<h2>Deploying the Terraform<a class="headerlink" href="#deploying-the-terraform" title="Link to this heading"></a></h2>
+<p>Once the user <code class="docutils literal notranslate"><span class="pre">.tfvars</span></code> is created and saved locally, run the following commands to deploy the DUM service with terraform:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">terraform</span> <span class="n">init</span>
 <span class="n">terraform</span> <span class="n">plan</span> <span class="o">-</span><span class="n">var</span><span class="o">-</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;&lt;path to user .tfvars file&gt;&quot;</span> <span class="o">-</span><span class="n">out</span><span class="o">=</span><span class="s2">&quot;pds-dum.tfplan&quot;</span>
 <span class="n">terraform</span> <span class="n">apply</span> <span class="s2">&quot;pds-dum.tfplan&quot;</span>
 </pre></div>
 </div>
 <p>If everything is configured correctly, deployment should only take about 5-10 minutes.</p>
-</div>
-<div class="section" id="utilizing-terraform-outputs">
-<h1>Utilizing Terraform Outputs<a class="headerlink" href="#utilizing-terraform-outputs" title="Permalink to this headline">¶</a></h1>
+</section>
+<section id="utilizing-terraform-outputs">
+<h2>Utilizing Terraform Outputs<a class="headerlink" href="#utilizing-terraform-outputs" title="Link to this heading"></a></h2>
 <p>On successful deployment, Terraform will output a number of key/value pairs with
 information needed to configure the INI config of the client-side <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code>
 application.</p>
@@ -286,71 +247,47 @@ application.</p>
 Client Configuration section of the <a class="reference external" href="../installation/index.html">installation</a> documentation. The values of these
 outputs should be securly stored for reference, as installers of the client script will
 have a need to know these values when setting up their local INI config.</p>
-</div>
-<div class="section" id="destroying-a-deployment">
-<h1>Destroying a Deployment<a class="headerlink" href="#destroying-a-deployment" title="Permalink to this headline">¶</a></h1>
+</section>
+<section id="destroying-a-deployment">
+<h2>Destroying a Deployment<a class="headerlink" href="#destroying-a-deployment" title="Link to this heading"></a></h2>
 <p>To destroy an existing deployment of the DUM Service, run the following from the same location
 the initial deploy was executed:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">terraform</span> <span class="n">destroy</span> <span class="o">-</span><span class="n">var</span><span class="o">-</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;&lt;path to user .tfvars file&gt;&quot;</span>
 </pre></div>
 </div>
 <p>Where <code class="docutils literal notranslate"><span class="pre">&lt;path</span> <span class="pre">to</span> <span class="pre">user</span> <span class="pre">.tfvars</span> <span class="pre">file&gt;</span></code> is the same <cite>.tfvars</cite> file used for the initial deployment.</p>
-</div>
+</section>
+</section>
 
 
            </div>
-           
           </div>
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="../api/index.html" class="btn btn-neutral float-right" title="️Command Line API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="../usage/index.html" class="btn btn-neutral float-left" title="🏃‍ ️Usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../usage/index.html" class="btn btn-neutral float-left" title="🏃‍ ️Usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../api/index.html" class="btn btn-neutral float-right" title="Command Line API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
-    <p>
-        
-        &copy; Copyright 2023 California Institute of Technology
-
-    </p>
+    <p>&#169; Copyright 2023 California Institute of Technology.</p>
   </div>
-    
-    
-    
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
-    
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
-    
-    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
 
 </footer>
-
         </div>
       </div>
-
     </section>
-
   </div>
-  
-
-  <script type="text/javascript">
+  <script>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>
