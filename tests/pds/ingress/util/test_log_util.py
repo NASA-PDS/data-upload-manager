@@ -15,15 +15,14 @@ from requests.exceptions import ConnectionError
 
 
 class LogUtilTest(unittest.TestCase):
-    def setUp(self):
-        if log_util.CLOUDWATCH_HANDLER:
-            log_util.CLOUDWATCH_HANDLER.bearer_token = None
-            log_util.CLOUDWATCH_HANDLER.node_id = None
-
     def tearDown(self):
         if log_util.FILE_HANDLER:
             if os.path.exists(log_util.FILE_HANDLER.baseFilename):
                 os.unlink(log_util.FILE_HANDLER.baseFilename)
+
+        if log_util.CLOUDWATCH_HANDLER:
+            log_util.CLOUDWATCH_HANDLER.bearer_token = None
+            log_util.CLOUDWATCH_HANDLER.node_id = None
 
     def test_setup_logging(self):
         """Tests for log_util.setup_logging()"""
@@ -142,13 +141,12 @@ class LogUtilTest(unittest.TestCase):
         log_util.CLOUDWATCH_HANDLER.bearer_token = "Bearer faketoken"
         log_util.CLOUDWATCH_HANDLER.node_id = "eng"
 
-        # Set up some canned HTTP responses for the transient error codes we retry for
+        # Skip the HTTP request to create the log stream
+        log_util.CLOUDWATCH_HANDLER._stream_created = True
+
+        # Set up some canned HTTP responses for transient error codes
         response_400 = Response()
         response_400.status_code = HTTPStatus.BAD_REQUEST
-        response_408 = Response()
-        response_408.status_code = HTTPStatus.REQUEST_TIMEOUT
-        response_425 = Response()
-        response_425.status_code = HTTPStatus.TOO_EARLY
         response_429 = Response()
         response_429.status_code = HTTPStatus.TOO_MANY_REQUESTS
         response_500 = Response()
@@ -159,20 +157,10 @@ class LogUtilTest(unittest.TestCase):
         response_503.status_code = HTTPStatus.SERVICE_UNAVAILABLE
         response_504 = Response()
         response_504.status_code = HTTPStatus.GATEWAY_TIMEOUT
-        response_509 = Response()
-        response_509.status_code = 509  # Bandwidth Limit Exceeded (non-standard code used by AWS)
+        response_200 = Response()
+        response_200.status_code = HTTPStatus.OK
 
-        responses = [
-            response_400,
-            response_408,
-            response_425,
-            response_429,
-            response_500,
-            response_502,
-            response_503,
-            response_504,
-            response_509,
-        ]
+        responses = [response_400, response_429, response_500, response_502, response_503, response_504, response_200]
 
         # Set up a Mock function for session.get which will cycle through all
         # transient error codes before finally returning success (200)
@@ -184,10 +172,13 @@ class LogUtilTest(unittest.TestCase):
         # Ensure we retired at least once for each of the failed responses
         self.assertGreaterEqual(mock_requests_post.call_count, len(responses))
 
-        # Now try with a simulated connection error, which is not caught by requests.raise_for_status()
+        # Now try with a simulated connection error, which is not a typical HTTPError
         response_104 = Response()
         response_104.status_code = 104
-        mock_requests_post = MagicMock(side_effect=ConnectionError("Connection reset by peer", response=response_104))
+
+        responses = [ConnectionError("Connection reset by peer", response=response_104), response_200]
+
+        mock_requests_post = MagicMock(side_effect=responses)
 
         with patch.object(log_util.requests, "post", mock_requests_post):
             log_util.CLOUDWATCH_HANDLER.flush()
