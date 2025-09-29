@@ -19,6 +19,7 @@
 
 **Defects:**
 
+- During DUM load, undocumented message about "Backing off" [\#282](https://github.com/NASA-PDS/data-upload-manager/issues/282) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 - DUM output has typo [\#271](https://github.com/NASA-PDS/data-upload-manager/issues/271) [[s.low](https://github.com/NASA-PDS/data-upload-manager/labels/s.low)]
 - When DUM crashes, the report it generates falsely indicates success [\#241](https://github.com/NASA-PDS/data-upload-manager/issues/241) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 
