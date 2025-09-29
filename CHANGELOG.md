@@ -7,6 +7,7 @@
 **Requirements:**
 
 - As a user, I want to specify in include/exclude filters for the set of input file paths [\#262](https://github.com/NASA-PDS/data-upload-manager/issues/262)
+- As a user, I want to load web logs to the web analytics bucket [\#232](https://github.com/NASA-PDS/data-upload-manager/issues/232)
 - As a user, I want to support upload of files \>5GB [\#221](https://github.com/NASA-PDS/data-upload-manager/issues/221)
 - As a user, I want to upload files to S3 Glacier directly via DUM [\#205](https://github.com/NASA-PDS/data-upload-manager/issues/205)
 - As a user, I want timestamps to the ongoing logs that are printed to stdout while running the job [\#118](https://github.com/NASA-PDS/data-upload-manager/issues/118)
