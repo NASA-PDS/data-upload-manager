@@ -147,15 +147,47 @@ class PathUtilTest(unittest.TestCase):
             join(abspath(self.working_dir.name), "dir_one", "dir_two", "low_level_file.txt"),
         ]
 
-        trimmed_paths = [
-            PathUtil.trim_ingress_path(ingress_path, prefix=abspath(self.working_dir.name))
-            for ingress_path in ingress_paths
-        ]
+        prefix = {"old": abspath(self.working_dir.name), "new": ""}
+
+        trimmed_paths = [PathUtil.trim_ingress_path(ingress_path, prefix=prefix) for ingress_path in ingress_paths]
 
         self.assertIn("top_level_file.txt", trimmed_paths)
         self.assertIn(join("dir_one", "mid_level_file.txt"), trimmed_paths)
         self.assertIn(join("dir_one", "dir_two", "low_level_file.txt"), trimmed_paths)
 
+        prefix = {"old": abspath(self.working_dir.name), "new": "replacement"}
+
+        trimmed_paths = [PathUtil.trim_ingress_path(ingress_path, prefix=prefix) for ingress_path in ingress_paths]
+
+        self.assertIn("replacement/top_level_file.txt", trimmed_paths)
+        self.assertIn(join("replacement", "dir_one", "mid_level_file.txt"), trimmed_paths)
+        self.assertIn(join("replacement", "dir_one", "dir_two", "low_level_file.txt"), trimmed_paths)
+
+        ingress_paths = [
+            join("dir_one", "dir_two", "dir_one_again", "dir_one_two", "file.txt"),
+        ]
+
+        # Make sure we perform at most one replacement at the beginning of the string
+        prefix = {"old": "dir_one", "new": "replacement"}
+
+        trimmed_paths = [PathUtil.trim_ingress_path(ingress_path, prefix=prefix) for ingress_path in ingress_paths]
+
+        self.assertIn("replacement/dir_two/dir_one_again/dir_one_two/file.txt", trimmed_paths)
+
+        # Make sure we do not perform replacement when "old" value is falsey
+        prefix = {"old": None, "new": "replacement"}
+
+        untrimmed_paths = [PathUtil.trim_ingress_path(ingress_path, prefix=prefix) for ingress_path in ingress_paths]
+
+        self.assertListEqual(ingress_paths, untrimmed_paths)
+
+        prefix = {"old": "", "new": "replacement"}
+
+        untrimmed_paths = [PathUtil.trim_ingress_path(ingress_path, prefix=prefix) for ingress_path in ingress_paths]
+
+        self.assertListEqual(ingress_paths, untrimmed_paths)
+
+        # Trim paths with no prefix dictionary provided
         untrimmed_paths = [PathUtil.trim_ingress_path(ingress_path) for ingress_path in ingress_paths]
 
         self.assertListEqual(ingress_paths, untrimmed_paths)
