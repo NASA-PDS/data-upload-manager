@@ -90,7 +90,7 @@ module "lambda_bucket" {
 module "lambda_ingress_service_s3_object" {
   source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object"  # pragma: allowlist secret
   bucket      = module.lambda_bucket.bucket_id
-  key         = "dum-lambda-auth.zip"
+  key         = "dum-ingress-service.zip"
   source_path = data.archive_file.lambda_ingress_service.output_path
 }
 
