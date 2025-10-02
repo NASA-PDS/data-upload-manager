@@ -33,7 +33,8 @@ except ImportError:
     SSLError = MagicMock()
 
 
-MOCK_REQUESTS_SEMAPHORE = multiprocessing.Semaphore(1)
+BATCH_REQUEST_FAILURE_SEMAPHORE = multiprocessing.Semaphore(1)
+INGRESS_FAILURE_SEMAPHORE = multiprocessing.Semaphore(1)
 
 
 def fatal_code(err: requests.exceptions.RequestException) -> bool:
@@ -126,7 +127,7 @@ def check_failure_chance(percentage: int) -> bool:
 
 
 def _simulate_requests_failure(
-    mock_requests, url, http_method, enable_key, failure_rate_key, failure_class_key, failure_status_code_key
+    mock_requests, url, http_method, failure_rate_key, failure_class_key, failure_status_code_key
 ):
     """
     Simulates a random failure for S3 ingress by registering the provided
@@ -148,8 +149,6 @@ def _simulate_requests_failure(
         The URL to which the simulated failure will be applied.
     http_method : str
         HTTP method to register the failure for (e.g., 'POST', 'PUT').
-    enable_key : str
-        Name of the INI key to check if failure simulation is enabled.
     failure_rate_key : str
         Name of the INI key that specifies the percentage chance of failure.
     failure_class_key : str
@@ -158,29 +157,28 @@ def _simulate_requests_failure(
     """
     config = ConfigUtil.get_config()
 
-    # Check if simulated failures are enabled, and if so, if we should simulate
-    # a failure via mock_requests based on the configured failure chance
-    if strtobool(config.get("DEBUG", enable_key, fallback="false")):
-        if check_failure_chance(int(config.get("DEBUG", failure_rate_key, fallback="0"))):
-            # Check if we're simulating a failure by raising an exception
-            failure_class_str = config.get("DEBUG", failure_class_key, fallback=None)
+    # Check if we should simulate a failure via mock_requests based on the
+    # configured failure chance
+    if check_failure_chance(int(config.get("DEBUG", failure_rate_key, fallback="0"))):
+        # Check if we're simulating a failure by raising an exception
+        failure_class_str = config.get("DEBUG", failure_class_key, fallback=None)
 
-            if failure_class_str is not None:
-                # Dynamically import the exception class to raise
-                failure_class_module, failure_exception_name = failure_class_str.rsplit(".", 1)
+        if failure_class_str is not None:
+            # Dynamically import the exception class to raise
+            failure_class_module, failure_exception_name = failure_class_str.rsplit(".", 1)
 
-                module = importlib.import_module(failure_class_module)
-                exception_klass = getattr(module, failure_exception_name)
+            module = importlib.import_module(failure_class_module)
+            exception_klass = getattr(module, failure_exception_name)
 
-                kwargs = {"exc": exception_klass}
-            # Otherwise, fall back to raising an HTTPError with a status code
-            else:
-                failure_status_code = int(config.get("DEBUG", failure_status_code_key, fallback="500"))
+            kwargs = {"exc": exception_klass}
+        # Otherwise, fall back to raising an HTTPError with a status code
+        else:
+            failure_status_code = int(config.get("DEBUG", failure_status_code_key, fallback="500"))
 
-                kwargs = {"status_code": failure_status_code}
+            kwargs = {"status_code": failure_status_code}
 
-            # Register the URL with the mock_requests to raise the specified exception w/ status code
-            mock_requests.register_uri(http_method, url, **kwargs)
+        # Register the URL with the mock_requests to raise the specified exception w/ status code
+        mock_requests.register_uri(http_method, url, **kwargs)
 
     return mock_requests
 
@@ -197,21 +195,26 @@ def simulate_batch_request_failure(api_gateway_url):
         The API Gateway URL to which the simulated failure will be applied.
 
     """
-    with MOCK_REQUESTS_SEMAPHORE:
-        with requests_mock.Mocker(real_http=True) as mock_requests:
-            try:
-                yield _simulate_requests_failure(
-                    mock_requests,
-                    api_gateway_url,
-                    "POST",
-                    "simulate_batch_request_failures",
-                    "batch_request_failure_rate",
-                    "batch_request_failure_class",
-                    "batch_request_failure_status_code",
-                )
-            finally:
-                # Remove any previously registered URL(s)
-                mock_requests.reset()
+    config = ConfigUtil.get_config()
+
+    # Check if simulated failures are enabled
+    if strtobool(config.get("DEBUG", "simulate_batch_request_failures", fallback="false")):
+        with BATCH_REQUEST_FAILURE_SEMAPHORE:
+            with requests_mock.Mocker(real_http=True) as mock_requests:
+                try:
+                    yield _simulate_requests_failure(
+                        mock_requests,
+                        api_gateway_url,
+                        "POST",
+                        "batch_request_failure_rate",
+                        "batch_request_failure_class",
+                        "batch_request_failure_status_code",
+                    )
+                finally:
+                    # Remove any previously registered URL(s)
+                    mock_requests.reset()
+    else:
+        yield
 
 
 @contextmanager
@@ -226,18 +229,23 @@ def simulate_ingress_failure(s3_ingress_url):
         The S3 ingress URL to which the simulated failure will be applied.
 
     """
-    with MOCK_REQUESTS_SEMAPHORE:
-        with requests_mock.Mocker(real_http=True) as mock_requests:
-            try:
-                yield _simulate_requests_failure(
-                    mock_requests,
-                    s3_ingress_url,
-                    "PUT",
-                    "simulate_ingress_failures",
-                    "ingress_failure_rate",
-                    "ingress_failure_class",
-                    "ingress_failure_status_code",
-                )
-            finally:
-                # Remove any previously registered URL(s)
-                mock_requests.reset()
+    config = ConfigUtil.get_config()
+
+    # Check if simulated failures are enabled
+    if strtobool(config.get("DEBUG", "simulate_ingress_failures", fallback="false")):
+        with INGRESS_FAILURE_SEMAPHORE:
+            with requests_mock.Mocker(real_http=True) as mock_requests:
+                try:
+                    yield _simulate_requests_failure(
+                        mock_requests,
+                        s3_ingress_url,
+                        "PUT",
+                        "ingress_failure_rate",
+                        "ingress_failure_class",
+                        "ingress_failure_status_code",
+                    )
+                finally:
+                    # Remove any previously registered URL(s)
+                    mock_requests.reset()
+    else:
+        yield

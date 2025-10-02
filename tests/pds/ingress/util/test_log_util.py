@@ -15,6 +15,11 @@ from requests.exceptions import ConnectionError
 
 
 class LogUtilTest(unittest.TestCase):
+    def setUp(self):
+        if log_util.CLOUDWATCH_HANDLER:
+            log_util.CLOUDWATCH_HANDLER.bearer_token = None
+            log_util.CLOUDWATCH_HANDLER.node_id = None
+
     def tearDown(self):
         if log_util.FILE_HANDLER:
             if os.path.exists(log_util.FILE_HANDLER.baseFilename):
