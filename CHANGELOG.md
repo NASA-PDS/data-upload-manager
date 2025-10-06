@@ -1,8 +1,8 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-10-06)
+## [release/2.2.2](https://github.com/NASA-PDS/data-upload-manager/tree/release/2.2.2) (2025-10-06)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.2.1...«unknown»)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.2.1...release/2.2.2)
 
 **Improvements:**
 
