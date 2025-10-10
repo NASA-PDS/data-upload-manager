@@ -63,13 +63,15 @@ def update_last_modified_metadata(key, head_metadata):
             last_modified = head_metadata["LastModified"].replace(tzinfo=timezone.utc).isoformat()
 
         updated_metadata["last_modified"] = last_modified
-        logger.info(f"Updating object {key} with {updated_metadata['last_modified']=}")
+        logger.info(
+            "Updating object %s with updated_metadata['last_modified']=%s", key, str(updated_metadata["last_modified"])
+        )
 
     if not mtime:
         # Convert ISO 8601 to epoch time for the mtime field
         epoch_last_modified = calendar.timegm(datetime.fromisoformat(updated_metadata["last_modified"]).timetuple())
         updated_metadata["mtime"] = str(epoch_last_modified)
-        logger.info(f"Updating object {key} with {updated_metadata['mtime']=}")
+        logger.info("Updating object %s with updated_metadata['mtime']=%s", key, str(updated_metadata["mtime"]))
 
     return updated_metadata
 
@@ -98,9 +100,9 @@ def update_md5_metadata(key, head_metadata):
         # Note this is only valid for non-multipart uploads
         etag = head_metadata["ETag"].strip('"')
         updated_metadata["md5"] = etag
-        logger.info(f"Updating object {key} with {updated_metadata['md5']=}")
+        logger.info("Updating object %s with updated_metadata['md5']=%s", key, str(updated_metadata["md5"]))
     except Exception as err:
-        logger.error(f"Failed to retrieve ETag for object {key}, reason: {err}")
+        logger.error("Failed to retrieve ETag for object %s, reason: %s", key, str(err))
 
     return updated_metadata
 
@@ -147,10 +149,10 @@ def process_s3_object(bucket_name, key):
             )
             return key, "updated"
         else:
-            logger.debug(f"Skipping object {key}, no updates required")
+            logger.debug("Skipping object %s, no updates required", key)
             return key, "skipped"
     except Exception as err:
-        logger.error(f"Failed to update metadata for object {key}, reason: {err}")
+        logger.error("Failed to update metadata for object %s, reason: %s", key, str(err))
         return key, "failed"
 
 
@@ -203,7 +205,7 @@ def update_s3_objects_metadata(context, bucket_name, prefix=None, timeout_buffer
 
     num_cores = max(os.cpu_count(), 1)
 
-    logger.info(f"Available CPU cores: {num_cores}")
+    logger.info("Available CPU cores: %d", num_cores)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_cores) as executor:
         futures = [executor.submit(process_s3_object, bucket_name, key) for key in keys]
