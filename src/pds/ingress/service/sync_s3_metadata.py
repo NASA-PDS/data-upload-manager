@@ -4,47 +4,103 @@ sync_s3_metadata.py
 ===================
 
 Lambda function which updates existing objects in S3 with metdata typically
-added by the rclone utility.
+added by either the DUM ingress client or the rclone utility.
 """
 import calendar
 import concurrent.futures
 import logging
 import os
 from datetime import datetime
+from datetime import timezone
 
 import boto3
 
+LOG_LEVELS = {
+    "critical": logging.CRITICAL,
+    "warn": logging.WARNING,
+    "warning": logging.WARNING,
+    "info": logging.INFO,
+    "debug": logging.DEBUG,
+}
 
 s3 = boto3.client("s3")
 paginator = s3.get_paginator("list_objects_v2")
 
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(LOG_LEVELS.get(LOG_LEVEL.lower(), logging.INFO))
 
 
-def update_s3_object_metadata(metadata_dict):
+def update_last_modified_metadata(key, head_metadata):
     """
     Updates an S3 object's metadata dictionary to include fields added during
     rclone uploads.
 
     Parameters
     ----------
-    metadata_dict : dict
-        Dictionary of existing metadata for an S3 object. Must include
-        'last_modified' field.
+    key : str
+        S3 object key. Used for logging.
+    head_metadata : dict
+        Dictionary of metadata for the S3 object as returned by head_object().
 
     Returns
     -------
     updated_metadata : dict
-        Updated metadata dictionary including 'mtime' field.
+        Updated custom metadata dictionary including 'last_modified' and 'mtime' fields.
 
     """
-    last_modified = metadata_dict["last_modified"]
+    updated_metadata = head_metadata.get("Metadata", {}).copy()
 
-    epoch_last_modified = calendar.timegm(datetime.fromisoformat(last_modified).timetuple())
+    last_modified = updated_metadata.get("last_modified")
+    mtime = updated_metadata.get("mtime")
 
-    updated_metadata = metadata_dict.copy()
-    updated_metadata["mtime"] = str(epoch_last_modified)
+    if not last_modified:
+        # Use the mtime assigned by rclone
+        if mtime:
+            last_modified = datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat()
+        # Fall back to the S3 LastModified value
+        else:
+            last_modified = head_metadata["LastModified"].replace(tzinfo=timezone.utc).isoformat()
+
+        updated_metadata["last_modified"] = last_modified
+        logger.info(f"Updating object {key} with {updated_metadata['last_modified']=}")
+
+    if not mtime:
+        # Convert ISO 8601 to epoch time for the mtime field
+        epoch_last_modified = calendar.timegm(datetime.fromisoformat(updated_metadata["last_modified"]).timetuple())
+        updated_metadata["mtime"] = str(epoch_last_modified)
+        logger.info(f"Updating object {key} with {updated_metadata['mtime']=}")
+
+    return updated_metadata
+
+
+def update_md5_metadata(key, head_metadata):
+    """
+    Updates an S3 object's metadata dictionary to include the 'md5' field.
+
+    Parameters
+    ----------
+    key : str
+        S3 object key. Used for logging.
+    head_metadata : dict
+        Dictionary of metadata for the S3 object as returned by head_object().
+
+    Returns
+    -------
+    updated_metadata : dict
+        Updated custom metadata dictionary including 'md5' field.
+
+    """
+    updated_metadata = head_metadata.get("Metadata", {}).copy()
+
+    try:
+        # Use the Etag as the MD5 checksum, stripping any surrounding quotes
+        # Note this is only valid for non-multipart uploads
+        etag = head_metadata["ETag"].strip('"')
+        updated_metadata["md5"] = etag
+        logger.info(f"Updating object {key} with {updated_metadata['md5']=}")
+    except Exception as err:
+        logger.error(f"Failed to retrieve ETag for object {key}, reason: {err}")
 
     return updated_metadata
 
@@ -69,29 +125,30 @@ def process_s3_object(bucket_name, key):
 
     """
     try:
-        head = s3.head_object(Bucket=bucket_name, Key=key)
-        metadata_dict = head.get("Metadata", {})
+        update_made = False
+        head_metadata = s3.head_object(Bucket=bucket_name, Key=key)
+        metadata_dict = head_metadata.get("Metadata", {})
 
-        if "mtime" in metadata_dict:
-            logger.debug(f"Object {key} already has required metadata. Skipping.")
+        if "mtime" not in metadata_dict or "last_modified" not in metadata_dict:
+            head_metadata["Metadata"] = update_last_modified_metadata(key, head_metadata)
+            update_made = True
+
+        if "md5" not in metadata_dict:
+            head_metadata["Metadata"] = update_md5_metadata(key, head_metadata)
+            update_made = True
+
+        if update_made:
+            s3.copy_object(
+                Bucket=bucket_name,
+                Key=key,
+                CopySource={"Bucket": bucket_name, "Key": key},
+                Metadata=head_metadata["Metadata"],
+                MetadataDirective="REPLACE",
+            )
+            return key, "updated"
+        else:
+            logger.debug(f"Skipping object {key}, no updates required")
             return key, "skipped"
-
-        try:
-            updated_metadata = update_s3_object_metadata(metadata_dict)
-        except KeyError as err:
-            logger.error(f"Missing expected metadata key for object {key}: {err}")
-            return key, "failed"
-
-        logger.debug(f"Updating object {key} with {updated_metadata['mtime']=}")
-
-        s3.copy_object(
-            Bucket=bucket_name,
-            Key=key,
-            CopySource={"Bucket": bucket_name, "Key": key},
-            Metadata=updated_metadata,
-            MetadataDirective="REPLACE",
-        )
-        return key, "updated"
     except Exception as err:
         logger.error(f"Failed to update metadata for object {key}, reason: {err}")
         return key, "failed"
