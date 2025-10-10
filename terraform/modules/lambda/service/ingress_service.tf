@@ -260,6 +260,12 @@ resource "aws_lambda_function" "metadata_sync_service" {
 
   role = var.lambda_ingress_service_iam_role_arn
 
+  environment {
+    variables = {
+      LOG_LEVEL = "INFO"
+    }
+  }
+
   # Use maximum available timeout
   timeout = 900
 
