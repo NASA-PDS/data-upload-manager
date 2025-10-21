@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 ===================
 sync_s3_metadata.py
@@ -6,6 +7,7 @@ sync_s3_metadata.py
 Lambda function which updates existing objects in S3 with metdata typically
 added by either the DUM ingress client or the rclone utility.
 """
+import argparse
 import calendar
 import concurrent.futures
 import logging
@@ -27,6 +29,7 @@ s3 = boto3.client("s3")
 paginator = s3.get_paginator("list_objects_v2")
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+logging.basicConfig()
 logger = logging.getLogger()
 logger.setLevel(LOG_LEVELS.get(LOG_LEVEL.lower(), logging.INFO))
 
@@ -163,9 +166,10 @@ def update_s3_objects_metadata(context, bucket_name, prefix=None, timeout_buffer
 
     Parameters
     ----------
-    context : object
+    context : object, optional
         Object containing details of the AWS context in which the Lambda was
-        invoked.
+        invoked. Used to check remaining execution time. If None, no time
+        checks are performed.
     bucket_name : str
         Name of the S3 bucket.
     prefix : str, optional
@@ -186,6 +190,8 @@ def update_s3_objects_metadata(context, bucket_name, prefix=None, timeout_buffer
         List of S3 object keys that were not processed due to Lambda timeout.
 
     """
+    logger.info("Starting S3 metadata update service")
+
     pagination_params = {"Bucket": bucket_name}
 
     if prefix:
@@ -196,23 +202,24 @@ def update_s3_objects_metadata(context, bucket_name, prefix=None, timeout_buffer
     failed = []
     unprocessed = []
 
+    num_cores = max(os.cpu_count(), 1)
+
+    logger.info("Available CPU cores: %d", num_cores)
+
     keys = []
 
+    logger.info("Indexing objects in bucket %s with prefix %s", bucket_name, prefix or "")
     for page in paginator.paginate(**pagination_params):
         for obj in page.get("Contents", []):
             keys.append(obj["Key"])
             unprocessed.append(obj["Key"])
-
-    num_cores = max(os.cpu_count(), 1)
-
-    logger.info("Available CPU cores: %d", num_cores)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_cores) as executor:
         futures = [executor.submit(process_s3_object, bucket_name, key) for key in keys]
 
         for future in concurrent.futures.as_completed(futures):
             # Check Lambda remaining time
-            if context.get_remaining_time_in_millis() < timeout_buffer_ms:
+            if context and context.get_remaining_time_in_millis() < timeout_buffer_ms:
                 logger.warning("Approaching Lambda timeout, cancelling remaining tasks.")
                 for f in futures:
                     f.cancel()
@@ -242,9 +249,10 @@ def lambda_handler(event, context):
     ----------
     event : dict
         Dictionary containing details of the event that triggered the Lambda.
-    context : object
+    context : object, optional
         Object containing details of the AWS context in which the Lambda was
-        invoked.
+        invoked. Used to check remaining execution time. If None, no time
+        checks are performed.
 
     Returns
     -------
@@ -274,3 +282,13 @@ def lambda_handler(event, context):
     logger.info("S3 Object Metadata update result:\n%s", result)
 
     return result
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Invoke S3 metadata sync outside of Lambda.")
+    parser.add_argument("bucket", help="S3 bucket name")
+    parser.add_argument("prefix", help="S3 prefix")
+    args = parser.parse_args()
+
+    event = {"bucket_name": args.bucket, "prefix": args.prefix}
+    lambda_handler(event, None)
