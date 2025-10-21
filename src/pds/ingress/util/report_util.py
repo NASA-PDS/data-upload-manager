@@ -8,12 +8,17 @@ to track status of a DUM upload request.
 
 """
 import json
+import multiprocessing
 import os
 import time
 from datetime import datetime
 from datetime import timezone
 
 from pds.ingress.util.log_util import get_logger
+
+
+REPORT_SEMAPHORE = multiprocessing.Semaphore(1)
+"""Semaphore used to control write access to the summary table"""
 
 EXPECTED_MANIFEST_KEYS = ("ingress_path", "md5", "size", "last_modified")
 """The keys we expect to find assigned to each mapping within a read manifest"""
@@ -59,18 +64,19 @@ def update_summary_table(summary_table, key, paths):
     if not isinstance(paths, list):
         paths = [paths]
 
-    summary_table[key].update(paths)
+    with REPORT_SEMAPHORE:
+        summary_table[key].update(paths)
 
-    if key == "uploaded":
-        # Update total number of bytes transferrred for successful uploads
-        summary_table["transferred"] += sum(os.stat(path).st_size for path in paths)
+        if key == "uploaded":
+            # Update total number of bytes transferrred for successful uploads
+            summary_table["transferred"] += sum(os.stat(path).st_size for path in paths)
 
-        # If this file or files previous failed, remove from the failed set
-        summary_table["failed"] -= set(paths)
+            # If this file or files previous failed, remove from the failed set
+            summary_table["failed"] -= set(paths)
 
-    # Prune any now-visted paths from the unprocessed set
-    if key != "unprocessed":
-        summary_table["unprocessed"] -= set(paths)
+        # Prune any now-visted paths from the unprocessed set
+        if key != "unprocessed":
+            summary_table["unprocessed"] -= set(paths)
 
 
 def print_ingress_summary(summary_table):
