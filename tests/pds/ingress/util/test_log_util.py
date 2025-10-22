@@ -19,6 +19,7 @@ class LogUtilTest(unittest.TestCase):
         if log_util.CLOUDWATCH_HANDLER:
             log_util.CLOUDWATCH_HANDLER.bearer_token = None
             log_util.CLOUDWATCH_HANDLER.node_id = None
+            log_util.CLOUDWATCH_HANDLER._stream_created = False
 
     def tearDown(self):
         if log_util.FILE_HANDLER:
@@ -28,6 +29,7 @@ class LogUtilTest(unittest.TestCase):
         if log_util.CLOUDWATCH_HANDLER:
             log_util.CLOUDWATCH_HANDLER.bearer_token = None
             log_util.CLOUDWATCH_HANDLER.node_id = None
+            log_util.CLOUDWATCH_HANDLER._stream_created = False
 
     def test_setup_logging(self):
         """Tests for log_util.setup_logging()"""
@@ -77,8 +79,6 @@ class LogUtilTest(unittest.TestCase):
         """Tests for CloudWatchHandler.send_log_events_to_cloud_watch()"""
         logger = log_util.get_logger("test_send_log_events_to_cloud_watch", console=False, file=False)
 
-        logger.info("Test message")
-
         # Ensure we see the following message logged when attempting to flush
         # to CloudWatch before the Cognito authentication information is set
         with self.assertLogs(level="DEBUG") as cm:
@@ -93,6 +93,11 @@ class LogUtilTest(unittest.TestCase):
         # Set dummy Cognito authentication values on handler
         log_util.CLOUDWATCH_HANDLER.bearer_token = "Bearer faketoken"
         log_util.CLOUDWATCH_HANDLER.node_id = "eng"
+
+        # Skip the HTTP request to create the log stream
+        log_util.CLOUDWATCH_HANDLER._stream_created = True
+
+        logger.info("Test message")
 
         def requests_post_patch(url, data=None, json=None, **kwargs):
             """Mock implementation for requests.post()"""
@@ -130,6 +135,7 @@ class LogUtilTest(unittest.TestCase):
 
             response = requests.Response()
             response.status_code = HTTPStatus.OK
+            response._content = b'{"message": "Success"}'  # Need this to ensure success response is valid JSON
 
             return response
 
@@ -164,6 +170,7 @@ class LogUtilTest(unittest.TestCase):
         response_504.status_code = HTTPStatus.GATEWAY_TIMEOUT
         response_200 = Response()
         response_200.status_code = HTTPStatus.OK
+        response_200._content = b'{"message": "Success"}'  # Need this to ensure success response is valid JSON
 
         responses = [response_400, response_429, response_500, response_502, response_503, response_504, response_200]
 
@@ -174,8 +181,8 @@ class LogUtilTest(unittest.TestCase):
         with patch.object(log_util.requests, "post", mock_requests_post):
             log_util.CLOUDWATCH_HANDLER.flush()
 
-        # Ensure we retired at least once for each of the failed responses
-        self.assertGreaterEqual(mock_requests_post.call_count, len(responses))
+        # Ensure we retired once for each of the failed responses
+        self.assertEqual(mock_requests_post.call_count, len(responses))
 
         # Now try with a simulated connection error, which is not a typical HTTPError
         response_104 = Response()
@@ -188,5 +195,5 @@ class LogUtilTest(unittest.TestCase):
         with patch.object(log_util.requests, "post", mock_requests_post):
             log_util.CLOUDWATCH_HANDLER.flush()
 
-        # Ensure we retried at least once for a connection error
-        self.assertGreaterEqual(mock_requests_post.call_count, 1)
+        # Ensure we retried once for a connection error
+        self.assertEqual(mock_requests_post.call_count, 2)

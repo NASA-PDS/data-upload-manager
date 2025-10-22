@@ -742,7 +742,7 @@ def setup_argparser():
         "--num-threads",
         "-t",
         type=int,
-        default=-1,
+        default=os.cpu_count(),
         help="Specify the number of threads to use when uploading "
         "files to S3 in parallel. By default, all available "
         "cores are used.",
