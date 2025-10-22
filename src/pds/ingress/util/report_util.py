@@ -17,8 +17,8 @@ from datetime import timezone
 from pds.ingress.util.log_util import get_logger
 
 
-REPORT_SEMAPHORE = multiprocessing.Semaphore(1)
-"""Semaphore used to control write access to the summary table"""
+REPORT_LOCK = multiprocessing.Lock()
+"""Lock used to control write access to the summary table"""
 
 EXPECTED_MANIFEST_KEYS = ("ingress_path", "md5", "size", "last_modified")
 """The keys we expect to find assigned to each mapping within a read manifest"""
@@ -64,7 +64,7 @@ def update_summary_table(summary_table, key, paths):
     if not isinstance(paths, list):
         paths = [paths]
 
-    with REPORT_SEMAPHORE:
+    with REPORT_LOCK:
         summary_table[key].update(paths)
 
         if key == "uploaded":

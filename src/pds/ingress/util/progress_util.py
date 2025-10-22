@@ -18,8 +18,8 @@ MANIFEST_BAR = None
 TOTAL_INGRESS_BAR = None
 BATCH_BARS = []
 
-BATCH_SEMAPHORE = multiprocessing.Semaphore(1)
-"""Semaphore used to control write access to Batch progress bars"""
+BATCH_LOCK = multiprocessing.Lock()
+"""Lock used to control write access to Batch progress bars"""
 
 LIGHT_GREEN = "#05E520"
 """Hex code for a light green color"""
@@ -194,7 +194,7 @@ def get_available_batch_progress_bar(total, desc=None):
     """
     batch_pbar = None
 
-    with BATCH_SEMAPHORE:
+    with BATCH_LOCK:
         while batch_pbar is None:
             try:
                 batch_pbar = next(pbar for pbar in BATCH_BARS if not pbar.in_use)
@@ -293,7 +293,7 @@ def close_batch_progress_bars():
     if not BATCH_BARS:
         return
 
-    with BATCH_SEMAPHORE:
+    with BATCH_LOCK:
         for batch_pbar in BATCH_BARS:
             batch_pbar.upload_pbar.close()
             batch_pbar.close()

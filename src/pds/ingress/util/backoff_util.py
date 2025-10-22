@@ -33,8 +33,11 @@ except ImportError:
     SSLError = MagicMock()
 
 
-BATCH_REQUEST_FAILURE_SEMAPHORE = multiprocessing.Semaphore(1)
-INGRESS_FAILURE_SEMAPHORE = multiprocessing.Semaphore(1)
+BATCH_REQUEST_FAILURE_LOCK = multiprocessing.Lock()
+"""Lock used to control write access to batch failure simulation request mocker"""
+
+INGRESS_FAILURE_LOCK = multiprocessing.Lock()
+"""Lock used to control write access to ingress failure simulation request mocker"""
 
 
 def fatal_code(err: requests.exceptions.RequestException) -> bool:
@@ -199,7 +202,7 @@ def simulate_batch_request_failure(api_gateway_url):
 
     # Check if simulated failures are enabled
     if strtobool(config.get("DEBUG", "simulate_batch_request_failures", fallback="false")):
-        with BATCH_REQUEST_FAILURE_SEMAPHORE:
+        with BATCH_REQUEST_FAILURE_LOCK:
             with requests_mock.Mocker(real_http=True) as mock_requests:
                 try:
                     yield _simulate_requests_failure(
@@ -233,7 +236,7 @@ def simulate_ingress_failure(s3_ingress_url):
 
     # Check if simulated failures are enabled
     if strtobool(config.get("DEBUG", "simulate_ingress_failures", fallback="false")):
-        with INGRESS_FAILURE_SEMAPHORE:
+        with INGRESS_FAILURE_LOCK:
             with requests_mock.Mocker(real_http=True) as mock_requests:
                 try:
                     yield _simulate_requests_failure(
