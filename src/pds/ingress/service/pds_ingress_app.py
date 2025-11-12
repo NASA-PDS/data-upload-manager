@@ -135,49 +135,36 @@ def bucket_exists(destination_bucket):
     return True
 
 
-def should_overwrite_file(
-    destination_bucket, object_key, md5_digest, base64_md5_digest, file_size, last_modified, force_overwrite
-):
+def file_exists_in_bucket(bucket_name, object_key, md5_digest, base64_md5_digest, file_size, last_modified):
     """
-    Determines if the file requested for ingress already exists in the S3
-    location we plan to upload to, and whether it should be overwritten with a
-    new version based on file info provided in the request headers.
+    Checks if the file already exists in the given S3 bucket and matches the same
+    content (MD5 + size + modified time).
 
     Parameters
     ----------
-    destination_bucket : str
-        Name of the S3 bucket to be uploaded to.
+    bucket_name : str
+        The S3 bucket name to check.
     object_key : str
-        Object key location within the S3 bucket to be uploaded to.
+        The object key to check.
     md5_digest : str
-        MD5 hash digest of the incoming version of the file.
+        MD5 hash digest of the file (hex).
     base64_md5_digest : str
-        Base64 encoded version of the MD5 hash digest corresponding to the file.
+        Base64 encoded MD5 of the same file.
     file_size : int
-        Size in bytes of the incoming version of the file.
+        File size in bytes.
     last_modified : float
-        Last modified time of the incoming version of the file as a Unix Epoch.
-    force_overwrite : bool
-        Flag indiciating whether to always overwrite with the incoming verisons of file.
+        Unix timestamp of the local file.
 
     Returns
     -------
-    True if overwrite (or write) should occur, False otherwise.
-
+    bool
+        True if the same file already exists, False otherwise.
     """
-    # First, check if the client has specified the "force overwite" option
-    if force_overwrite:
-        logger.debug("Client has specified force overwrite")
-        return True
-
-    # Next, check if the file already exists within the S3 bucket designated by
-    # the bucket map
     try:
-        object_head = s3_client.head_object(Bucket=destination_bucket, Key=object_key)
+        object_head = s3_client.head_object(Bucket=bucket_name, Key=object_key)
     except botocore.exceptions.ClientError as e:
         if e.response["Error"]["Code"] == "404":
-            # File does not already exist, safe to write
-            return True
+            return False
         else:
             # Some other kind of unexpected error
             raise
@@ -185,37 +172,111 @@ def should_overwrite_file(
     object_length = int(object_head["ContentLength"])
     object_last_modified = object_head["LastModified"]
 
-    # Pull the Base64 MD5 we assign as custom metadata
-    if "md5chksum" in object_head["Metadata"]:
-        object_md5 = object_head["Metadata"]["md5chksum"]
+    # Read metadata of S3 object
+    meta = object_head.get("Metadata", {})
+
+    if "md5chksum" in meta:
+        object_md5 = meta["md5chksum"]
         request_md5 = base64_md5_digest
-    # If the Base64 MD5 is not present, check for the hex MD5
-    elif "md5" in object_head["Metadata"]:
-        logger.warning("Missing Base64 MD5 for %s/%s, falling back to Hex MD5", destination_bucket, object_key)
-        object_md5 = object_head["Metadata"]["md5"]
+    elif "md5" in meta:
+        object_md5 = meta["md5"]
         request_md5 = md5_digest
     # If neither is present, fall back to the ETag value, which should be the same as the hex MD5
     else:
-        logger.warning("Missing MD5 for %s/%s, falling back to ETag", destination_bucket, object_key)
+        logger.warning("Missing MD5 for %s/%s, falling back to ETag", bucket_name, object_key)
         object_md5 = object_head["ETag"][1:-1]  # strip embedded quotes
         request_md5 = md5_digest
 
+    request_length = int(file_size)
+    request_last_modified = datetime.fromtimestamp(last_modified, tz=timezone.utc)
+
+    logger.debug("bucket_name=%s", bucket_name)
+    logger.debug("object_key=%s", object_key)
     logger.debug("object_length=%d", object_length)
     logger.debug("object_last_modified=%s", object_last_modified)
     logger.debug("object_md5=%s", object_md5)
-
-    request_length = file_size
-    request_last_modified = datetime.fromtimestamp(last_modified, tz=timezone.utc)
-
     logger.debug("request_length=%d", request_length)
     logger.debug("request_last_modified=%s", request_last_modified)
     logger.debug("request_md5=%s", request_md5)
 
-    # If the request object differs from current version in S3 (newer, different contents),
-    # then it should be overwritten
-    return not (
-        object_length == request_length and object_md5 == request_md5 and object_last_modified >= request_last_modified
+    if object_length != request_length:
+        return False
+    if not object_md5:
+        logger.info("No usable MD5 for %s/%s (multipart or missing), treating as existing", bucket_name, object_key)
+        return True
+
+    return (
+            object_length == request_length
+            and object_md5 == request_md5
+            and object_last_modified >= request_last_modified
     )
+
+
+def should_upload_file(
+        staging_bucket,
+        archive_bucket,
+        object_key,
+        md5_digest,
+        base64_md5_digest,
+        file_size,
+        last_modified,
+        force_overwrite,
+):
+    """
+    Determines whether the file should be uploaded to the staging bucket.
+
+    Upload is skipped if the same file already exists in *either* staging or archive bucket,
+    unless 'force_overwrite' is True.
+
+    Parameters
+    ----------
+    staging_bucket : str
+        Name of the staging S3 bucket to check.
+    archive_bucket : str
+        Name of the archive S3 bucket to check.
+    object_key : str
+        Object key location within the bucket.
+    md5_digest : str
+        MD5 hash digest of the file (hex).
+    base64_md5_digest : str
+        Base64 encoded MD5 digest.
+    file_size : int
+        File size in bytes.
+    last_modified : float
+        Unix timestamp of the file.
+    force_overwrite : bool
+        Whether to always overwrite the file.
+
+    Returns
+    -------
+    bool
+        True if upload should occur, False otherwise.
+    """
+    if force_overwrite:
+        logger.debug("Force overwrite enabled for %s", object_key)
+        return True
+
+    file_exists_in_staging = False
+    file_exists_in_archive = False
+
+    # Check staging bucket first, then archive only if not found in staging
+    if file_exists_in_bucket(staging_bucket, object_key, md5_digest, base64_md5_digest, file_size, last_modified):
+        file_exists_in_staging = True
+        logger.debug("File %s found in staging bucket %s", object_key, staging_bucket)
+    elif file_exists_in_bucket(archive_bucket, object_key, md5_digest, base64_md5_digest, file_size, last_modified):
+        file_exists_in_archive = True
+        logger.debug("File %s found in archive bucket %s", object_key, archive_bucket)
+
+    if file_exists_in_staging or file_exists_in_archive:
+        logger.info(
+            "File %s already exists in staging (%s) or archive (%s)",
+            object_key,
+            staging_bucket,
+            archive_bucket,
+        )
+        return False
+
+    return True
 
 
 def generate_presigned_upload_url(
@@ -465,8 +526,12 @@ def process_ingress_request(ingress_request, request_index, node_bucket_map, req
 
     logger.info("Processing request for %s (index %d)", trimmed_path, request_index)
 
-    bucket_info = bucket_for_path(node_bucket_map, trimmed_path, logger)
-    destination_bucket = bucket_info["name"]
+    # Get bucket info of both staging and archive buckets
+    staging_bucket_info = bucket_for_path(node_bucket_map, trimmed_path, logger, bucket_type="staging")
+    archive_bucket_info = bucket_for_path(node_bucket_map, trimmed_path, logger, bucket_type="archive")
+
+    destination_bucket = staging_bucket_info["name"]
+    archive_bucket = archive_bucket_info["name"]
 
     if not bucket_exists(destination_bucket):
         result = {
@@ -481,20 +546,21 @@ def process_ingress_request(ingress_request, request_index, node_bucket_map, req
     else:
         object_key = join(request_node.lower(), trimmed_path)
 
-        if should_overwrite_file(
-            destination_bucket,
-            object_key,
-            md5_digest,
-            base64_md5_digest,
-            int(file_size),
-            float(last_modified),
-            force_overwrite,
+        if should_upload_file(
+                destination_bucket,
+                archive_bucket,
+                object_key,
+                md5_digest,
+                base64_md5_digest,
+                int(file_size),
+                float(last_modified),
+                force_overwrite,
         ):
             if file_size >= MAX_UPLOAD_SIZE:
                 logger.info("%s exceeds maximum upload size, initiating Multi-part upload", object_key)
 
                 signed_urls, complete_url, abort_url, num_parts = process_multipart_upload(
-                    bucket_info,
+                    staging_bucket_info,
                     object_key,
                     file_size,
                     md5_digest,
@@ -519,7 +585,7 @@ def process_ingress_request(ingress_request, request_index, node_bucket_map, req
                 }
             else:
                 s3_url = generate_presigned_upload_url(
-                    bucket_info,
+                    staging_bucket_info,
                     object_key,
                     md5_digest,
                     base64_md5_digest,
@@ -542,7 +608,10 @@ def process_ingress_request(ingress_request, request_index, node_bucket_map, req
                 }
         else:
             logger.info(
-                "File %s already exists in bucket %s and should not be overwritten", object_key, destination_bucket
+                "File %s already exists in bucket %s or archive %s and should not be overwritten",
+                object_key,
+                destination_bucket,
+                archive_bucket,
             )
 
             result = {
@@ -597,7 +666,7 @@ def lambda_handler(event, context):
 
     check_client_version(client_version, service_version)
 
-    node_bucket_map = bucket_map["MAP"]["NODES"].get(request_node.upper())
+    node_bucket_map = bucket_map["NODES"].get(request_node.upper())
 
     if not node_bucket_map:
         logger.exception("No bucket map entries configured for node ID %s", request_node)
