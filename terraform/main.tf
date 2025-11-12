@@ -2,8 +2,6 @@
 
 provider "aws" {
   region                   = var.region
-  profile                  = var.profile
-  shared_credentials_files = [var.credential_file]
 }
 
 module "nucleus_dum_ingress_service_lambda" {
