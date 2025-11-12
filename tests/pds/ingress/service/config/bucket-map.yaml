@@ -1,38 +1,71 @@
-MAP:
+BUCKET_MAP:
   NODES:
     ATM:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-atm-staging-test
+        archive:
+          name: pds-atm-archive-test
+
     ENG:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-eng-staging-test
+        archive:
+          name: pds-eng-archive-test
+
     GEO:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-geo-staging-test
+        archive:
+          name: pds-geo-archive-test
+
     IMG:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-img-staging-test
+        archive:
+          name: pds-img-archive-test
+
     NAIF:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-naif-staging-test
+        archive:
+          name: pds-naif-archive-test
+
     PPI:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-ppi-staging-test
+        archive:
+          name: pds-ppi-archive-test
+
     RMS:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-rms-staging-test
+        archive:
+          name: pds-rms-archive-test
+
     RS:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-rs-staging-test
+        archive:
+          name: pds-rs-archive-test
+
     SBN:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-sbn-staging-test
+        archive:
+          name: pds-sbn-archive-test
+      paths:
+        - prefix: manifests/*
+          bucket:
+            name: pds-sbn-manifests-test
+        - prefix: weblogs/*
+          bucket:
+            name: pds-test-web-analytics

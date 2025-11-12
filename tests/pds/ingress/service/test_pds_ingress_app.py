@@ -17,7 +17,7 @@ from pds.ingress.service.pds_ingress_app import check_client_version
 from pds.ingress.service.pds_ingress_app import get_dum_version
 from pds.ingress.service.pds_ingress_app import lambda_handler
 from pds.ingress.service.pds_ingress_app import logger as service_logger
-from pds.ingress.service.pds_ingress_app import should_overwrite_file
+from pds.ingress.service.pds_ingress_app import should_upload_file
 from importlib.resources import files
 
 
@@ -224,73 +224,80 @@ class PDSIngressAppTest(unittest.TestCase):
         with self.assertRaises(RuntimeError, msg="No request node ID provided in queryStringParameters"):
             lambda_handler(test_event, context)
 
-    def test_should_overwrite_file(self):
-        """Test check for overwrite of prexisting file in S3"""
-        # Test inclusion of ForceOverwrite flag
-        bucket = "sample_bucket"
-        key = "path/to/sample_file"
+    def test_should_upload_file(self):
+        """Test decision logic for whether a file should be uploaded (with staging + archive bucket checks)."""
+        staging_bucket = "pds-staging-test"
+        archive_bucket = "pds-archive-test"
+        object_key = "path/to/sample_file"
         md5_digest = "validhash"
-        base64_md5_digest = "validbase64hash"
+        base64_md5_digest = "dmFsaWRoYXNo"  # base64 of 'validhash'
         file_size = os.stat(os.path.abspath(__file__)).st_size
         last_modified = os.path.getmtime(os.path.abspath(__file__))
 
+        # Force overwrite should always return True
         self.assertTrue(
-            should_overwrite_file(
-                bucket, key, md5_digest, base64_md5_digest, file_size, last_modified, force_overwrite=True
+            should_upload_file(
+                staging_bucket,
+                archive_bucket,
+                object_key,
+                md5_digest,
+                base64_md5_digest,
+                file_size,
+                last_modified,
+                force_overwrite=True,
             )
         )
 
-        # Setup mock return values for head_object, one which matches the requested
-        # file exactly, and one that does not
-        match = {
+        # Mock for a file that exists in S3 and matches the uploaded one
+        existing_file = {
             "ContentLength": file_size,
-            "ETag": "0validhash0",
+            "ETag": '"validhash"',
             "LastModified": datetime.fromtimestamp(last_modified, tz=timezone.utc),
             "Metadata": {"md5": md5_digest, "md5chksum": base64_md5_digest},
         }
-        mismatch = {
+
+        # Mock for a file that exists with same name, but the content is different (hash/size mismatch)
+        different_file = {
             "ContentLength": 2,
-            "ETag": "0mismatchhash0",
+            "ETag": '"mismatchhash"',
             "LastModified": datetime.now(tz=timezone.utc),
             "Metadata": {"md5": "mismatchhash", "md5chksum": "mismatchbase64hash"},
         }
 
-        mock_head_object = MagicMock(side_effect=[mismatch, match])
+        # Case 1: staging bucket has different file → should continue
+        # Case 2: archive bucket has matching file → should skip upload
+        mock_file_check = MagicMock(side_effect=[different_file, existing_file])
 
-        with patch.object(botocore.client.BaseClient, "_make_api_call", mock_head_object):
-            # First call should not match, meaning file should be overwritten
-            self.assertTrue(
-                should_overwrite_file(
-                    bucket, key, md5_digest, base64_md5_digest, file_size, last_modified, force_overwrite=False
-                )
-            )
-
-            # Second call should match, meaning file should not be overwritten
+        with patch("pds.ingress.service.pds_ingress_app.file_exists_in_bucket", mock_file_check):
             self.assertFalse(
-                should_overwrite_file(
-                    bucket, key, md5_digest, base64_md5_digest, file_size, last_modified, force_overwrite=False
+                should_upload_file(
+                    staging_bucket,
+                    archive_bucket,
+                    object_key,
+                    md5_digest,
+                    base64_md5_digest,
+                    file_size,
+                    last_modified,
+                    force_overwrite=False,
                 )
             )
 
-        err = {"Error": {"Code": "404"}}
-        mock_head_object = MagicMock(side_effect=botocore.exceptions.ClientError(err, "head_object"))
+        # Case 3: both buckets return not found → should upload
+        mock_no_file = MagicMock(return_value=False)
 
-        with patch.object(botocore.client.BaseClient, "_make_api_call", mock_head_object):
-            # File not existing should always result in True
+        with patch("pds.ingress.service.pds_ingress_app.file_exists_in_bucket", mock_no_file):
             self.assertTrue(
-                should_overwrite_file(
-                    bucket, key, md5_digest, base64_md5_digest, file_size, last_modified, force_overwrite=False
+                should_upload_file(
+                    staging_bucket,
+                    archive_bucket,
+                    object_key,
+                    md5_digest,
+                    base64_md5_digest,
+                    file_size,
+                    last_modified,
+                    force_overwrite=False,
                 )
             )
-
-        err = {"Error": {"Code": "403"}}
-        mock_head_object = MagicMock(side_effect=botocore.exceptions.ClientError(err, "head_object"))
-
-        with patch.object(botocore.client.BaseClient, "_make_api_call", mock_head_object):
-            # Any type of exception from head_object other than file not found (404) should
-            # get reraised
-            self.assertRaises(botocore.exceptions.ClientError)
-
 
 if __name__ == "__main__":
     unittest.main()
