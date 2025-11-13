@@ -112,27 +112,61 @@ def check_client_version(client_version, service_version):
         logger.info("DUM client version (%s) matches ingress service", client_version)
 
 
-def bucket_exists(destination_bucket):
+def check_bucket_access(bucket_name, bucket_type):
     """
-    Checks if the destination bucket read from the bucket-map actually exists or not.
+    Verifies that the given S3 bucket exists and this Lambda has permissions
+    to perform at least a HEAD operation.
 
     Parameters
     ----------
-    destination_bucket : str
-        Name of the S3 bucket to check for.
+    bucket_name : str
+        Name of bucket to check.
+    bucket_type : str
+        Descriptive type ("staging" or "archive").
 
     Returns
     -------
-    True if the bucket exists, False otherwise
+    bool
+        True if bucket exists and we have permission.
+        False if bucket does not exist.
 
+    Raises
+    ------
+    ClientError
+        On 403 or unexpected errors.
     """
     try:
-        s3_client.head_bucket(Bucket=destination_bucket)
-    except botocore.exceptions.ClientError as e:
-        logger.warning("Check for bucket %s returned code %s", destination_bucket, e.response["Error"]["Code"])
-        return False
+        s3_client.head_bucket(Bucket=bucket_name)
+        logger.info("%s bucket '%s' is accessible", bucket_type, bucket_name)
+        return True
 
-    return True
+    except botocore.exceptions.ClientError as e:
+        code = e.response["Error"]["Code"]
+
+        if code == "404":
+            logger.error(
+                "%s bucket '%s' does not exist (404 Not Found)",
+                bucket_type.capitalize(),
+                bucket_name,
+            )
+            return False
+
+        if code == "403":
+            logger.error(
+                "%s bucket '%s' exists but access is forbidden (403). "
+                "Bucket policy/IAM require correction.",
+                bucket_type.capitalize(),
+                bucket_name,
+            )
+            raise
+
+        logger.exception(
+            "Unexpected error when checking %s bucket '%s' (%s)",
+            bucket_type.capitalize(),
+            bucket_name,
+            code,
+        )
+        raise
 
 
 def file_exists_in_bucket(bucket_name, object_key, md5_digest, base64_md5_digest, file_size, last_modified):
@@ -484,8 +518,8 @@ def process_multipart_upload(
 
 def process_ingress_request(ingress_request, request_index, node_bucket_map, request_event):
     """
-    Processes a single ingress request, deriving the appropriate S3 upload URL
-    based on the contents of the request and the bucket map configuration.
+    Processes a single ingress request and derives the appropriate S3 upload
+    URL based on the request contents and the bucket map configuration.
 
     Parameters
     ----------
@@ -494,16 +528,15 @@ def process_ingress_request(ingress_request, request_index, node_bucket_map, req
     request_index : int
         Index of the request within the batch of requests being processed.
     node_bucket_map : dict
-        Dictionary containing the bucket map configuration for the requestor node.
+        Bucket map configuration for the requestor node.
     request_event : dict
-        Dictionary containing details of the event that triggered the Lambda.
+        Event that triggered the Lambda invocation.
 
     Returns
     -------
     result : dict
         JSON-compliant dictionary containing the results of processing the
         ingress request.
-
     """
     ingress_path = ingress_request.get("ingress_path")
     trimmed_path = ingress_request.get("trimmed_path")
@@ -517,7 +550,7 @@ def process_ingress_request(ingress_request, request_index, node_bucket_map, req
     service_version = get_dum_version()
     force_overwrite = bool(int(request_headers.get("ForceOverwrite", False)))
 
-    # Convert MD5 from hex to base64, since this is how AWS represents it
+    # Convert MD5 from hex to base64 (AWS format)
     base64_md5_digest = base64.b64encode(bytes.fromhex(md5_digest)).decode()
 
     if not all(field is not None for field in (ingress_path, trimmed_path, md5_digest, file_size, last_modified)):
@@ -526,105 +559,143 @@ def process_ingress_request(ingress_request, request_index, node_bucket_map, req
 
     logger.info("Processing request for %s (index %d)", trimmed_path, request_index)
 
-    # Get bucket info of both staging and archive buckets
+    # Get bucket info for staging and archive
     staging_bucket_info = bucket_for_path(node_bucket_map, trimmed_path, logger, bucket_type="staging")
     archive_bucket_info = bucket_for_path(node_bucket_map, trimmed_path, logger, bucket_type="archive")
 
     destination_bucket = staging_bucket_info["name"]
     archive_bucket = archive_bucket_info["name"]
 
-    if not bucket_exists(destination_bucket):
-        result = {
+    #
+    # Verify access to both staging and archive buckets.
+    # Staging bucket must exist and be readable by this Lambda.
+    # Archive bucket must also be accessible to determine whether the file
+    # already exists. Fail early if either bucket cannot be accessed.
+    #
+    staging_ok = check_bucket_access(destination_bucket, "staging")
+    archive_ok = check_bucket_access(archive_bucket, "archive")
+
+    # Staging bucket is required
+    if not staging_ok:
+        logger.error(
+            "Staging bucket %s does not exist or cannot be accessed",
+            destination_bucket,
+        )
+        return {
             "result": HTTPStatus.NOT_FOUND,
             "trimmed_path": trimmed_path,
             "ingress_path": ingress_path,
             "s3_url": None,
-            "bucket": None,
+            "bucket": destination_bucket,
             "key": None,
-            "message": f"Mapped bucket {destination_bucket} does not exist or has insufficient access permisisons",
+            "message": (
+                f"Staging bucket {destination_bucket} does not exist or cannot be accessed"
+            ),
         }
-    else:
-        object_key = join(request_node.lower(), trimmed_path)
 
-        if should_upload_file(
-                destination_bucket,
-                archive_bucket,
+    # Archive bucket must also be accessible to correctly evaluate deduplication state
+    if not archive_ok:
+        logger.error(
+            "Archive bucket %s does not exist or cannot be accessed",
+            archive_bucket,
+        )
+        return {
+            "result": HTTPStatus.FORBIDDEN,
+            "trimmed_path": trimmed_path,
+            "ingress_path": ingress_path,
+            "s3_url": None,
+            "bucket": archive_bucket,
+            "key": None,
+            "message": (
+                f"Archive bucket {archive_bucket} cannot be accessed. "
+                f"Verify that cross-account permissions are configured"
+            ),
+        }
+
+    object_key = join(request_node.lower(), trimmed_path)
+
+    if should_upload_file(
+            destination_bucket,
+            archive_bucket,
+            object_key,
+            md5_digest,
+            base64_md5_digest,
+            int(file_size),
+            float(last_modified),
+            force_overwrite,
+    ):
+        # Multipart upload path
+        if file_size >= MAX_UPLOAD_SIZE:
+            logger.info("%s exceeds maximum upload size, initiating multi-part upload", object_key)
+
+            signed_urls, complete_url, abort_url, num_parts = process_multipart_upload(
+                staging_bucket_info,
                 object_key,
+                file_size,
                 md5_digest,
                 base64_md5_digest,
-                int(file_size),
                 float(last_modified),
-                force_overwrite,
-        ):
-            if file_size >= MAX_UPLOAD_SIZE:
-                logger.info("%s exceeds maximum upload size, initiating Multi-part upload", object_key)
-
-                signed_urls, complete_url, abort_url, num_parts = process_multipart_upload(
-                    staging_bucket_info,
-                    object_key,
-                    file_size,
-                    md5_digest,
-                    base64_md5_digest,
-                    float(last_modified),
-                    client_version,
-                    service_version,
-                )
-
-                result = {
-                    "result": HTTPStatus.OK,
-                    "trimmed_path": trimmed_path,
-                    "ingress_path": ingress_path,
-                    "s3_urls": signed_urls,
-                    "bucket": destination_bucket,
-                    "key": object_key,
-                    "upload_complete_url": complete_url,
-                    "upload_abort_url": abort_url,
-                    "num_parts": num_parts,
-                    "chunk_size": CHUNK_SIZE,
-                    "message": "Multipart Upload Request initiated",
-                }
-            else:
-                s3_url = generate_presigned_upload_url(
-                    staging_bucket_info,
-                    object_key,
-                    md5_digest,
-                    base64_md5_digest,
-                    file_size,
-                    float(last_modified),
-                    client_version,
-                    service_version,
-                )
-
-                result = {
-                    "result": HTTPStatus.OK,
-                    "trimmed_path": trimmed_path,
-                    "ingress_path": ingress_path,
-                    "md5": md5_digest,
-                    "base64_md5": base64_md5_digest,
-                    "s3_url": s3_url,
-                    "bucket": destination_bucket,
-                    "key": object_key,
-                    "message": "Request success",
-                }
-        else:
-            logger.info(
-                "File %s already exists in bucket %s or archive %s and should not be overwritten",
-                object_key,
-                destination_bucket,
-                archive_bucket,
+                client_version,
+                service_version,
             )
 
-            result = {
-                "result": HTTPStatus.NO_CONTENT,
+            return {
+                "result": HTTPStatus.OK,
                 "trimmed_path": trimmed_path,
                 "ingress_path": ingress_path,
-                "s3_url": None,
+                "s3_urls": signed_urls,
                 "bucket": destination_bucket,
                 "key": object_key,
-                "message": "File already exists",
+                "upload_complete_url": complete_url,
+                "upload_abort_url": abort_url,
+                "num_parts": num_parts,
+                "chunk_size": CHUNK_SIZE,
+                "message": "Multipart upload request initiated",
             }
 
-    return result
+        # Single-part upload
+        s3_url = generate_presigned_upload_url(
+            staging_bucket_info,
+            object_key,
+            md5_digest,
+            base64_md5_digest,
+            file_size,
+            float(last_modified),
+            client_version,
+            service_version,
+        )
+
+        return {
+            "result": HTTPStatus.OK,
+            "trimmed_path": trimmed_path,
+            "ingress_path": ingress_path,
+            "md5": md5_digest,
+            "base64_md5": base64_md5_digest,
+            "s3_url": s3_url,
+            "bucket": destination_bucket,
+            "key": object_key,
+            "message": "Request success",
+        }
+
+    #
+    # File already exists in staging or archive — upload not needed
+    #
+    logger.info(
+        "File %s already exists in bucket %s or archive %s and should not be overwritten",
+        object_key,
+        destination_bucket,
+        archive_bucket,
+    )
+
+    return {
+        "result": HTTPStatus.NO_CONTENT,
+        "trimmed_path": trimmed_path,
+        "ingress_path": ingress_path,
+        "s3_url": None,
+        "bucket": destination_bucket,
+        "key": object_key,
+        "message": "File already exists",
+    }
 
 
 def lambda_handler(event, context):
