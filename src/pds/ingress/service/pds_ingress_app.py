@@ -136,6 +136,7 @@ def check_bucket_access(bucket_name, bucket_type):
         On 403 or unexpected errors.
     """
     try:
+        # Bucket exists and is accessible
         s3_client.head_bucket(Bucket=bucket_name)
         logger.info("%s bucket '%s' is accessible", bucket_type, bucket_name)
         return True
@@ -143,6 +144,7 @@ def check_bucket_access(bucket_name, bucket_type):
     except botocore.exceptions.ClientError as e:
         code = e.response["Error"]["Code"]
 
+        # Bucket not found
         if code == "404":
             logger.error(
                 "%s bucket '%s' does not exist (404 Not Found)",
@@ -151,6 +153,7 @@ def check_bucket_access(bucket_name, bucket_type):
             )
             return False
 
+        # Bucket exists but access is forbidden
         if code == "403":
             logger.error(
                 "%s bucket '%s' exists but access is forbidden (403). "
@@ -158,15 +161,16 @@ def check_bucket_access(bucket_name, bucket_type):
                 bucket_type.capitalize(),
                 bucket_name,
             )
-            raise
+            return False
 
+        # Unexpected error when checking bucket
         logger.exception(
             "Unexpected error when checking %s bucket '%s' (%s)",
             bucket_type.capitalize(),
             bucket_name,
             code,
         )
-        raise
+        return False   # Always return boolean (never None)
 
 
 def file_exists_in_bucket(bucket_name, object_key, md5_digest, base64_md5_digest, file_size, last_modified):
@@ -759,4 +763,18 @@ def lambda_handler(event, context):
         for future in concurrent.futures.as_completed(futures):
             results.append(future.result())
 
-    return {"statusCode": HTTPStatus.OK, "body": json.dumps(results)}
+    #
+    # Determine top-level HTTP status for the entire batch.
+    # If ANY request fails (403, 404, other), return that status code so the DUM
+    # client immediately understands the request failed and will not hang.
+    #
+    batch_status = HTTPStatus.OK
+    for result in results:
+        if result["result"] not in (HTTPStatus.OK, HTTPStatus.NO_CONTENT):
+            batch_status = result["result"]
+            break
+
+    return {
+        "statusCode": batch_status,
+        "body": json.dumps(results),
+    }
