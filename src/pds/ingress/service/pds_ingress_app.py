@@ -571,50 +571,45 @@ def process_ingress_request(ingress_request, request_index, node_bucket_map, req
     archive_bucket = archive_bucket_info["name"]
 
     #
-    # Verify access to both staging and archive buckets.
-    # Staging bucket must exist and be readable by this Lambda.
-    # Archive bucket must also be accessible to determine whether the file
-    # already exists. Fail early if either bucket cannot be accessed.
+    # Verify that the Lambda execution role has access to the staging and archive
+    # S3 buckets. If either bucket cannot be accessed, this indicates a backend
+    # configuration issue (IAM policy, cross-account permissions, or bucket policy).
+    #
+    # Important:
+    #   - Fail fast by raising an exception so that the Lambda returns
+    #     a top-level HTTP 500. This prevents the DUM client from hanging while
+    #     waiting for presigned URLs that will never be generated.
     #
     staging_ok = check_bucket_access(destination_bucket, "staging")
     archive_ok = check_bucket_access(archive_bucket, "archive")
 
-    # Staging bucket is required
+    # Staging bucket must be accessible for uploads
     if not staging_ok:
+        # Log full bucket name for internal debugging
         logger.error(
-            "Staging bucket %s does not exist or cannot be accessed",
+            "INTERNAL ERROR: Lambda cannot access staging bucket '%s'. "
+            "Possible IAM role or bucket policy misconfiguration.",
             destination_bucket,
         )
-        return {
-            "result": HTTPStatus.NOT_FOUND,
-            "trimmed_path": trimmed_path,
-            "ingress_path": ingress_path,
-            "s3_url": None,
-            "bucket": destination_bucket,
-            "key": None,
-            "message": (
-                f"Staging bucket {destination_bucket} does not exist or cannot be accessed"
-            ),
-        }
 
-    # Archive bucket must also be accessible to correctly evaluate deduplication state
+        # Send a generic error to the client (no bucket name)
+        raise RuntimeError(
+            "Internal server error: the ingestion service cannot access required resources. "
+            "Please contact PDS Engineering."
+        )
+
+    # Archive bucket must be accessible for deduplication checks
     if not archive_ok:
         logger.error(
-            "Archive bucket %s does not exist or cannot be accessed",
+            "INTERNAL ERROR: Lambda cannot access archive bucket '%s'. "
+            "Likely cross-account permissions or bucket policy issue.",
             archive_bucket,
         )
-        return {
-            "result": HTTPStatus.FORBIDDEN,
-            "trimmed_path": trimmed_path,
-            "ingress_path": ingress_path,
-            "s3_url": None,
-            "bucket": archive_bucket,
-            "key": None,
-            "message": (
-                f"Archive bucket {archive_bucket} cannot be accessed. "
-                f"Verify that cross-account permissions are configured"
-            ),
-        }
+
+        raise RuntimeError(
+            "Internal server error: the ingestion service cannot access required resources. "
+            "Please contact PDS Engineering."
+        )
 
     object_key = join(request_node.lower(), trimmed_path)
 
@@ -761,17 +756,33 @@ def lambda_handler(event, context):
         }
 
         for future in concurrent.futures.as_completed(futures):
-            results.append(future.result())
+            try:
+                results.append(future.result())
+            except Exception as e:
+                logger.exception("Ingress request failed inside worker thread")
+
+                # FAIL FAST: return 500 to the client
+                return {
+                    "statusCode": HTTPStatus.INTERNAL_SERVER_ERROR.value,
+                    "body": json.dumps({
+                        "error": (
+                            "Internal server error: the ingestion service encountered a failure "
+                            "while processing this request. Please contact PDS Engineering."
+                        )
+                    }),
+                }
+
 
     #
     # Determine top-level HTTP status for the entire batch.
     # If ANY request fails (403, 404, other), return that status code so the DUM
     # client immediately understands the request failed and will not hang.
     #
-    batch_status = HTTPStatus.OK
+    batch_status = HTTPStatus.OK.value
+
     for result in results:
-        if result["result"] not in (HTTPStatus.OK, HTTPStatus.NO_CONTENT):
-            batch_status = result["result"]
+        if result["result"] not in (HTTPStatus.OK.value, HTTPStatus.NO_CONTENT.value):
+            batch_status = int(result["result"])
             break
 
     return {

@@ -10,7 +10,7 @@ Ingress Service Lambda.
 import boto3  # type: ignore
 
 from .config_util import ConfigUtil
-from .log_util import get_logger
+from .log_util import get_logger, Color
 
 
 class AuthUtil:
@@ -59,9 +59,16 @@ class AuthUtil:
                 AuthFlow="USER_PASSWORD_AUTH", AuthParameters=auth_params, ClientId=cognito_config["client_id"]
             )
         except Exception as err:
-            raise RuntimeError(f"Failed to authenticate to Cognito, reason: {str(err)}") from err
+            # Console-friendly red log message
+            logger.error(Color.red_bold("Failed to authenticate to Cognito"))
+            logger.error(Color.red(f"Reason: {str(err)}"))
 
-        logger.info("Authentication successful")
+            # Raise same message but colored (per user request)
+            raise RuntimeError(
+                Color.red_bold(f"Failed to authenticate to Cognito, reason: {str(err)}")
+            ) from err
+
+        logger.info(Color.green_bold("Authentication successful"))
 
         authentication_result = response["AuthenticationResult"]
 
@@ -126,7 +133,16 @@ class AuthUtil:
                 AuthFlow="REFRESH_TOKEN_AUTH", AuthParameters=auth_params, ClientId=cognito_config["client_id"]
             )
         except Exception as err:
-            raise RuntimeError(f"Failed to refresh Cognito authentication token, reason: {str(err)}") from err
+            # Console red message
+            logger.error(Color.red_bold("Failed to refresh Cognito token"))
+            logger.error(Color.red(f"Reason: {str(err)}"))
+
+            # Raise colored error (matching Option C)
+            raise RuntimeError(
+                Color.red(
+                    f"Failed to refresh Cognito authentication token, reason: {str(err)}"
+                )
+            ) from err
 
         logger.info("Token refresh successful")
 

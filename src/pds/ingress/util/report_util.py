@@ -14,8 +14,7 @@ import time
 from datetime import datetime
 from datetime import timezone
 
-from pds.ingress.util.log_util import get_logger
-
+from pds.ingress.util.log_util import get_logger, Color
 
 REPORT_LOCK = multiprocessing.Lock()
 """Lock used to control write access to the summary table"""
@@ -79,6 +78,14 @@ def update_summary_table(summary_table, key, paths):
             summary_table["unprocessed"] -= set(paths)
 
 
+def color_count(label, count, color_func):
+    """
+    Returns a colorized text only when count > 0. Otherwise, returns plain text.
+    """
+    text = f"{label}: {count} file(s)"
+    return color_func(text) if count > 0 else text
+
+
 def print_ingress_summary(summary_table):
     """
     Prints the summary report for last execution of the client script.
@@ -101,16 +108,21 @@ def print_ingress_summary(summary_table):
 
     title = f"Ingress Summary Report for {str(datetime.now())}"
 
-    logger.info("")  # Blank line to distance report from any progress bar cleanup
-    logger.info(title)
-    logger.info("-" * len(title))
-    logger.info("Uploaded: %d file(s)", num_uploaded)
-    logger.info("Skipped: %d file(s)", num_skipped)
-    logger.info("Failed: %d file(s)", num_failed)
-    logger.info("Unprocessed: %d file(s)", num_unprocessed)
-    logger.info("Total: %d files(s)", num_uploaded + num_skipped + num_failed + num_unprocessed)
-    logger.info("Time elapsed: %.2f seconds", end_time - start_time)
-    logger.info("Bytes transferred: %d", transferred)
+    logger.info("")  # Blank line to distance report from progress bar cleanup
+    logger.info(Color.bold(title))
+    logger.info(Color.bold("-" * len(title)))
+
+    logger.info(color_count("Uploaded", num_uploaded, Color.green_bold))
+    logger.info(color_count("Skipped", num_skipped, Color.blue))
+    logger.info(color_count("Failed", num_failed, Color.red))
+    logger.info(color_count("Unprocessed", num_unprocessed, Color.yellow))
+
+    total = num_uploaded + num_skipped + num_failed + num_unprocessed
+    logger.info(Color.bold(f"Total: {total} file(s)"))
+    logger.info(Color.bold(f"Time elapsed: {end_time - start_time:.2f} seconds"))
+    logger.info(Color.green(f"Bytes transferred: {transferred}"))
+
+
 
 
 def read_manifest_file(manifest_path):
