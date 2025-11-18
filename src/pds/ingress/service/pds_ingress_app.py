@@ -112,72 +112,97 @@ def check_client_version(client_version, service_version):
         logger.info("DUM client version (%s) matches ingress service", client_version)
 
 
-def bucket_exists(destination_bucket):
+def check_bucket_access(bucket_name, bucket_type):
     """
-    Checks if the destination bucket read from the bucket-map actually exists or not.
+    Verifies that the given S3 bucket exists and this Lambda has permissions
+    to perform at least a HEAD operation.
 
     Parameters
     ----------
-    destination_bucket : str
-        Name of the S3 bucket to check for.
+    bucket_name : str
+        Name of bucket to check.
+    bucket_type : str
+        Descriptive type ("staging" or "archive").
 
     Returns
     -------
-    True if the bucket exists, False otherwise
+    bool
+        True if bucket exists and we have permission.
+        False if bucket does not exist.
 
+    Raises
+    ------
+    ClientError
+        On 403 or unexpected errors.
     """
     try:
-        s3_client.head_bucket(Bucket=destination_bucket)
-    except botocore.exceptions.ClientError as e:
-        logger.warning("Check for bucket %s returned code %s", destination_bucket, e.response["Error"]["Code"])
-        return False
-
-    return True
-
-
-def should_overwrite_file(
-    destination_bucket, object_key, md5_digest, base64_md5_digest, file_size, last_modified, force_overwrite
-):
-    """
-    Determines if the file requested for ingress already exists in the S3
-    location we plan to upload to, and whether it should be overwritten with a
-    new version based on file info provided in the request headers.
-
-    Parameters
-    ----------
-    destination_bucket : str
-        Name of the S3 bucket to be uploaded to.
-    object_key : str
-        Object key location within the S3 bucket to be uploaded to.
-    md5_digest : str
-        MD5 hash digest of the incoming version of the file.
-    base64_md5_digest : str
-        Base64 encoded version of the MD5 hash digest corresponding to the file.
-    file_size : int
-        Size in bytes of the incoming version of the file.
-    last_modified : float
-        Last modified time of the incoming version of the file as a Unix Epoch.
-    force_overwrite : bool
-        Flag indiciating whether to always overwrite with the incoming verisons of file.
-
-    Returns
-    -------
-    True if overwrite (or write) should occur, False otherwise.
-
-    """
-    # First, check if the client has specified the "force overwite" option
-    if force_overwrite:
-        logger.debug("Client has specified force overwrite")
+        # Bucket exists and is accessible
+        s3_client.head_bucket(Bucket=bucket_name)
+        logger.info("%s bucket '%s' is accessible", bucket_type, bucket_name)
         return True
 
-    # Next, check if the file already exists within the S3 bucket designated by
-    # the bucket map
+    except botocore.exceptions.ClientError as e:
+        code = e.response["Error"]["Code"]
+
+        # Bucket not found
+        if code == "404":
+            logger.error(
+                "%s bucket '%s' does not exist (404 Not Found)",
+                bucket_type.capitalize(),
+                bucket_name,
+            )
+            return False
+
+        # Bucket exists but access is forbidden
+        if code == "403":
+            logger.error(
+                "%s bucket '%s' exists but access is forbidden (403). "
+                "Bucket policy/IAM require correction.",
+                bucket_type.capitalize(),
+                bucket_name,
+            )
+            return False
+
+        # Unexpected error when checking bucket
+        logger.exception(
+            "Unexpected error when checking %s bucket '%s' (%s)",
+            bucket_type.capitalize(),
+            bucket_name,
+            code,
+        )
+        return False   # Always return boolean (never None)
+
+
+def file_exists_in_bucket(bucket_name, object_key, md5_digest, base64_md5_digest, file_size, last_modified):
+    """
+    Checks if the file already exists in the given S3 bucket and matches the same
+    content (MD5 + size + modified time).
+
+    Parameters
+    ----------
+    bucket_name : str
+        The S3 bucket name to check.
+    object_key : str
+        The object key to check.
+    md5_digest : str
+        MD5 hash digest of the file (hex).
+    base64_md5_digest : str
+        Base64 encoded MD5 of the same file.
+    file_size : int
+        File size in bytes.
+    last_modified : float
+        Unix timestamp of the local file.
+
+    Returns
+    -------
+    bool
+        True if the same file already exists, False otherwise.
+    """
     try:
-        object_head = s3_client.head_object(Bucket=destination_bucket, Key=object_key)
+        object_head = s3_client.head_object(Bucket=bucket_name, Key=object_key)
     except botocore.exceptions.ClientError as e:
         if e.response["Error"]["Code"] == "404":
-            # File does not already exist, safe to write
-            return True
+            return False
         else:
             # Some other kind of unexpected error
             raise
@@ -185,37 +210,111 @@ def should_overwrite_file(
     object_length = int(object_head["ContentLength"])
     object_last_modified = object_head["LastModified"]
 
-    # Pull the Base64 MD5 we assign as custom metadata
-    if "md5chksum" in object_head["Metadata"]:
-        object_md5 = object_head["Metadata"]["md5chksum"]
+    # Read metadata of S3 object
+    meta = object_head.get("Metadata", {})
+
+    if "md5chksum" in meta:
+        object_md5 = meta["md5chksum"]
         request_md5 = base64_md5_digest
-    # If the Base64 MD5 is not present, check for the hex MD5
-    elif "md5" in object_head["Metadata"]:
-        logger.warning("Missing Base64 MD5 for %s/%s, falling back to Hex MD5", destination_bucket, object_key)
-        object_md5 = object_head["Metadata"]["md5"]
+    elif "md5" in meta:
+        object_md5 = meta["md5"]
         request_md5 = md5_digest
     # If neither is present, fall back to the ETag value, which should be the same as the hex MD5
     else:
-        logger.warning("Missing MD5 for %s/%s, falling back to ETag", destination_bucket, object_key)
+        logger.warning("Missing MD5 for %s/%s, falling back to ETag", bucket_name, object_key)
         object_md5 = object_head["ETag"][1:-1]  # strip embedded quotes
         request_md5 = md5_digest
 
+    request_length = int(file_size)
+    request_last_modified = datetime.fromtimestamp(last_modified, tz=timezone.utc)
+
+    logger.debug("bucket_name=%s", bucket_name)
+    logger.debug("object_key=%s", object_key)
     logger.debug("object_length=%d", object_length)
     logger.debug("object_last_modified=%s", object_last_modified)
     logger.debug("object_md5=%s", object_md5)
-
-    request_length = file_size
-    request_last_modified = datetime.fromtimestamp(last_modified, tz=timezone.utc)
-
     logger.debug("request_length=%d", request_length)
     logger.debug("request_last_modified=%s", request_last_modified)
     logger.debug("request_md5=%s", request_md5)
 
-    # If the request object differs from current version in S3 (newer, different contents),
-    # then it should be overwritten
-    return not (
-        object_length == request_length and object_md5 == request_md5 and object_last_modified >= request_last_modified
+    if object_length != request_length:
+        return False
+    if not object_md5:
+        logger.info("No usable MD5 for %s/%s (multipart or missing), treating as existing", bucket_name, object_key)
+        return True
+
+    return (
+            object_length == request_length
+            and object_md5 == request_md5
+            and object_last_modified >= request_last_modified
     )
+
+
+def should_upload_file(
+        staging_bucket,
+        archive_bucket,
+        object_key,
+        md5_digest,
+        base64_md5_digest,
+        file_size,
+        last_modified,
+        force_overwrite,
+):
+    """
+    Determines whether the file should be uploaded to the staging bucket.
+
+    Upload is skipped if the same file already exists in *either* staging or archive bucket,
+    unless 'force_overwrite' is True.
+
+    Parameters
+    ----------
+    staging_bucket : str
+        Name of the staging S3 bucket to check.
+    archive_bucket : str
+        Name of the archive S3 bucket to check.
+    object_key : str
+        Object key location within the bucket.
+    md5_digest : str
+        MD5 hash digest of the file (hex).
+    base64_md5_digest : str
+        Base64 encoded MD5 digest.
+    file_size : int
+        File size in bytes.
+    last_modified : float
+        Unix timestamp of the file.
+    force_overwrite : bool
+        Whether to always overwrite the file.
+
+    Returns
+    -------
+    bool
+        True if upload should occur, False otherwise.
+    """
+    if force_overwrite:
+        logger.debug("Force overwrite enabled for %s", object_key)
+        return True
+
+    file_exists_in_staging = False
+    file_exists_in_archive = False
+
+    # Check staging bucket first, then archive only if not found in staging
+    if file_exists_in_bucket(staging_bucket, object_key, md5_digest, base64_md5_digest, file_size, last_modified):
+        file_exists_in_staging = True
+        logger.debug("File %s found in staging bucket %s", object_key, staging_bucket)
+    elif file_exists_in_bucket(archive_bucket, object_key, md5_digest, base64_md5_digest, file_size, last_modified):
+        file_exists_in_archive = True
+        logger.debug("File %s found in archive bucket %s", object_key, archive_bucket)
+
+    if file_exists_in_staging or file_exists_in_archive:
+        logger.info(
+            "File %s already exists in staging (%s) or archive (%s)",
+            object_key,
+            staging_bucket,
+            archive_bucket,
+        )
+        return False
+
+    return True
 
 
 def generate_presigned_upload_url(
@@ -423,8 +522,8 @@ def process_multipart_upload(
 
 def process_ingress_request(ingress_request, request_index, node_bucket_map, request_event):
     """
-    Processes a single ingress request, deriving the appropriate S3 upload URL
-    based on the contents of the request and the bucket map configuration.
+    Processes a single ingress request and derives the appropriate S3 upload
+    URL based on the request contents and the bucket map configuration.
 
     Parameters
     ----------
@@ -433,16 +532,15 @@ def process_ingress_request(ingress_request, request_index, node_bucket_map, req
     request_index : int
         Index of the request within the batch of requests being processed.
     node_bucket_map : dict
-        Dictionary containing the bucket map configuration for the requestor node.
+        Bucket map configuration for the requestor node.
     request_event : dict
-        Dictionary containing details of the event that triggered the Lambda.
+        Event that triggered the Lambda invocation.
 
     Returns
     -------
     result : dict
         JSON-compliant dictionary containing the results of processing the
         ingress request.
-
     """
     ingress_path = ingress_request.get("ingress_path")
     trimmed_path = ingress_request.get("trimmed_path")
@@ -456,7 +554,7 @@ def process_ingress_request(ingress_request, request_index, node_bucket_map, req
     service_version = get_dum_version()
     force_overwrite = bool(int(request_headers.get("ForceOverwrite", False)))
 
-    # Convert MD5 from hex to base64, since this is how AWS represents it
+    # Convert MD5 from hex to base64 (AWS format)
     base64_md5_digest = base64.b64encode(bytes.fromhex(md5_digest)).decode()
 
     if not all(field is not None for field in (ingress_path, trimmed_path, md5_digest, file_size, last_modified)):
@@ -465,97 +563,138 @@ def process_ingress_request(ingress_request, request_index, node_bucket_map, req
 
     logger.info("Processing request for %s (index %d)", trimmed_path, request_index)
 
-    bucket_info = bucket_for_path(node_bucket_map, trimmed_path, logger)
-    destination_bucket = bucket_info["name"]
+    # Get bucket info for staging and archive
+    staging_bucket_info = bucket_for_path(node_bucket_map, trimmed_path, logger, bucket_type="staging")
+    archive_bucket_info = bucket_for_path(node_bucket_map, trimmed_path, logger, bucket_type="archive")
 
-    if not bucket_exists(destination_bucket):
-        result = {
-            "result": HTTPStatus.NOT_FOUND,
-            "trimmed_path": trimmed_path,
-            "ingress_path": ingress_path,
-            "s3_url": None,
-            "bucket": None,
-            "key": None,
-            "message": f"Mapped bucket {destination_bucket} does not exist or has insufficient access permisisons",
-        }
-    else:
-        object_key = join(request_node.lower(), trimmed_path)
+    destination_bucket = staging_bucket_info["name"]
+    archive_bucket = archive_bucket_info["name"]
 
-        if should_overwrite_file(
+    #
+    # Verify that the Lambda execution role has access to the staging and archive
+    # S3 buckets. If either bucket cannot be accessed, this indicates a backend
+    # configuration issue (IAM policy, cross-account permissions, or bucket policy).
+    #
+    # Important:
+    #   - Fail fast by raising an exception so that the Lambda returns
+    #     a top-level HTTP 500. This prevents the DUM client from hanging while
+    #     waiting for presigned URLs that will never be generated.
+    #
+    staging_ok = check_bucket_access(destination_bucket, "staging")
+    archive_ok = check_bucket_access(archive_bucket, "archive")
+
+    # Staging bucket must be accessible for uploads
+    if not staging_ok:
+        # Log full bucket name for internal debugging
+        logger.error(
+            "INTERNAL ERROR: Lambda cannot access staging bucket '%s'. "
+            "Possible IAM role or bucket policy misconfiguration.",
             destination_bucket,
+        )
+
+        # Send a generic error to the client (no bucket name)
+        raise RuntimeError(
+            "Internal server error: the ingestion service cannot access required resources. "
+            "Please contact PDS Engineering."
+        )
+
+    # Archive bucket must be accessible for deduplication checks
+    if not archive_ok:
+        logger.error(
+            "INTERNAL ERROR: Lambda cannot access archive bucket '%s'. "
+            "Likely cross-account permissions or bucket policy issue.",
+            archive_bucket,
+        )
+
+        raise RuntimeError(
+            "Internal server error: the ingestion service cannot access required resources. "
+            "Please contact PDS Engineering."
+        )
+
+    object_key = join(request_node.lower(), trimmed_path)
+
+    if should_upload_file(
+            destination_bucket,
+            archive_bucket,
             object_key,
             md5_digest,
             base64_md5_digest,
             int(file_size),
             float(last_modified),
             force_overwrite,
-        ):
-            if file_size >= MAX_UPLOAD_SIZE:
-                logger.info("%s exceeds maximum upload size, initiating Multi-part upload", object_key)
+    ):
+        # Multipart upload path
+        if file_size >= MAX_UPLOAD_SIZE:
+            logger.info("%s exceeds maximum upload size, initiating multi-part upload", object_key)
 
-                signed_urls, complete_url, abort_url, num_parts = process_multipart_upload(
-                    bucket_info,
-                    object_key,
-                    file_size,
-                    md5_digest,
-                    base64_md5_digest,
-                    float(last_modified),
-                    client_version,
-                    service_version,
-                )
-
-                result = {
-                    "result": HTTPStatus.OK,
-                    "trimmed_path": trimmed_path,
-                    "ingress_path": ingress_path,
-                    "s3_urls": signed_urls,
-                    "bucket": destination_bucket,
-                    "key": object_key,
-                    "upload_complete_url": complete_url,
-                    "upload_abort_url": abort_url,
-                    "num_parts": num_parts,
-                    "chunk_size": CHUNK_SIZE,
-                    "message": "Multipart Upload Request initiated",
-                }
-            else:
-                s3_url = generate_presigned_upload_url(
-                    bucket_info,
-                    object_key,
-                    md5_digest,
-                    base64_md5_digest,
-                    file_size,
-                    float(last_modified),
-                    client_version,
-                    service_version,
-                )
-
-                result = {
-                    "result": HTTPStatus.OK,
-                    "trimmed_path": trimmed_path,
-                    "ingress_path": ingress_path,
-                    "md5": md5_digest,
-                    "base64_md5": base64_md5_digest,
-                    "s3_url": s3_url,
-                    "bucket": destination_bucket,
-                    "key": object_key,
-                    "message": "Request success",
-                }
-        else:
-            logger.info(
-                "File %s already exists in bucket %s and should not be overwritten", object_key, destination_bucket
+            signed_urls, complete_url, abort_url, num_parts = process_multipart_upload(
+                staging_bucket_info,
+                object_key,
+                file_size,
+                md5_digest,
+                base64_md5_digest,
+                float(last_modified),
+                client_version,
+                service_version,
             )
 
-            result = {
-                "result": HTTPStatus.NO_CONTENT,
+            return {
+                "result": HTTPStatus.OK,
                 "trimmed_path": trimmed_path,
                 "ingress_path": ingress_path,
-                "s3_url": None,
+                "s3_urls": signed_urls,
                 "bucket": destination_bucket,
                 "key": object_key,
-                "message": "File already exists",
+                "upload_complete_url": complete_url,
+                "upload_abort_url": abort_url,
+                "num_parts": num_parts,
+                "chunk_size": CHUNK_SIZE,
+                "message": "Multipart upload request initiated",
             }
 
-    return result
+        # Single-part upload
+        s3_url = generate_presigned_upload_url(
+            staging_bucket_info,
+            object_key,
+            md5_digest,
+            base64_md5_digest,
+            file_size,
+            float(last_modified),
+            client_version,
+            service_version,
+        )
+
+        return {
+            "result": HTTPStatus.OK,
+            "trimmed_path": trimmed_path,
+            "ingress_path": ingress_path,
+            "md5": md5_digest,
+            "base64_md5": base64_md5_digest,
+            "s3_url": s3_url,
+            "bucket": destination_bucket,
+            "key": object_key,
+            "message": "Request success",
+        }
+
+    #
+    # File already exists in staging or archive — upload not needed
+    #
+    logger.info(
+        "File %s already exists in bucket %s or archive %s and should not be overwritten",
+        object_key,
+        destination_bucket,
+        archive_bucket,
+    )
+
+    return {
+        "result": HTTPStatus.NO_CONTENT,
+        "trimmed_path": trimmed_path,
+        "ingress_path": ingress_path,
+        "s3_url": None,
+        "bucket": destination_bucket,
+        "key": object_key,
+        "message": "File already exists",
+    }
 
 
 def lambda_handler(event, context):
@@ -597,7 +736,7 @@ def lambda_handler(event, context):
 
     check_client_version(client_version, service_version)
 
-    node_bucket_map = bucket_map["MAP"]["NODES"].get(request_node.upper())
+    node_bucket_map = bucket_map["NODES"].get(request_node.upper())
 
     if not node_bucket_map:
         logger.exception("No bucket map entries configured for node ID %s", request_node)
@@ -617,6 +756,36 @@ def lambda_handler(event, context):
         }
 
         for future in concurrent.futures.as_completed(futures):
-            results.append(future.result())
+            try:
+                results.append(future.result())
+            except Exception as e:
+                logger.exception("Ingress request failed inside worker thread")
 
-    return {"statusCode": HTTPStatus.OK, "body": json.dumps(results)}
+                # FAIL FAST: return 500 to the client
+                return {
+                    "statusCode": HTTPStatus.INTERNAL_SERVER_ERROR.value,
+                    "body": json.dumps({
+                        "error": (
+                            "Internal server error: the ingestion service encountered a failure "
+                            "while processing this request. Please contact PDS Engineering."
+                        )
+                    }),
+                }
+
+
+    #
+    # Determine top-level HTTP status for the entire batch.
+    # If ANY request fails (403, 404, other), return that status code so the DUM
+    # client immediately understands the request failed and will not hang.
+    #
+    batch_status = HTTPStatus.OK.value
+
+    for result in results:
+        if result["result"] not in (HTTPStatus.OK.value, HTTPStatus.NO_CONTENT.value):
+            batch_status = int(result["result"])
+            break
+
+    return {
+        "statusCode": batch_status,
+        "body": json.dumps(results),
+    }

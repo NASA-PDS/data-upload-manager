@@ -31,6 +31,7 @@ from pds.ingress.util.backoff_util import simulate_batch_request_failure
 from pds.ingress.util.backoff_util import simulate_ingress_failure
 from pds.ingress.util.config_util import ConfigUtil
 from pds.ingress.util.hash_util import md5_for_path
+from pds.ingress.util.log_util import Color
 from pds.ingress.util.log_util import get_log_level
 from pds.ingress.util.log_util import get_logger
 from pds.ingress.util.node_util import NodeUtil
@@ -420,36 +421,72 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
 
     elapsed_time = time.time() - start_time
 
-    # Ingress request successful
+    #
+    # SUCCESS PATH — 200 OK
+    # The ingress request completed successfully and the Lambda returned
+    # a valid response batch. Parse and return it to the caller.
+    #
     if response.status_code == HTTPStatus.OK:
         response_batch = response.json()
 
         logger.info("Batch %d : Ingress request completed in %.2f seconds", batch_index, elapsed_time)
 
         return response_batch
-    elif response.status_code == HTTPStatus.FORBIDDEN:
-        # Tidy up progress bars so they don't interfere with the message we're
-        # about to log to the console
-        close_ingress_total_progress_bar()
-        close_batch_progress_bars()
 
-        # If we're here, it's our first indication that a user can authentiate with Cognito,
-        # but the API Gateway is denying access to any requests. This is typicaly due to IP restrictions
-        # set by the WAF allocated to the API Gateway
-        logger = get_logger("request_batch_for_ingress", cloudwatch=False, console=True, file=True)
-        logger.error("------------------------------------------------------")
-        logger.error("Ingress request failed due to 403 Forbidden error.")
-        logger.error("This is typically caused by IP restrictions on the API Gateway.")
-        logger.error(
-            "If you have not already, please contact a PDS Engineering Node "
-            "administrator with the desired IP address ranges for your local "
-            "network to ensure they are white-listed for access to the DUM service."
-        )
+    #
+    # FAILURE PATH — ANY NON-200 RESPONSE
+    # At this point the request did not succeed. This indicates either:
+    #   • The user does not have permission (403), OR
+    #   • The ingestion service experienced an internal failure (500), OR
+    #   • Any other client/server error that prevents progress.
+    #
+    # All of these conditions require the client to stop immediately.
+    #
 
-        # This is a fatal error, so we should not continue processing or attempt to backoff/retry
-        sys.exit(1)
+    # Ensure progress bars are closed before printing the error message
+    close_ingress_total_progress_bar()
+    close_batch_progress_bars()
+
+    # Use console-only logger so the user clearly sees the error message
+    logger = get_logger(
+        "request_batch_for_ingress",
+        cloudwatch=False,
+        console=True,
+        file=True,
+    )
+
+    logger.error(Color.red("----------------------------------------------"))
+    logger.error(Color.red_bold(
+        f"Ingress request failed with HTTP status {response.status_code} ({response.reason})"
+    ))
+
+    #
+    # Special handling for 403 (user is authenticated but not allowed)
+    # This typically indicates an external access restriction, such as
+    # the client’s IP address not being permitted to access the DUM
+    # service through API Gateway/WAF.
+    #
+    if response.status_code == HTTPStatus.FORBIDDEN:
+        logger.error(Color.red(
+            "Access to the ingestion service was denied (403 Forbidden).\n"
+            "This usually indicates that the current network is not "
+            "authorized to access the DUM service.\n"
+            "Please contact PDS Engineering with your network’s IP range."
+        ))
+
+    #
+    # All other non-200 errors are treated as internal service failures.
+    # These require assistance from PDS Engineering and should not be retried.
+    #
     else:
-        response.raise_for_status()
+        logger.error(Color.red(
+            "The ingestion service encountered an internal error and could "
+            "not process this request.\n"
+            "Please contact PDS Engineering for assistance."
+        ))
+
+    # Fail fast — do not retry or continue processing further batches
+    sys.exit(1)
 
 
 @backoff.on_exception(backoff.expo, Exception, max_time=120, on_backoff=backoff_handler, logger=None)
@@ -523,17 +560,26 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
         update_summary_table(SUMMARY_TABLE, "uploaded", ingress_path)
         upload_pbar.reset()
     elif response_result == HTTPStatus.NO_CONTENT:
-        logger.info(
-            "Batch %d : Skipping ingress for %s, reason %s", batch_index, trimmed_path, ingress_response.get("message")
+        Color.blue(
+            f"Batch {batch_index} : Skipping ingress for {trimmed_path}, "
+            f"reason {ingress_response.get('message')}"
         )
         update_summary_table(SUMMARY_TABLE, "skipped", ingress_path)
+
     elif response_result == HTTPStatus.NOT_FOUND:
         logger.warning(
-            "Batch %d : Ingress failed for %s, reason: %s", batch_index, trimmed_path, ingress_response.get("message")
+            Color.yellow(
+                f"Batch {batch_index} : Ingress failed for {trimmed_path}, "
+                f"reason: {ingress_response.get('message')}"
+            )
         )
         update_summary_table(SUMMARY_TABLE, "failed", ingress_path)
+
     else:
-        logger.error("Batch %d : Unexepected response code (%d) from Ingress service", batch_index, response_result)
+        logger.error(Color.red(
+            f"Batch {batch_index} : Unexpected response code ({response_result}) "
+            f"from Ingress service"
+        ))
         raise RuntimeError
 
 
@@ -609,8 +655,8 @@ def ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar):
 
                 completed_parts.append({"ETag": response.headers["ETag"], "PartNumber": part_number})
         except Exception as err:
-            logger.error("Failure occurred during Multipart upload, reason: %s", str(err))
-            logger.error("Aborting Multipart Upload for %s", trimmed_path)
+            logger.error(Color.red(f"Failure occurred during Multipart upload, reason: {err}"))
+            logger.error(Color.red(f"Aborting Multipart Upload for {trimmed_path}"))
             response = requests.post(upload_abort_url)
             response.raise_for_status()
             raise
@@ -618,24 +664,24 @@ def ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar):
             file_handle.close()
 
         # Complete the multipart upload
-        logger.info("Completing Multipart Upload for %s", trimmed_path)
+        logger.info(Color.green_bold("Completing Multipart Upload for %s", trimmed_path))
         response = requests.post(upload_complete_url, data=parts_to_xml(completed_parts))
         response.raise_for_status()
 
-        logger.info("Batch %d : %s Multipart Upload complete", batch_index, trimmed_path)
+        logger.info(Color.green_bold("Batch %d : %s Multipart Upload complete", batch_index, trimmed_path))
         update_summary_table(SUMMARY_TABLE, "uploaded", ingress_path)
     elif response_result == HTTPStatus.NO_CONTENT:
         logger.info(
-            "Batch %d : Skipping ingress for %s, reason %s", batch_index, trimmed_path, ingress_response.get("message")
+            Color.blue_bold("Batch %d : Skipping ingress for %s, reason %s", batch_index, trimmed_path, ingress_response.get("message"))
         )
         update_summary_table(SUMMARY_TABLE, "skipped", ingress_path)
     elif response_result == HTTPStatus.NOT_FOUND:
         logger.warning(
-            "Batch %d : Ingress failed for %s, reason: %s", batch_index, trimmed_path, ingress_response.get("message")
+            Color.red_bold("Batch %d : Ingress failed for %s, reason: %s", batch_index, trimmed_path, ingress_response.get("message"))
         )
         update_summary_table(SUMMARY_TABLE, "failed", ingress_path)
     else:
-        logger.error("Batch %d : Unexepected response code (%d) from Ingress service", batch_index, response_result)
+        logger.error(Color.red_bold("Batch %d : Unexepected response code (%d) from Ingress service", batch_index, response_result))
         raise RuntimeError
 
 
@@ -843,6 +889,8 @@ def main(args):
     logger.info("Starting PDS Data Upload Manager Client v%s", __version__)
     logger.info("Loaded config file %s", args.config_path)
     logger.info("Logging to file %s", log_util.FILE_HANDLER.baseFilename)
+    if args.force_overwrite:
+        logger.info(Color.red_bold("Force-overwrite enabled: existing files will be overwritten."))
 
     # Derive the full list of ingress paths based on the set of paths requested
     # by the user
@@ -931,7 +979,7 @@ def main(args):
         finally:
             close_batch_progress_bars()
 
-        logger.info("All batches processed")
+        logger.info(Color.green_bold("All batches processed"))
 
         try:
             if len(SUMMARY_TABLE["failed"]) > 0:
@@ -950,7 +998,7 @@ def main(args):
             # Flush all logged statements to CloudWatch Logs
             log_util.CLOUDWATCH_HANDLER.flush()
     else:
-        logger.info("Dry run requested, skipping ingress request submission.")
+        logger.info(Color.blue("Dry run requested, skipping ingress request submission."))
 
     # Capture completion time
     SUMMARY_TABLE["end_time"] = time.time()

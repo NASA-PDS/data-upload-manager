@@ -1,41 +1,74 @@
-MAP:
+# =======================
+# bucket-map.yaml.tmpl
+# =======================
+# Defines all node-specific staging and archive S3 buckets for the
+# PDS Ingress Service. This version is Yamale-schema compliant and
+# supports both staging and archive buckets for each node.
+
+BUCKET_MAP:
   NODES:
     ATM:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-atm-staging-${venue}
+        archive:
+          name: pds-atm-archive-${venue}
+
     ENG:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-eng-staging-${venue}
+        archive:
+          name: pds-eng-archive-${venue}
+
     GEO:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-geo-staging-${venue}
+        archive:
+          name: pds-geo-archive-${venue}
+
     IMG:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-img-staging-${venue}
+        archive:
+          name: pds-img-archive-${venue}
+
     NAIF:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-naif-staging-${venue}
+        archive:
+          name: pds-naif-archive-${venue}
+
     PPI:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-ppi-staging-${venue}
+        archive:
+          name: pds-ppi-archive-${venue}
+
     RMS:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-rms-staging-${venue}
+        archive:
+          name: pds-rms-archive-${venue}
+
     RS:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-rs-staging-${venue}
+        archive:
+          name: pds-rs-archive-${venue}
+
     SBN:
-      default:
-        bucket:
+      buckets:
+        staging:
           name: pds-sbn-staging-${venue}
+        archive:
+          name: pds-sbn-archive-${venue}
       paths:
         - prefix: manifests/*
           bucket:

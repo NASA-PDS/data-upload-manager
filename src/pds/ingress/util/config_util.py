@@ -241,13 +241,15 @@ def initialize_bucket_map(logger):
     with open(bucket_map_path, "r") as infile:
         bucket_map = yaml.safe_load(infile)
 
+    bucket_map = bucket_map["BUCKET_MAP"]
+
     logger.info("Bucket map %s loaded", bucket_map_path)
     logger.debug(str(bucket_map))
 
     return bucket_map
 
 
-def bucket_for_path(node_bucket_map, file_path, logger):
+def bucket_for_path(node_bucket_map, file_path, logger, bucket_type="staging"):
     """
     Derives the appropriate bucket location and settings for the specified
     file path using the provided node-specific portion of the bucket map.
@@ -260,12 +262,14 @@ def bucket_for_path(node_bucket_map, file_path, logger):
         The file path to match to a bucket map entry.
     logger : logging.logger
         Object to log results of the path resolution to.
+    bucket_type : str, optional
+        Either 'staging' or 'archive'. Defaults to 'staging'.
 
     Returns
     -------
     bucket : dict
-        Dicitonary containing details on the S3 bucket that will act as destination
-        for the incomming file. This includes the bucket name, as well as any
+        Dictionary containing details on the S3 bucket that will act as destination
+        for the incoming file. This includes the bucket name, as well as any
         other configuration options that can be specified in the bucket map.
 
     """
@@ -274,14 +278,25 @@ def bucket_for_path(node_bucket_map, file_path, logger):
         """Determine if a file path matches a bucket map prefix via equality, substring, or Unix-style pattern matching"""
         return file_path == prefix or file_path.startswith(prefix) or fnmatchcase(file_path, prefix)
 
-    bucket = node_bucket_map["default"]["bucket"]
+    # Pick bucket type (staging or archive)
+    buckets = node_bucket_map.get("buckets", {})
+    if bucket_type in buckets:
+        bucket = buckets[bucket_type]
+    else:
+        bucket = node_bucket_map.get("default", {}).get("bucket")
 
+    # If any path overrides are defined, apply them
     for path in node_bucket_map.get("paths", []):
         if _match_path_to_prefix(file_path, path["prefix"]):
             bucket = path["bucket"]
-            logger.debug("Resolved bucket location %s for path %s", bucket, file_path)
+            logger.debug("Resolved %s bucket location %s for path %s", bucket_type, bucket, file_path)
             break
     else:
-        logger.debug('No bucket location configured for path "%s", using default bucket %s', file_path, bucket)
+        logger.debug('No %s bucket location configured for path "%s", using default bucket %s',
+                     bucket_type, file_path, bucket)
+
+    # Always wrap result in dict form
+    if isinstance(bucket, str):
+        bucket = {"name": bucket}
 
     return bucket

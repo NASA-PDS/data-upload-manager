@@ -14,6 +14,49 @@ import tempfile
 from datetime import datetime
 from logging.handlers import BufferingHandler
 
+
+# ANSI color constants (console use only — CloudWatch/file logs remain plain text)
+class Color:
+    RED = "\033[31m"
+    YELLOW = "\033[33m"
+    BLUE = "\033[34m"
+    GREEN = "\033[32m"
+    BOLD = "\033[1m"
+    RESET = "\033[0m"
+
+    @staticmethod
+    def red(text):
+        return f"{Color.RED}{text}{Color.RESET}"
+
+    @staticmethod
+    def yellow(text):
+        return f"{Color.YELLOW}{text}{Color.RESET}"
+
+    @staticmethod
+    def blue(text):
+        return f"{Color.BLUE}{text}{Color.RESET}"
+
+    @staticmethod
+    def green(text):
+        return f"{Color.GREEN}{text}{Color.RESET}"
+
+    @staticmethod
+    def bold(text):
+        return f"{Color.BOLD}{text}{Color.RESET}"
+
+    @staticmethod
+    def red_bold(text):
+        return f"{Color.RED}{Color.BOLD}{text}{Color.RESET}"
+
+    @staticmethod
+    def blue_bold(text):
+        return f"{Color.BLUE}{Color.BOLD}{text}{Color.RESET}"
+
+    @staticmethod
+    def green_bold(text):
+        return f"{Color.GREEN}{Color.BOLD}{text}{Color.RESET}"
+
+
 # When leveraging this module with the Lambda service functions, the backoff
 # and requests modules will not be available within the Python runtime.
 # They should not be needed by those Lambda's, so use MagicMock to bypass any
