@@ -889,6 +889,8 @@ def main(args):
     logger.info("Starting PDS Data Upload Manager Client v%s", __version__)
     logger.info("Loaded config file %s", args.config_path)
     logger.info("Logging to file %s", log_util.FILE_HANDLER.baseFilename)
+    if args.force_overwrite:
+        logger.info(Color.red_bold("Force-overwrite enabled: existing files will be overwritten."))
 
     # Derive the full list of ingress paths based on the set of paths requested
     # by the user
