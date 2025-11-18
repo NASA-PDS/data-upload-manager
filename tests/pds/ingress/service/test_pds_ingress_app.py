@@ -12,13 +12,15 @@ os.environ["AWS_DEFAULT_REGION"] = "us-west-2"
 import botocore.auth
 import botocore.client
 import botocore.exceptions
+from importlib.resources import files
+
 from pds.ingress import __version__
 from pds.ingress.service.pds_ingress_app import check_client_version
 from pds.ingress.service.pds_ingress_app import get_dum_version
 from pds.ingress.service.pds_ingress_app import lambda_handler
 from pds.ingress.service.pds_ingress_app import logger as service_logger
 from pds.ingress.service.pds_ingress_app import should_upload_file
-from importlib.resources import files
+from pds.ingress.service.pds_ingress_app import file_exists_in_bucket
 
 
 class PDSIngressAppTest(unittest.TestCase):
@@ -102,8 +104,9 @@ class PDSIngressAppTest(unittest.TestCase):
 
         context = {}  # Unused by lambda_handler
 
-        with patch.object(botocore.auth.HmacV1QueryAuth, "add_auth", MagicMock):
-            response = lambda_handler(test_event, context)
+        with patch("pds.ingress.service.pds_ingress_app.file_exists_in_bucket", return_value=False):
+            with patch.object(botocore.auth.HmacV1QueryAuth, "add_auth", MagicMock):
+                response = lambda_handler(test_event, context)
 
         self.assertIn("statusCode", response)
         self.assertEqual(response["statusCode"], 200)
@@ -165,8 +168,9 @@ class PDSIngressAppTest(unittest.TestCase):
             "headers": {"ClientVersion": __version__, "ForceOverwrite": False},
         }
 
-        with patch.object(botocore.auth.HmacV1QueryAuth, "add_auth", MagicMock):
-            response = lambda_handler(test_event, context)
+        with patch("pds.ingress.service.pds_ingress_app.file_exists_in_bucket", return_value=False):
+            with patch.object(botocore.auth.HmacV1QueryAuth, "add_auth", MagicMock):
+                response = lambda_handler(test_event, context)
 
         self.assertIn("statusCode", response)
         self.assertEqual(response["statusCode"], 200)
@@ -234,7 +238,6 @@ class PDSIngressAppTest(unittest.TestCase):
         file_size = os.stat(os.path.abspath(__file__)).st_size
         last_modified = os.path.getmtime(os.path.abspath(__file__))
 
-        # Force overwrite should always return True
         self.assertTrue(
             should_upload_file(
                 staging_bucket,
@@ -248,7 +251,6 @@ class PDSIngressAppTest(unittest.TestCase):
             )
         )
 
-        # Mock for a file that exists in S3 and matches the uploaded one
         existing_file = {
             "ContentLength": file_size,
             "ETag": '"validhash"',
@@ -256,7 +258,6 @@ class PDSIngressAppTest(unittest.TestCase):
             "Metadata": {"md5": md5_digest, "md5chksum": base64_md5_digest},
         }
 
-        # Mock for a file that exists with same name, but the content is different (hash/size mismatch)
         different_file = {
             "ContentLength": 2,
             "ETag": '"mismatchhash"',
@@ -264,8 +265,6 @@ class PDSIngressAppTest(unittest.TestCase):
             "Metadata": {"md5": "mismatchhash", "md5chksum": "mismatchbase64hash"},
         }
 
-        # Case 1: staging bucket has different file → should continue
-        # Case 2: archive bucket has matching file → should skip upload
         mock_file_check = MagicMock(side_effect=[different_file, existing_file])
 
         with patch("pds.ingress.service.pds_ingress_app.file_exists_in_bucket", mock_file_check):
@@ -282,7 +281,6 @@ class PDSIngressAppTest(unittest.TestCase):
                 )
             )
 
-        # Case 3: both buckets return not found → should upload
         mock_no_file = MagicMock(return_value=False)
 
         with patch("pds.ingress.service.pds_ingress_app.file_exists_in_bucket", mock_no_file):
@@ -298,6 +296,59 @@ class PDSIngressAppTest(unittest.TestCase):
                     force_overwrite=False,
                 )
             )
+
+    def test_file_exists_in_bucket_404(self):
+        bucket = "pds-test"
+        key = "obj"
+
+        error = botocore.exceptions.ClientError(
+            error_response={"Error": {"Code": "404", "Message": "Not Found"}},
+            operation_name="HeadObject",
+        )
+
+        with patch("pds.ingress.service.pds_ingress_app.s3_client") as mock_s3:
+            mock_s3.head_object.side_effect = error
+
+            exists = file_exists_in_bucket(
+                bucket,
+                key,
+                md5_digest="x",
+                base64_md5_digest="eA==",
+                file_size=10,
+                last_modified=datetime.now().timestamp(),
+            )
+
+        self.assertFalse(exists)
+
+    def test_file_exists_in_bucket_matching(self):
+        bucket = "pds-test"
+        key = "obj"
+
+        md5_hex = "abc"
+        md5_b64 = "YWJj"
+        now = datetime.now(tz=timezone.utc)
+
+        s3_head = {
+            "ContentLength": 10,
+            "LastModified": now,
+            "ETag": '"ignored"',
+            "Metadata": {"md5": md5_hex},
+        }
+
+        with patch("pds.ingress.service.pds_ingress_app.s3_client") as mock_s3:
+            mock_s3.head_object.return_value = s3_head
+
+            exists = file_exists_in_bucket(
+                bucket,
+                key,
+                md5_digest=md5_hex,
+                base64_md5_digest=md5_b64,
+                file_size=10,
+                last_modified=now.timestamp(),
+            )
+
+        self.assertTrue(exists)
+
 
 if __name__ == "__main__":
     unittest.main()
