@@ -14,7 +14,8 @@ import time
 from datetime import datetime
 from datetime import timezone
 
-from pds.ingress.util.log_util import get_logger, Color
+from pds.ingress.util.log_util import Color
+from pds.ingress.util.log_util import get_logger
 
 REPORT_LOCK = multiprocessing.Lock()
 """Lock used to control write access to the summary table"""

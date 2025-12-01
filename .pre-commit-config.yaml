@@ -26,14 +26,18 @@ repos:
 #        language: system
 #        pass_filenames: false
 
--   repo: local
-    hooks:
-    -   id: black
-        name: black
-        entry: black
-        files: ^src/|tests/
-        language: system
-        types: [python]
+# Disabled black hook - conflicts with reorder-python-imports
+# Both tools try to format import statements differently, causing infinite reformatting
+# Keeping reorder-python-imports as it's more specialized for import organization
+# See: https://github.com/psf/black/issues/1485 for context on this conflict
+#-   repo: local
+#    hooks:
+#    -   id: black
+#        name: black
+#        entry: black
+#        files: ^src/|tests/
+#        language: system
+#        types: [python]
 
 -   repo: local
     hooks:
@@ -49,7 +53,7 @@ repos:
         name: Tests
         entry: pytest
         language: system
-        stages: [push]
+        stages: [pre-push]
         pass_filenames: false
 
 -   repo: https://github.com/NASA-AMMOS/slim-detect-secrets
