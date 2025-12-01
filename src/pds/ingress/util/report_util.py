@@ -124,8 +124,6 @@ def print_ingress_summary(summary_table):
     logger.info(Color.green(f"Bytes transferred: {transferred}"))
 
 
-
-
 def read_manifest_file(manifest_path):
     """
     Reads manifest contents, including file checksums, from the provided
