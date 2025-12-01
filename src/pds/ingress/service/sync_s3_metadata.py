@@ -397,7 +397,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Invoke S3 metadata sync outside of Lambda.")
     parser.add_argument("bucket", help="S3 bucket name")
     parser.add_argument("prefix", help="S3 prefix")
-    parser.add_argument("--batch-size", type=int, default=1000, help="Batch size for processing (default: 1000)")
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=1000,
+        help="Batch size for processing (default: %(default)d)",
+    )
     args = parser.parse_args()
 
     event = {"bucket_name": args.bucket, "prefix": args.prefix, "batch_size": args.batch_size}
