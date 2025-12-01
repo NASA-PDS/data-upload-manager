@@ -186,9 +186,10 @@ def _process_batch(bucket_name, keys_batch, num_workers, context, timeout_buffer
         List of keys that failed.
 
     """
-    updated = []
-    skipped = []
-    failed = []
+    # Use sets internally to guarantee uniqueness, then convert back to lists for callers
+    updated = set()
+    skipped = set()
+    failed = set()
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
         # Submit all tasks for this batch
@@ -206,16 +207,17 @@ def _process_batch(bucket_name, keys_batch, num_workers, context, timeout_buffer
             try:
                 result_key, status = future.result()
                 if status == "updated":
-                    updated.append(result_key)
+                    updated.add(result_key)
                 elif status == "skipped":
-                    skipped.append(result_key)
+                    skipped.add(result_key)
                 else:
-                    failed.append(result_key)
+                    failed.add(result_key)
             except Exception as err:
                 logger.error("Exception processing key %s: %s", key, str(err))
-                failed.append(key)
+                failed.add(key)
 
-    return updated, skipped, failed
+    # Convert back to lists to preserve the public API
+    return list(updated), list(skipped), list(failed)
 
 
 def update_s3_objects_metadata(context, bucket_name, prefix=None, timeout_buffer_ms=5000, batch_size=1000):
