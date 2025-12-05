@@ -43,16 +43,7 @@ logger.setLevel(LOG_LEVELS.get(LOG_LEVEL.lower(), logging.INFO))
 logger.addFilter(SingleLogFilter())
 
 # Get expected bucket owner from environment variable for security
-EXPECTED_BUCKET_OWNER = os.getenv("EXPECTED_BUCKET_OWNER")
-
-# Fallback to reading from config if available
-if not EXPECTED_BUCKET_OWNER:
-    try:
-        config = ConfigUtil.get_config()
-        if config.has_option("AWS", "expected_bucket_owner"):
-            EXPECTED_BUCKET_OWNER = config["AWS"]["expected_bucket_owner"]
-    except Exception:
-        pass
+EXPECTED_BUCKET_OWNER = ConfigUtil.get_expected_bucket_owner()
 
 logger.info("Loading function PDS Ingress Status Service")
 

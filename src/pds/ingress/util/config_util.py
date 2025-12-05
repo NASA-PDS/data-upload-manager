@@ -158,6 +158,25 @@ class ConfigUtil:
             for region in [config["API_GATEWAY"]["region"].lower(), config["COGNITO"]["region"].lower()]
         )
 
+    @staticmethod
+    def get_expected_bucket_owner():
+        """
+        Returns the Expected Bucket Owner ID from the environment variable
+        or the configuration file.
+        """
+        expected_bucket_owner = os.getenv("EXPECTED_BUCKET_OWNER")
+
+        if not expected_bucket_owner:
+            try:
+                config = ConfigUtil.get_config()
+                if config.has_option("AWS", "expected_bucket_owner"):
+                    expected_bucket_owner = config["AWS"]["expected_bucket_owner"]
+            except Exception:
+                # Config might not be available or readable, which is fine in some contexts
+                pass
+
+        return expected_bucket_owner
+
 
 def validate_bucket_map(bucket_map_path, logger):
     """
@@ -224,17 +243,7 @@ def initialize_bucket_map(logger):
         try:
             s3_client = boto3.client("s3")
             # Get expected bucket owner from environment variable for security
-            expected_bucket_owner = os.getenv("EXPECTED_BUCKET_OWNER")
-            
-            # Fallback to reading from config if available
-            if not expected_bucket_owner:
-                try:
-                    config = ConfigUtil.get_config()
-                    if config.has_option("AWS", "expected_bucket_owner"):
-                        expected_bucket_owner = config["AWS"]["expected_bucket_owner"]
-                except Exception:
-                    # Config might not be available or readable, which is fine in some contexts
-                    pass
+            expected_bucket_owner = ConfigUtil.get_expected_bucket_owner()
 
             # Verify bucket ownership first using head_object
             if expected_bucket_owner:
