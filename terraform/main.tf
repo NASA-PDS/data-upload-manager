@@ -14,6 +14,7 @@ module "nucleus_dum_ingress_service_lambda" {
   lambda_ingress_service_iam_role_arn    = var.lambda_ingress_service_iam_role_arn
   lambda_ingress_localstack_context      = var.localstack_context
   lambda_ingress_service_default_buckets = var.lambda_ingress_service_default_buckets
+  expected_bucket_owner                  = var.expected_bucket_owner
 }
 
 module "nucleus_dum_status_queue" {

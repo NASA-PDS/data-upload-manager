@@ -33,6 +33,9 @@ logging.basicConfig()
 logger = logging.getLogger()
 logger.setLevel(LOG_LEVELS.get(LOG_LEVEL.lower(), logging.INFO))
 
+# Get expected bucket owner from environment variable for security
+EXPECTED_BUCKET_OWNER = os.getenv("EXPECTED_BUCKET_OWNER")
+
 
 def update_last_modified_metadata(key, head_metadata):
     """
@@ -131,7 +134,10 @@ def process_s3_object(bucket_name, key):
     """
     try:
         update_made = False
-        head_metadata = s3.head_object(Bucket=bucket_name, Key=key)
+        head_params = {"Bucket": bucket_name, "Key": key}
+        if EXPECTED_BUCKET_OWNER:
+            head_params["ExpectedBucketOwner"] = EXPECTED_BUCKET_OWNER
+        head_metadata = s3.head_object(**head_params)
         metadata_dict = head_metadata.get("Metadata", {})
 
         if "mtime" not in metadata_dict or "last_modified" not in metadata_dict:
@@ -143,13 +149,16 @@ def process_s3_object(bucket_name, key):
             update_made = True
 
         if update_made:
-            s3.copy_object(
-                Bucket=bucket_name,
-                Key=key,
-                CopySource={"Bucket": bucket_name, "Key": key},
-                Metadata=head_metadata["Metadata"],
-                MetadataDirective="REPLACE",
-            )
+            copy_params = {
+                "Bucket": bucket_name,
+                "Key": key,
+                "CopySource": {"Bucket": bucket_name, "Key": key},
+                "Metadata": head_metadata["Metadata"],
+                "MetadataDirective": "REPLACE",
+            }
+            if EXPECTED_BUCKET_OWNER:
+                copy_params["ExpectedBucketOwner"] = EXPECTED_BUCKET_OWNER
+            s3.copy_object(**copy_params)
             return key, "updated"
         else:
             logger.debug("Skipping object %s, no updates required", key)
