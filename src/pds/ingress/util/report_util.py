@@ -14,7 +14,8 @@ import time
 from datetime import datetime
 from datetime import timezone
 
-from pds.ingress.util.log_util import get_logger, Color
+from pds.ingress.util.log_util import Color
+from pds.ingress.util.log_util import get_logger
 
 REPORT_LOCK = multiprocessing.Lock()
 """Lock used to control write access to the summary table"""
@@ -121,8 +122,6 @@ def print_ingress_summary(summary_table):
     logger.info(Color.bold(f"Total: {total} file(s)"))
     logger.info(Color.bold(f"Time elapsed: {end_time - start_time:.2f} seconds"))
     logger.info(Color.green(f"Bytes transferred: {transferred}"))
-
-
 
 
 def read_manifest_file(manifest_path):

@@ -14,6 +14,9 @@ import tempfile
 from datetime import datetime
 from logging.handlers import BufferingHandler
 
+from .config_util import ConfigUtil
+from .node_util import NodeUtil
+
 
 # ANSI color constants (console use only — CloudWatch/file logs remain plain text)
 class Color:
@@ -69,9 +72,6 @@ except ImportError:
 
     backoff = MagicMock()
     requests = MagicMock()
-
-from .config_util import ConfigUtil
-from .node_util import NodeUtil
 
 MILLI_PER_SEC = 1000
 

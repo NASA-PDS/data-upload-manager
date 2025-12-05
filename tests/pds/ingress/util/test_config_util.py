@@ -8,13 +8,11 @@ from os.path import join
 from unittest.mock import patch
 
 import pds.ingress.util.config_util
-from pds.ingress.util.config_util import (
-    bucket_for_path,
-    ConfigUtil,
-    initialize_bucket_map,
-    SanitizingConfigParser,
-    strtobool,
-)
+from pds.ingress.util.config_util import bucket_for_path
+from pds.ingress.util.config_util import ConfigUtil
+from pds.ingress.util.config_util import initialize_bucket_map
+from pds.ingress.util.config_util import SanitizingConfigParser
+from pds.ingress.util.config_util import strtobool
 
 
 # ----------------------------------------------------------------------

@@ -244,9 +244,9 @@ def file_exists_in_bucket(bucket_name, object_key, md5_digest, base64_md5_digest
         return True
 
     return (
-            object_length == request_length
-            and object_md5 == request_md5
-            and object_last_modified >= request_last_modified
+        object_length == request_length
+        and object_md5 == request_md5
+        and object_last_modified >= request_last_modified
     )
 
 
@@ -758,22 +758,22 @@ def lambda_handler(event, context):
         for future in concurrent.futures.as_completed(futures):
             try:
                 results.append(future.result())
-            except Exception as e:
+            except Exception:
                 logger.exception("Ingress request failed inside worker thread")
 
                 # FAIL FAST: return 500 to the client
                 return {
                     "statusCode": HTTPStatus.INTERNAL_SERVER_ERROR.value,
-                    "body": json.dumps({
-                        "error": (
-                            "Internal server error: the ingestion service encountered a failure "
-                            "while processing this request. Please contact PDS Engineering."
-                        )
-                    }),
+                    "body": json.dumps(
+                        {
+                            "error": (
+                                "Internal server error: the ingestion service encountered a failure "
+                                "while processing this request. Please contact PDS Engineering."
+                            )
+                        }
+                    ),
                 }
 
-
-    #
     # Determine top-level HTTP status for the entire batch.
     # If ANY request fails (403, 404, other), return that status code so the DUM
     # client immediately understands the request failed and will not hang.

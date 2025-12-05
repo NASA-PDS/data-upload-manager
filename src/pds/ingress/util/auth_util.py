@@ -10,7 +10,8 @@ Ingress Service Lambda.
 import boto3  # type: ignore
 
 from .config_util import ConfigUtil
-from .log_util import get_logger, Color
+from .log_util import Color
+from .log_util import get_logger
 
 
 class AuthUtil:

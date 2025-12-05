@@ -60,7 +60,7 @@ def update_last_modified_metadata(key, head_metadata):
     if not last_modified:
         # Use the mtime assigned by rclone
         if mtime:
-            last_modified = datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat()
+            last_modified = datetime.fromtimestamp(float(mtime), tz=timezone.utc).isoformat()
         # Fall back to the S3 LastModified value
         else:
             last_modified = head_metadata["LastModified"].replace(tzinfo=timezone.utc).isoformat()
@@ -159,10 +159,73 @@ def process_s3_object(bucket_name, key):
         return key, "failed"
 
 
-def update_s3_objects_metadata(context, bucket_name, prefix=None, timeout_buffer_ms=5000):
+def _process_batch(bucket_name, keys_batch, num_workers, context, timeout_buffer_ms):
+    """
+    Process a batch of S3 object keys.
+
+    Parameters
+    ----------
+    bucket_name : str
+        Name of the S3 bucket.
+    keys_batch : list
+        List of S3 object keys to process.
+    num_workers : int
+        Number of worker threads to use.
+    context : object
+        Lambda context for timeout checking.
+    timeout_buffer_ms : int
+        Buffer time in milliseconds before timeout.
+
+    Returns
+    -------
+    updated : list
+        List of keys that were updated.
+    skipped : list
+        List of keys that were skipped.
+    failed : list
+        List of keys that failed.
+
+    """
+    # Use sets internally to guarantee uniqueness, then convert back to lists for callers
+    updated = set()
+    skipped = set()
+    failed = set()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+        # Submit all tasks for this batch
+        future_to_key = {executor.submit(process_s3_object, bucket_name, key): key for key in keys_batch}
+
+        for future in concurrent.futures.as_completed(future_to_key):
+            # Check Lambda remaining time
+            if context and context.get_remaining_time_in_millis() < timeout_buffer_ms:
+                logger.warning("Approaching Lambda timeout, cancelling remaining tasks in batch.")
+                for f in future_to_key:
+                    f.cancel()
+                break
+
+            key = future_to_key[future]
+            try:
+                result_key, status = future.result()
+                if status == "updated":
+                    updated.add(result_key)
+                elif status == "skipped":
+                    skipped.add(result_key)
+                else:
+                    failed.add(result_key)
+            except Exception as err:
+                logger.error("Exception processing key %s: %s", key, str(err))
+                failed.add(key)
+
+    # Convert back to lists to preserve the public API
+    return list(updated), list(skipped), list(failed)
+
+
+def update_s3_objects_metadata(context, bucket_name, prefix=None, timeout_buffer_ms=5000, batch_size=1000):
     """
     Recursively iterates over all objects in an S3 bucket and updates their
     metadata to include fields added during rclone uploads, if not already present.
+
+    Processes objects in batches to avoid memory exhaustion.
 
     Parameters
     ----------
@@ -176,6 +239,8 @@ def update_s3_objects_metadata(context, bucket_name, prefix=None, timeout_buffer
         S3 key path to start traversal from.
     timeout_buffer_ms : int, optional
         Buffer time in milliseconds to stop processing before Lambda timeout.
+    batch_size : int, optional
+        Number of objects to process in each batch. Defaults to 1000.
 
     Returns
     -------
@@ -203,38 +268,79 @@ def update_s3_objects_metadata(context, bucket_name, prefix=None, timeout_buffer
     unprocessed = []
 
     num_cores = max(os.cpu_count(), 1)
-
     logger.info("Available CPU cores: %d", num_cores)
+    logger.info("Processing in batches of %d objects to avoid memory issues", batch_size)
 
-    keys = []
+    # Process objects in batches as they're discovered
+    current_batch = []
+    total_processed = 0
+    should_stop = False
 
-    logger.info("Indexing objects in bucket %s with prefix %s", bucket_name, prefix or "")
+    logger.info("Indexing and processing objects in bucket %s with prefix %s", bucket_name, prefix or "")
+
     for page in paginator.paginate(**pagination_params):
+        if should_stop:
+            # Add remaining keys from current page to unprocessed
+            for obj in page.get("Contents", []):
+                if obj["Key"] not in current_batch:
+                    unprocessed.append(obj["Key"])
+            break
+
         for obj in page.get("Contents", []):
-            keys.append(obj["Key"])
-            unprocessed.append(obj["Key"])
+            key = obj["Key"]
+            current_batch.append(key)
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_cores) as executor:
-        futures = [executor.submit(process_s3_object, bucket_name, key) for key in keys]
+            # Process batch when it reaches the batch size
+            if len(current_batch) >= batch_size:
+                batch_updated, batch_skipped, batch_failed = _process_batch(
+                    bucket_name, current_batch, num_cores, context, timeout_buffer_ms
+                )
+                updated.extend(batch_updated)
+                skipped.extend(batch_skipped)
+                failed.extend(batch_failed)
+                total_processed += len(current_batch)
+                logger.info(
+                    "Processed batch: %d objects (total: %d, updated: %d, skipped: %d, failed: %d)",
+                    len(current_batch),
+                    total_processed,
+                    len(updated),
+                    len(skipped),
+                    len(failed),
+                )
+                current_batch = []
 
-        for future in concurrent.futures.as_completed(futures):
-            # Check Lambda remaining time
-            if context and context.get_remaining_time_in_millis() < timeout_buffer_ms:
-                logger.warning("Approaching Lambda timeout, cancelling remaining tasks.")
-                for f in futures:
-                    f.cancel()
-                break
+                # Check if we should stop due to timeout
+                if context and context.get_remaining_time_in_millis() < timeout_buffer_ms:
+                    logger.warning("Approaching Lambda timeout, stopping processing.")
+                    should_stop = True
+                    # Add remaining keys from current page to unprocessed
+                    for remaining_obj in page.get("Contents", []):
+                        if remaining_obj["Key"] not in current_batch:
+                            unprocessed.append(remaining_obj["Key"])
+                    break
 
-            key, status = future.result()
+    # Process any remaining objects in the final batch
+    if current_batch and not should_stop:
+        batch_updated, batch_skipped, batch_failed = _process_batch(
+            bucket_name, current_batch, num_cores, context, timeout_buffer_ms
+        )
+        updated.extend(batch_updated)
+        skipped.extend(batch_skipped)
+        failed.extend(batch_failed)
+        total_processed += len(current_batch)
+        logger.info("Processed final batch of %d objects", len(current_batch))
+    elif current_batch:
+        # Add remaining batch to unprocessed if we stopped early
+        unprocessed.extend(current_batch)
 
-            if status == "updated":
-                updated.append(key)
-            elif status == "skipped":
-                skipped.append(key)
-            else:
-                failed.append(key)
-
-            unprocessed.remove(key)
+    logger.info(
+        "Processing complete. Total processed: %d (updated: %d, skipped: %d, failed: %d, unprocessed: %d)",
+        total_processed,
+        len(updated),
+        len(skipped),
+        len(failed),
+        len(unprocessed),
+    )
 
     return updated, skipped, failed, unprocessed
 
@@ -262,8 +368,11 @@ def lambda_handler(event, context):
     """
     bucket_name = event["bucket_name"]
     prefix = event.get("prefix", None)
+    batch_size = int(event.get("batch_size", os.getenv("BATCH_SIZE", "1000")))
 
-    updated, skipped, failed, unprocessed = update_s3_objects_metadata(context, bucket_name, prefix)
+    updated, skipped, failed, unprocessed = update_s3_objects_metadata(
+        context, bucket_name, prefix, batch_size=batch_size
+    )
 
     result = {
         "statusCode": 200,
@@ -288,7 +397,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Invoke S3 metadata sync outside of Lambda.")
     parser.add_argument("bucket", help="S3 bucket name")
     parser.add_argument("prefix", help="S3 prefix")
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=1000,
+        help="Batch size for processing (default: %(default)d)",
+    )
     args = parser.parse_args()
 
-    event = {"bucket_name": args.bucket, "prefix": args.prefix}
+    event = {"bucket_name": args.bucket, "prefix": args.prefix, "batch_size": args.batch_size}
     lambda_handler(event, None)
