@@ -672,12 +672,22 @@ def ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar):
         update_summary_table(SUMMARY_TABLE, "uploaded", ingress_path)
     elif response_result == HTTPStatus.NO_CONTENT:
         logger.info(
-            Color.blue_bold("Batch %d : Skipping ingress for %s, reason %s", batch_index, trimmed_path, ingress_response.get("message"))
+            Color.blue_bold(
+                "Batch %d : Skipping ingress for %s, reason %s",
+                batch_index,
+                trimmed_path,
+                ingress_response.get("message")
+            )
         )
         update_summary_table(SUMMARY_TABLE, "skipped", ingress_path)
     elif response_result == HTTPStatus.NOT_FOUND:
         logger.warning(
-            Color.red_bold("Batch %d : Ingress failed for %s, reason: %s", batch_index, trimmed_path, ingress_response.get("message"))
+            Color.red_bold(
+                "Batch %d : Ingress failed for %s, reason: %s",
+                batch_index,
+                trimmed_path,
+                ingress_response.get("message")
+            )
         )
         update_summary_table(SUMMARY_TABLE, "failed", ingress_path)
     else:
