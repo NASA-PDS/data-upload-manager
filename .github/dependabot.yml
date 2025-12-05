@@ -10,6 +10,24 @@ updates:
     schedule:
       interval: "weekly"
 
+  - package-ecosystem: "npm"
+    directory: "/src/pds/ingress/authorizer"
+    schedule:
+      interval: "weekly"
+    # Always increase the version requirement
+    # to match the new version.
+    versioning-strategy: increase
+    groups:
+       # Specify a name for the group, which will be used in pull request titles
+       # and branch names
+       dev-dependencies:
+          # Define patterns to include dependencies in the group (based on
+          # dependency name)
+          applies-to: version-updates # Applies the group rule to version updates
+          patterns:
+            - "*"       # A wildcard that matches all dependencies in the package
+                        # ecosystem. Note: using "*" may open a large pull request
+
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
