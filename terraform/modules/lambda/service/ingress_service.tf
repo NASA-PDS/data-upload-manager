@@ -198,6 +198,7 @@ resource "aws_lambda_function" "lambda_ingress_service" {
       VERSION_LOCATION           = "config",
       VERSION_FILE               = "VERSION.txt"
       ENDPOINT_URL               = var.lambda_ingress_localstack_context ? "http://localhost.localstack.cloud:4566" : ""
+      EXPECTED_BUCKET_OWNER      = var.expected_bucket_owner
     }
   }
 
@@ -236,6 +237,7 @@ resource "aws_lambda_function" "lambda_status_service" {
       VERSION_FILE               = "VERSION.txt"
       ENDPOINT_URL               = var.lambda_ingress_localstack_context ? "http://localhost.localstack.cloud:4566" : ""
       SMTP_CONFIG_SSM_KEY_PATH   = "/pds/dum/smtp/"
+      EXPECTED_BUCKET_OWNER      = var.expected_bucket_owner
     }
   }
 
@@ -263,6 +265,7 @@ resource "aws_lambda_function" "metadata_sync_service" {
   environment {
     variables = {
       LOG_LEVEL = "INFO"
+      EXPECTED_BUCKET_OWNER = var.expected_bucket_owner
     }
   }
 

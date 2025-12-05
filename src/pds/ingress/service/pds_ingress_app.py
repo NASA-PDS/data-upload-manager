@@ -25,12 +25,14 @@ from botocore.exceptions import ClientError
 try:
     from util.config_util import bucket_for_path
     from util.config_util import initialize_bucket_map
+    from util.config_util import ConfigUtil
     from util.log_util import LOG_LEVELS
     from util.log_util import SingleLogFilter
 # When running the unit tests, these imports need to be relative
 except ModuleNotFoundError:
     from .util.config_util import bucket_for_path
     from .util.config_util import initialize_bucket_map
+    from .util.config_util import ConfigUtil
     from .util.log_util import LOG_LEVELS
     from .util.log_util import SingleLogFilter
 
@@ -39,6 +41,9 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 logger = logging.getLogger()
 logger.setLevel(LOG_LEVELS.get(LOG_LEVEL.lower(), logging.INFO))
 logger.addFilter(SingleLogFilter())
+
+# Get expected bucket owner from environment variable for security
+EXPECTED_BUCKET_OWNER = ConfigUtil.get_expected_bucket_owner()
 
 logger.info("Loading function PDS Ingress Service")
 
@@ -199,7 +204,10 @@ def file_exists_in_bucket(bucket_name, object_key, md5_digest, base64_md5_digest
         True if the same file already exists, False otherwise.
     """
     try:
-        object_head = s3_client.head_object(Bucket=bucket_name, Key=object_key)
+        head_params = {"Bucket": bucket_name, "Key": object_key}
+        if EXPECTED_BUCKET_OWNER:
+            head_params["ExpectedBucketOwner"] = EXPECTED_BUCKET_OWNER
+        object_head = s3_client.head_object(**head_params)
     except botocore.exceptions.ClientError as e:
         if e.response["Error"]["Code"] == "404":
             return False
@@ -385,6 +393,9 @@ def generate_presigned_upload_url(
     if bucket_info.get("storage_class"):
         method_parameters["StorageClass"] = bucket_info["storage_class"]
 
+    if EXPECTED_BUCKET_OWNER:
+        method_parameters["ExpectedBucketOwner"] = EXPECTED_BUCKET_OWNER
+
     try:
         url = s3_client.generate_presigned_url(
             ClientMethod=client_method, Params=method_parameters, ExpiresIn=expires_in
@@ -451,10 +462,10 @@ def process_multipart_upload(
 
     """
     # Initiate the multi-part upload request
-    response = s3_client.create_multipart_upload(
-        Bucket=bucket_info["name"],
-        Key=object_key,
-        Metadata={
+    mpu_params = {
+        "Bucket": bucket_info["name"],
+        "Key": object_key,
+        "Metadata": {
             "md5": md5_digest,
             "last_modified": datetime.fromtimestamp(last_modified, tz=timezone.utc).isoformat(),
             "dum_client_version": client_version,
@@ -464,7 +475,11 @@ def process_multipart_upload(
             "md5chksum": base64_md5_digest,
             "mtime": str(last_modified),
         },
-    )
+    }
+    if EXPECTED_BUCKET_OWNER:
+        mpu_params["ExpectedBucketOwner"] = EXPECTED_BUCKET_OWNER
+
+    response = s3_client.create_multipart_upload(**mpu_params)
 
     # This upload ID will be required for all subsequent requests related to
     # this multipart upload
@@ -487,6 +502,9 @@ def process_multipart_upload(
             }
 
             try:
+                if EXPECTED_BUCKET_OWNER:
+                    method_parameters["ExpectedBucketOwner"] = EXPECTED_BUCKET_OWNER
+
                 signed_urls.append(
                     s3_client.generate_presigned_url(
                         ClientMethod="upload_part", Params=method_parameters, ExpiresIn=expires_in
@@ -500,6 +518,9 @@ def process_multipart_upload(
 
         # Create pre-signed URLs for the client to complete (or abort) the multipart upload
         method_parameters = {"Bucket": bucket_info["name"], "Key": object_key, "UploadId": upload_id}
+
+        if EXPECTED_BUCKET_OWNER:
+            method_parameters["ExpectedBucketOwner"] = EXPECTED_BUCKET_OWNER
 
         complete_upload_url = s3_client.generate_presigned_url(
             ClientMethod="complete_multipart_upload", Params=method_parameters, ExpiresIn=expires_in, HttpMethod="POST"

@@ -20,6 +20,8 @@ from .node_util import NodeUtil
 
 # ANSI color constants (console use only — CloudWatch/file logs remain plain text)
 class Color:
+    """Container for ANSI color codes and helper methods for colorizing text."""
+
     RED = "\033[31m"
     YELLOW = "\033[33m"
     BLUE = "\033[34m"
@@ -29,34 +31,42 @@ class Color:
 
     @staticmethod
     def red(text):
+        """Returns the provided text wrapped in red ANSI color codes."""
         return f"{Color.RED}{text}{Color.RESET}"
 
     @staticmethod
     def yellow(text):
+        """Returns the provided text wrapped in yellow ANSI color codes."""
         return f"{Color.YELLOW}{text}{Color.RESET}"
 
     @staticmethod
     def blue(text):
+        """Returns the provided text wrapped in blue ANSI color codes."""
         return f"{Color.BLUE}{text}{Color.RESET}"
 
     @staticmethod
     def green(text):
+        """Returns the provided text wrapped in green ANSI color codes."""
         return f"{Color.GREEN}{text}{Color.RESET}"
 
     @staticmethod
     def bold(text):
+        """Returns the provided text wrapped in bold ANSI color codes."""
         return f"{Color.BOLD}{text}{Color.RESET}"
 
     @staticmethod
     def red_bold(text):
+        """Returns the provided text wrapped in red and bold ANSI color codes."""
         return f"{Color.RED}{Color.BOLD}{text}{Color.RESET}"
 
     @staticmethod
     def blue_bold(text):
+        """Returns the provided text wrapped in blue and bold ANSI color codes."""
         return f"{Color.BLUE}{Color.BOLD}{text}{Color.RESET}"
 
     @staticmethod
     def green_bold(text):
+        """Returns the provided text wrapped in green and bold ANSI color codes."""
         return f"{Color.GREEN}{Color.BOLD}{text}{Color.RESET}"
 
 

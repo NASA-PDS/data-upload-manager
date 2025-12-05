@@ -117,5 +117,8 @@ variable "lambda_ingress_service_default_buckets" {
       name        = "pds-sbn-staging",
       description = "Default staging bucket for PDS Small Bodies Node"
     }
-  ]
+variable "expected_bucket_owner" {
+  type        = string
+  description = "The AWS Account ID that is expected to own the S3 buckets. Used for security verification."
+  default     = ""
 }
