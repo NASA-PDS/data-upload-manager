@@ -106,3 +106,9 @@ variable "lambda_ingress_service_default_buckets" {
   )
   description = "List of the default S3 staging buckets to create for each PDS Node, each name will be appended with the designated venue name to form the final bucket name"
 }
+
+variable "expected_bucket_owner" {
+  type        = string
+  description = "The AWS Account ID that is expected to own the S3 buckets. Used for security verification."
+  default     = ""
+}

@@ -25,12 +25,14 @@ from botocore.exceptions import ClientError
 try:
     from util.config_util import bucket_for_path
     from util.config_util import initialize_bucket_map
+    from util.config_util import ConfigUtil
     from util.log_util import LOG_LEVELS
     from util.log_util import SingleLogFilter
 # When running the unit tests, these imports need to be relative
 except ModuleNotFoundError:
     from .util.config_util import bucket_for_path
     from .util.config_util import initialize_bucket_map
+    from .util.config_util import ConfigUtil
     from .util.log_util import LOG_LEVELS
     from .util.log_util import SingleLogFilter
 
@@ -39,6 +41,9 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 logger = logging.getLogger()
 logger.setLevel(LOG_LEVELS.get(LOG_LEVEL.lower(), logging.INFO))
 logger.addFilter(SingleLogFilter())
+
+# Get expected bucket owner from environment variable for security
+EXPECTED_BUCKET_OWNER = ConfigUtil.get_expected_bucket_owner()
 
 logger.info("Loading function PDS Ingress Status Service")
 
@@ -94,6 +99,9 @@ def parse_manifest(record):
     local_manifest_path = join(tempfile.gettempdir(), Path(s3_key).name)
 
     try:
+        # Verify bucket ownership first using head_object
+        if EXPECTED_BUCKET_OWNER:
+            s3_client.head_object(Bucket=s3_bucket, Key=s3_key, ExpectedBucketOwner=EXPECTED_BUCKET_OWNER)
         s3_client.download_file(s3_bucket, s3_key, local_manifest_path)
         logger.info(f"Downloaded {manifest_s3_uri} locally to {local_manifest_path}")
     except Exception as err:
@@ -218,7 +226,10 @@ def get_ingress_status(destination_bucket, object_key, file_info):
 
     """
     try:
-        object_head = s3_client.head_object(Bucket=destination_bucket, Key=object_key)
+        head_params = {"Bucket": destination_bucket, "Key": object_key}
+        if EXPECTED_BUCKET_OWNER:
+            head_params["ExpectedBucketOwner"] = EXPECTED_BUCKET_OWNER
+        object_head = s3_client.head_object(**head_params)
     except ClientError as e:
         if e.response["Error"]["Code"] == "404":
             # File does not exist in S3

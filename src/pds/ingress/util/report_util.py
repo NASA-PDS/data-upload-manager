@@ -80,9 +80,7 @@ def update_summary_table(summary_table, key, paths):
 
 
 def color_count(label, count, color_func):
-    """
-    Returns a colorized text only when count > 0. Otherwise, returns plain text.
-    """
+    """Returns a colorized text only when count > 0. Otherwise, returns plain text."""
     text = f"{label}: {count} file(s)"
     return color_func(text) if count > 0 else text
 
