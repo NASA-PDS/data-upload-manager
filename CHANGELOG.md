@@ -1,5 +1,23 @@
 # Changelog
 
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-12-12)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.2.3...«unknown»)
+
+**Requirements:**
+
+- As a user, I can read rclone-generated checksums when checking for existing files in the staging bucket [\#209](https://github.com/NASA-PDS/data-upload-manager/issues/209)
+- As a user, I want to force an upload of file that is already in the archive bucket [\#100](https://github.com/NASA-PDS/data-upload-manager/issues/100)
+- As a user, I want to skip upload of files that are already in the archive bucket [\#99](https://github.com/NASA-PDS/data-upload-manager/issues/99)
+
+**Defects:**
+
+- Summary table bytes transferred does not calculate correctly with multiple threads [\#304](https://github.com/NASA-PDS/data-upload-manager/issues/304) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
+
+## [v2.2.3](https://github.com/NASA-PDS/data-upload-manager/tree/v2.2.3) (2025-10-22)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.2.2...v2.2.3)
+
 ## [v2.2.2](https://github.com/NASA-PDS/data-upload-manager/tree/v2.2.2) (2025-10-06)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.2.1...v2.2.2)
