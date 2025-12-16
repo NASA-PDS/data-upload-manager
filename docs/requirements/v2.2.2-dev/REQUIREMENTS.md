@@ -52,11 +52,11 @@ This requirement is not impacted by the current version
 
 
 This requirement is not impacted by the current version
-## As a user, I want to skip upload of files that are already in the Registry ([#99](https://github.com/NASA-PDS/data-upload-manager/issues/99)) 
+## As a user, I want to skip upload of files that are already in the archive bucket ([#99](https://github.com/NASA-PDS/data-upload-manager/issues/99)) 
 
 
 This requirement is not impacted by the current version
-## As a user, I want to force an upload of file that is already in S3 or the Registry ([#100](https://github.com/NASA-PDS/data-upload-manager/issues/100)) 
+## As a user, I want to force an upload of file that is already in the archive bucket ([#100](https://github.com/NASA-PDS/data-upload-manager/issues/100)) 
 
 
 This requirement is not impacted by the current version
