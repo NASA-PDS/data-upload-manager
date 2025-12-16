@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-12-12)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-12-16)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.2.3...«unknown»)
 
@@ -12,6 +12,7 @@
 
 **Defects:**
 
+- S3 operations do not validate bucket ownership leading to Confused Deputy vulnerability [\#321](https://github.com/NASA-PDS/data-upload-manager/issues/321) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
 - Summary table bytes transferred does not calculate correctly with multiple threads [\#304](https://github.com/NASA-PDS/data-upload-manager/issues/304) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 
 ## [v2.2.3](https://github.com/NASA-PDS/data-upload-manager/tree/v2.2.3) (2025-10-22)
