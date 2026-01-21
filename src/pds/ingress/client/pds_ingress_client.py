@@ -456,9 +456,7 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
     )
 
     logger.error(Color.red("----------------------------------------------"))
-    logger.error(Color.red_bold(
-        f"Ingress request failed with HTTP status {response.status_code} ({response.reason})"
-    ))
+    logger.error(Color.red_bold(f"Ingress request failed with HTTP status {response.status_code} ({response.reason})"))
 
     #
     # Special handling for 403 (user is authenticated but not allowed)
@@ -467,23 +465,27 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
     # service through API Gateway/WAF.
     #
     if response.status_code == HTTPStatus.FORBIDDEN:
-        logger.error(Color.red(
-            "Access to the ingestion service was denied (403 Forbidden).\n"
-            "This usually indicates that the current network is not "
-            "authorized to access the DUM service.\n"
-            "Please contact PDS Engineering with your network’s IP range."
-        ))
+        logger.error(
+            Color.red(
+                "Access to the ingestion service was denied (403 Forbidden).\n"
+                "This usually indicates that the current network is not "
+                "authorized to access the DUM service.\n"
+                "Please contact PDS Engineering with your network’s IP range."
+            )
+        )
 
     #
     # All other non-200 errors are treated as internal service failures.
     # These require assistance from PDS Engineering and should not be retried.
     #
     else:
-        logger.error(Color.red(
-            "The ingestion service encountered an internal error and could "
-            "not process this request.\n"
-            "Please contact PDS Engineering for assistance."
-        ))
+        logger.error(
+            Color.red(
+                "The ingestion service encountered an internal error and could "
+                "not process this request.\n"
+                "Please contact PDS Engineering for assistance."
+            )
+        )
 
     # Fail fast — do not retry or continue processing further batches
     sys.exit(1)
@@ -561,8 +563,7 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
         upload_pbar.reset()
     elif response_result == HTTPStatus.NO_CONTENT:
         Color.blue(
-            f"Batch {batch_index} : Skipping ingress for {trimmed_path}, "
-            f"reason {ingress_response.get('message')}"
+            f"Batch {batch_index} : Skipping ingress for {trimmed_path}, " f"reason {ingress_response.get('message')}"
         )
         update_summary_table(SUMMARY_TABLE, "skipped", ingress_path)
 
@@ -576,10 +577,9 @@ def ingress_file_to_s3(ingress_response, batch_index, batch_pbar):
         update_summary_table(SUMMARY_TABLE, "failed", ingress_path)
 
     else:
-        logger.error(Color.red(
-            f"Batch {batch_index} : Unexpected response code ({response_result}) "
-            f"from Ingress service"
-        ))
+        logger.error(
+            Color.red(f"Batch {batch_index} : Unexpected response code ({response_result}) " f"from Ingress service")
+        )
         raise RuntimeError
 
 
@@ -676,7 +676,7 @@ def ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar):
                 "Batch %d : Skipping ingress for %s, reason %s",
                 batch_index,
                 trimmed_path,
-                ingress_response.get("message")
+                ingress_response.get("message"),
             )
         )
         update_summary_table(SUMMARY_TABLE, "skipped", ingress_path)
@@ -686,12 +686,16 @@ def ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar):
                 "Batch %d : Ingress failed for %s, reason: %s",
                 batch_index,
                 trimmed_path,
-                ingress_response.get("message")
+                ingress_response.get("message"),
             )
         )
         update_summary_table(SUMMARY_TABLE, "failed", ingress_path)
     else:
-        logger.error(Color.red_bold("Batch %d : Unexepected response code (%d) from Ingress service", batch_index, response_result))
+        logger.error(
+            Color.red_bold(
+                "Batch %d : Unexepected response code (%d) from Ingress service", batch_index, response_result
+            )
+        )
         raise RuntimeError
 
 
@@ -926,6 +930,20 @@ def main(args):
     logger.info("Using batch size of %d", batch_size)
     logger.info("Request (%d files) split into %d batches", len(resolved_ingress_paths), len(batched_ingress_paths))
     SUMMARY_TABLE["num_batches"] = len(batched_ingress_paths)
+
+    # Validate gzip extension for weblog uploads
+    if args.weblogs:
+        non_gzipped = [p for p in resolved_ingress_paths if not PathUtil.validate_gzip_extension(p)]
+        if non_gzipped:
+            logger.error("The following files are not gzipped (.gz):")
+            for path in non_gzipped[:10]:
+                logger.error("  %s", path)
+            if len(non_gzipped) > 10:
+                logger.error("  ... and %d more", len(non_gzipped) - 10)
+            raise ValueError(
+                f"Weblog uploads require gzipped files. Found {len(non_gzipped)} non-gzipped file(s). "
+                "Please compress files with gzip before uploading."
+            )
 
     if args.manifest_path and os.path.exists(args.manifest_path):
         logger.info("Reading existing manifest file %s", args.manifest_path)

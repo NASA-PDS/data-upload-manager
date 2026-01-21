@@ -6,6 +6,7 @@ path_util.py
 Module containing functions for working with local file system paths.
 
 """
+
 import fnmatch
 import os
 
@@ -157,3 +158,21 @@ class PathUtil:
             result = True
 
         return result
+
+    @staticmethod
+    def validate_gzip_extension(file_path):
+        """
+        Validates that a file has a .gz extension.
+
+        Parameters
+        ----------
+        file_path : str
+            The file path to validate.
+
+        Returns
+        -------
+        bool
+            True if the file has a .gz extension, False otherwise.
+
+        """
+        return file_path.lower().endswith(".gz")
