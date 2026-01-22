@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2025-12-17)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-01-22)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.2.3...«unknown»)
 
@@ -13,7 +13,13 @@
 **Defects:**
 
 - S3 operations do not validate bucket ownership leading to Confused Deputy vulnerability [\#321](https://github.com/NASA-PDS/data-upload-manager/issues/321) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
+- S3 client initialization does not use explicit IAM role credentials [\#318](https://github.com/NASA-PDS/data-upload-manager/issues/318) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 - Summary table bytes transferred does not calculate correctly with multiple threads [\#304](https://github.com/NASA-PDS/data-upload-manager/issues/304) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
+
+**Other closed issues:**
+
+- B13.1 Deliver Manager [\#331](https://github.com/NASA-PDS/data-upload-manager/issues/331)
+- Run and Test DUM for Uploading Web Logs [\#294](https://github.com/NASA-PDS/data-upload-manager/issues/294)
 
 ## [v2.2.3](https://github.com/NASA-PDS/data-upload-manager/tree/v2.2.3) (2025-10-22)
 
