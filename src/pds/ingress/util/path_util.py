@@ -6,7 +6,6 @@ path_util.py
 Module containing functions for working with local file system paths.
 
 """
-
 import fnmatch
 import os
 
