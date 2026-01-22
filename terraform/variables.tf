@@ -112,3 +112,33 @@ variable "expected_bucket_owner" {
   description = "The AWS Account ID that is expected to own the S3 buckets. Used for security verification."
   default     = ""
 }
+
+# Mandatory tag variables
+variable "tag_tenant" {
+  type        = string
+  description = "Owner Discipline Node (en, sbn, img, atm etc.)"
+  default     = "en"
+}
+
+variable "tag_venue" {
+  type        = string
+  description = "Environment (pds-cds-dev, pds-cds-prod)"
+  default     = "pds-cds-dev"
+}
+
+variable "tag_component" {
+  type        = string
+  description = "Component name (dum, nucleus, registry, etc.)"
+  default     = "dum"
+}
+
+variable "tag_cicd" {
+  type        = string
+  description = "Deployment method (iac, cd, etc.)"
+  default     = "iac"
+}
+
+variable "tag_managedby" {
+  type        = string
+  description = "PDS Team Email"
+}

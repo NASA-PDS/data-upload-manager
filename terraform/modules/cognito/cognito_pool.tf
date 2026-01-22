@@ -2,6 +2,8 @@
 
 resource "aws_cognito_user_pool" "nucleus_dum_cognito_user_pool" {
   name = var.user_pool_name
+  
+  tags = var.tags
 
   admin_create_user_config {
     invite_message_template {
@@ -44,6 +46,8 @@ resource "aws_ssm_parameter" "nucleus_dum_cognito_user_pool_id_parameter" {
   type       = "String"
   value      = aws_cognito_user_pool.nucleus_dum_cognito_user_pool.id
   depends_on = [aws_cognito_user_pool.nucleus_dum_cognito_user_pool]
+  
+  tags = var.tags
 }
 
 resource "aws_cognito_user_pool_client" "nucleus_dum_cognito_user_pool_client" {
@@ -73,6 +77,8 @@ resource "aws_ssm_parameter" "nucleus_dum_cognito_user_pool_client_id_parameter"
   type       = "String"
   value      = aws_cognito_user_pool_client.nucleus_dum_cognito_user_pool_client.id
   depends_on = [aws_cognito_user_pool_client.nucleus_dum_cognito_user_pool_client]
+  
+  tags = var.tags
 }
 
 resource "aws_cognito_user_pool_domain" "nucleus_dum_cognito_user_pool_domain" {

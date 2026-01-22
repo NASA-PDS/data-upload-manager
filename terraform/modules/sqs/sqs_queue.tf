@@ -7,6 +7,8 @@ resource "aws_sqs_queue" "status_queue" {
   max_message_size           = 262144
   message_retention_seconds  = 345600
   receive_wait_time_seconds  = 0
+  
+  tags = var.tags
 }
 
 data "aws_iam_policy_document" "status_queue_policy" {

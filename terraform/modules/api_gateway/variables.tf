@@ -65,7 +65,10 @@ variable "api_deployment_stages" {
   default     = ["test"]
 }
 
-variable "cloudwatch_iam_role_name" {
-  type        = string
-  description = "IAM Role name used for CloudWatch Logging"
+# CloudWatch IAM role variable removed as we're not configuring API Gateway account
+
+variable "tags" {
+  description = "A map of tags to apply to all resources"
+  type        = map(string)
+  default     = {}
 }
