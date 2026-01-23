@@ -1,11 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-01-22)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-01-23)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.2.3...«unknown»)
 
 **Requirements:**
 
+- As a Node Operator, I want weblogs to be validated as gzipped prior to upload [\#330](https://github.com/NASA-PDS/data-upload-manager/issues/330)
 - As a user, I can read rclone-generated checksums when checking for existing files in the staging bucket [\#209](https://github.com/NASA-PDS/data-upload-manager/issues/209)
 - As a user, I want to force an upload of file that is already in the archive bucket [\#100](https://github.com/NASA-PDS/data-upload-manager/issues/100)
 - As a user, I want to skip upload of files that are already in the archive bucket [\#99](https://github.com/NASA-PDS/data-upload-manager/issues/99)
