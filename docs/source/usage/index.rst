@@ -62,6 +62,13 @@ the "trimmed" path for each ingested file to replace the specified path prefix w
 ensuring that all weblog files are routed to a specific S3 bucket used for web analytics.
 Because of this, the ``--prefix`` argument must be provided when using the ``--weblogs`` argument.
 
+**Important:** When using the ``--weblogs`` flag, all files must be GZip-compressed (i.e., have a ``.gz``
+extension). The client will validate this requirement and report an error if any non-GZipped files are
+detected. For information on how to compress files using GZip:
+
+- **Unix/Linux/macOS:** The ``gzip`` command is typically pre-installed. See the `GNU Gzip documentation`_ for usage details.
+- **Windows:** Install gzip via `GnuWin32 gzip`_ or use the ``gzip`` command included with `Git for Windows`_.
+
 The ``pds-ingress-client`` by default utilizes all available CPUs on the
 local machine to perform parallelized ingress requests to the ingress service. The exact
 number of threads can be controlled via the ``--num-threads`` argument.
@@ -206,3 +213,6 @@ Should persistent failures like this occur, they should be communicated to the P
 .. References:
 .. _backoff: https://pypi.org/project/backoff/
 .. _installation: ../installation/index.html
+.. _GNU Gzip documentation: https://www.gnu.org/software/gzip/
+.. _GnuWin32 gzip: http://gnuwin32.sourceforge.net/packages/gzip.htm
+.. _Git for Windows: https://gitforwindows.org/
