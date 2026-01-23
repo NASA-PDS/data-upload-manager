@@ -192,6 +192,22 @@ class PathUtilTest(unittest.TestCase):
 
         self.assertListEqual(ingress_paths, untrimmed_paths)
 
+    def test_validate_gzip_extension(self):
+        """Test the validate_gzip_extension() function"""
+        # Valid gzip extensions
+        self.assertTrue(PathUtil.validate_gzip_extension("/path/to/file.log.gz"))
+        self.assertTrue(PathUtil.validate_gzip_extension("/path/to/file.gz"))
+        self.assertTrue(PathUtil.validate_gzip_extension("file.gz"))
+        self.assertTrue(PathUtil.validate_gzip_extension("/path/to/file.GZ"))
+        self.assertTrue(PathUtil.validate_gzip_extension("/path/to/file.Gz"))
+
+        # Invalid extensions
+        self.assertFalse(PathUtil.validate_gzip_extension("/path/to/file.log"))
+        self.assertFalse(PathUtil.validate_gzip_extension("/path/to/file.txt"))
+        self.assertFalse(PathUtil.validate_gzip_extension("/path/to/file.gz.bak"))
+        self.assertFalse(PathUtil.validate_gzip_extension("/path/to/file"))
+        self.assertFalse(PathUtil.validate_gzip_extension(""))
+
 
 if __name__ == "__main__":
     unittest.main()
