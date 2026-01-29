@@ -44,12 +44,12 @@ resource "aws_api_gateway_rest_api" "nucleus_dum_api" {
       apiGatewaySourceVpc                 = var.api_gateway_policy_source_vpc,
       awsRegion                           = var.region,
       awsAccountId                        = data.aws_caller_identity.current.account_id,
-      createStreamResourceMappingTemplate = jsonencode(file("${path.module}/templates/createstream-resource-mapping-template.json"))
+      createStreamResourceMappingTemplate = jsonencode(file("${path.module}/templates/createstream-resource-mapping-template.json")),
       lambdaAuthorizerARN                 = var.lambda_authorizer_function_arn,
       lambdaAuthorizerFunctionName        = var.lambda_authorizer_function_name,
       lambdaServiceARN                    = var.lambda_ingress_service_function_arn,
-      logResourceMappingTemplate          = jsonencode(file("${path.module}/templates/log-resource-mapping-template.json"))
-      statusResourceMappingTemplate       = jsonencode(file("${path.module}/templates/status-resource-mapping-template.json"))
+      logResourceMappingTemplate          = jsonencode(file("${path.module}/templates/log-resource-mapping-template.json")),
+      statusResourceMappingTemplate       = jsonencode(file("${path.module}/templates/status-resource-mapping-template.json")),
 
       # Keep existing input for backward-compatibility (template can still reference it if needed)
       statusQueueARN = var.status_queue_arn
