@@ -1,15 +1,15 @@
 # Main Terraform module for automated deployment of the PDS Data Upload Manager (DUM)
 
 provider "aws" {
-  region                   = var.region
-  
+  region = var.region
+
   default_tags {
     tags = {
-      tenant     = var.tag_tenant
-      venue      = var.tag_venue
-      component  = var.tag_component
-      cicd       = var.tag_cicd
-      managedby  = var.tag_managedby
+      tenant    = var.tag_tenant
+      venue     = var.tag_venue
+      component = var.tag_component
+      cicd      = var.tag_cicd
+      managedby = var.tag_managedby
     }
   }
 }
@@ -25,24 +25,24 @@ module "nucleus_dum_ingress_service_lambda" {
   lambda_ingress_localstack_context      = var.localstack_context
   lambda_ingress_service_default_buckets = var.lambda_ingress_service_default_buckets
   expected_bucket_owner                  = var.expected_bucket_owner
-  skip_lambda_layers                     = false  # Create Lambda layers for new environment
-  tags                                   = {
-    tenant     = var.tag_tenant
-    venue      = var.tag_venue
-    component  = var.tag_component
-    cicd       = var.tag_cicd
-    managedby  = var.tag_managedby
+  skip_lambda_layers                     = false # Create Lambda layers for new environment
+  tags = {
+    tenant    = var.tag_tenant
+    venue     = var.tag_venue
+    component = var.tag_component
+    cicd      = var.tag_cicd
+    managedby = var.tag_managedby
   }
 }
 
 module "nucleus_dum_status_queue" {
   source = "./modules/sqs"
-  tags   = {
-    tenant     = var.tag_tenant
-    venue      = var.tag_venue
-    component  = var.tag_component
-    cicd       = var.tag_cicd
-    managedby  = var.tag_managedby
+  tags = {
+    tenant    = var.tag_tenant
+    venue     = var.tag_venue
+    component = var.tag_component
+    cicd      = var.tag_cicd
+    managedby = var.tag_managedby
   }
 }
 
@@ -60,12 +60,12 @@ module "nucleus_dum_cognito" {
   source = "./modules/cognito"
 
   nucleus_dum_cognito_initial_users = var.nucleus_dum_cognito_initial_users
-  tags   = {
-    tenant     = var.tag_tenant
-    venue      = var.tag_venue
-    component  = var.tag_component
-    cicd       = var.tag_cicd
-    managedby  = var.tag_managedby
+  tags = {
+    tenant    = var.tag_tenant
+    venue     = var.tag_venue
+    component = var.tag_component
+    cicd      = var.tag_cicd
+    managedby = var.tag_managedby
   }
 }
 
@@ -77,12 +77,12 @@ module "nucleus_dum_lambda_authorizer" {
   lambda_authorizer_cognito_pool_id    = module.nucleus_dum_cognito.nucleus_dum_cognito_user_pool_id
   lambda_authorizer_cognito_client_id  = module.nucleus_dum_cognito.nucleus_dum_cognito_user_pool_client_id
   lambda_authorizer_localstack_context = var.localstack_context
-  tags                                 = {
-    tenant     = var.tag_tenant
-    venue      = var.tag_venue
-    component  = var.tag_component
-    cicd       = var.tag_cicd
-    managedby  = var.tag_managedby
+  tags = {
+    tenant    = var.tag_tenant
+    venue     = var.tag_venue
+    component = var.tag_component
+    cicd      = var.tag_cicd
+    managedby = var.tag_managedby
   }
 
   depends_on = [module.nucleus_dum_ingress_service_lambda, module.nucleus_dum_cognito]
@@ -100,30 +100,30 @@ module "nucleus_dum_api" {
   lambda_ingress_service_function_name = module.nucleus_dum_ingress_service_lambda.lambda_ingress_service_function_name
   lambda_ingress_service_function_arn  = module.nucleus_dum_ingress_service_lambda.lambda_ingress_service_function_arn
   status_queue_arn                     = module.nucleus_dum_status_queue.nucleus_dum_sqs_arn
-  tags                                 = {
-    tenant     = var.tag_tenant
-    venue      = var.tag_venue
-    component  = var.tag_component
-    cicd       = var.tag_cicd
-    managedby  = var.tag_managedby
+  tags = {
+    tenant    = var.tag_tenant
+    venue     = var.tag_venue
+    component = var.tag_component
+    cicd      = var.tag_cicd
+    managedby = var.tag_managedby
   }
 
   depends_on = [module.nucleus_dum_lambda_authorizer,
-                module.nucleus_dum_ingress_service_lambda,
-                module.nucleus_dum_status_queue]
+    module.nucleus_dum_ingress_service_lambda,
+  module.nucleus_dum_status_queue]
 }
 
 resource "aws_cloudwatch_log_group" "ingress_client_cloudwatch_log_group" {
   name = var.nucleus_dum_client_cloudwatch_log_group
 
   retention_in_days = 30
-  
+
   tags = {
-    tenant     = var.tag_tenant
-    venue      = var.tag_venue
-    component  = var.tag_component
-    cicd       = var.tag_cicd
-    managedby  = var.tag_managedby
+    tenant    = var.tag_tenant
+    venue     = var.tag_venue
+    component = var.tag_component
+    cicd      = var.tag_cicd
+    managedby = var.tag_managedby
   }
 }
 

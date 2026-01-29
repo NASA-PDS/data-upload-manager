@@ -28,8 +28,8 @@ variable "credential_file" {
 }
 
 variable "venue" {
-    type        = string
-    description = "Name of the venue to be deployed to. Should be one of [dev,test,prod]"
+  type        = string
+  description = "Name of the venue to be deployed to. Should be one of [dev,test,prod]"
 }
 
 variable "lambda_s3_bucket_name" {
@@ -70,9 +70,9 @@ variable "lambda_authorizer_iam_role_arn" {
 }
 
 variable "localstack_context" {
-    type        = bool
-    default     = false
-    description = "Flag indicating whether DUM is to be deployed to a Localstack instance"
+  type        = bool
+  default     = false
+  description = "Flag indicating whether DUM is to be deployed to a Localstack instance"
 }
 
 variable "nucleus_dum_cognito_initial_users" {
