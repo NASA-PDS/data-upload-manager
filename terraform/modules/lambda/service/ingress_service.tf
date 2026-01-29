@@ -161,11 +161,11 @@ resource "aws_lambda_layer_version" "lambda_ingress_service_pyyaml_layer" {
   s3_key              = "layer-PyYAML.zip"
   layer_name          = "PyYAML"
   compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12","python3.13"]
-  
+
   # Conditionally create Lambda layer based on skip_lambda_layers variable
   # This allows for tagging existing resources without requiring layer creation
   count = var.skip_lambda_layers ? 0 : 1
-  
+
   lifecycle {
     # Prevent errors if the S3 object doesn't exist
     ignore_changes = [source_code_hash]
@@ -177,11 +177,11 @@ resource "aws_lambda_layer_version" "lambda_ingress_service_yamale_layer" {
   s3_key              = "layer-Yamale.zip"
   layer_name          = "Yamale"
   compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12","python3.13"]
-  
+
   # Conditionally create Lambda layer based on skip_lambda_layers variable
   # This allows for tagging existing resources without requiring layer creation
   count = var.skip_lambda_layers ? 0 : 1
-  
+
   lifecycle {
     # Prevent errors if the S3 object doesn't exist
     ignore_changes = [source_code_hash]
