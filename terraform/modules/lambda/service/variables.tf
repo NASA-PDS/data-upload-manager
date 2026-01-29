@@ -10,8 +10,8 @@ variable "cicd" {
 }
 
 variable "venue" {
-    type        = string
-    description = "Name of the venue to be deployed to. Should be one of [dev,test,prod]"
+  type        = string
+  description = "Name of the venue to be deployed to. Should be one of [dev,test,prod]"
 }
 
 variable "lambda_s3_bucket_name" {
@@ -25,8 +25,8 @@ variable "lambda_s3_bucket_partition" {
 }
 
 variable "lambda_ingress_localstack_context" {
-    type        = bool
-    description = "Flag indicating whether the ingress service will execute in a localstack context or not"
+  type        = bool
+  description = "Flag indicating whether the ingress service will execute in a localstack context or not"
 }
 
 variable "lambda_ingress_service_function_name" {
@@ -117,8 +117,23 @@ variable "lambda_ingress_service_default_buckets" {
       name        = "pds-sbn-staging",
       description = "Default staging bucket for PDS Small Bodies Node"
     }
+  ]
+}
+
 variable "expected_bucket_owner" {
   type        = string
   description = "The AWS Account ID that is expected to own the S3 buckets. Used for security verification."
   default     = ""
+}
+
+variable "tags" {
+  description = "A map of tags to apply to all resources"
+  type        = map(string)
+  default     = {}
+}
+
+variable "skip_lambda_layers" {
+  description = "When set to true, skips Lambda layer creation. Use this when applying tags to existing resources or when layer source files are not available."
+  type        = bool
+  default     = false
 }

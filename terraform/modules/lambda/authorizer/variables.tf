@@ -35,3 +35,9 @@ variable "lambda_authorizer_localstack_context" {
     type        = bool
     description = "Flag indicating whether the authorizer will execute in a localstack context or not"
 }
+
+variable "tags" {
+  description = "A map of tags to apply to all resources"
+  type        = map(string)
+  default     = {}
+}

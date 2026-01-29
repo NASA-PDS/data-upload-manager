@@ -32,6 +32,7 @@ paths:
         requestTemplates:
           application/json: ${logResourceMappingTemplate}
         passthroughBehavior: "when_no_templates"
+
   /status:
     post:
       responses:
@@ -47,7 +48,8 @@ paths:
         type: "aws"
         credentials: ${apiGatewayLambdaRole}
         httpMethod: "POST"
-        uri: ${statusQueueARN}
+        # API Gateway requires apigateway-style SQS URI including "path/"
+        uri: "arn:aws:apigateway:${awsRegion}:sqs:path/${awsAccountId}/${element(split(":", statusQueueARN), length(split(":", statusQueueARN)) - 1)}"
         responses:
           default:
             statusCode: "200"
@@ -58,6 +60,7 @@ paths:
         passthroughBehavior: "when_no_match"
         cacheKeyParameters:
         - "integration.request.header.Content-Type"
+
   /request:
     post:
       responses:
@@ -78,6 +81,7 @@ paths:
             statusCode: "200"
         passthroughBehavior: "when_no_match"
         contentHandling: "CONVERT_TO_TEXT"
+
   /createstream:
     post:
       requestBody:
@@ -106,6 +110,7 @@ paths:
         requestTemplates:
           application/json: ${createStreamResourceMappingTemplate}
         passthroughBehavior: "when_no_templates"
+
 components:
   schemas:
     Empty:
