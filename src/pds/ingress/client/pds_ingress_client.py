@@ -475,6 +475,16 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
         )
 
     #
+    # User is unauthorized (user is not in the required Cognito user group)
+    #
+    elif response.status_code == HTTPStatus.UNAUTHORIZED:
+        logger.error(Color.red(
+            "You are not authorized to use the ingestion service (401 Unauthorized).\n"
+            "Your account may not be in the required user group.\n"
+            "Please contact PDS Engineering for access."
+        ))
+
+    #
     # All other non-200 errors are treated as internal service failures.
     # These require assistance from PDS Engineering and should not be retried.
     #

@@ -161,6 +161,15 @@ resource "aws_lambda_layer_version" "lambda_ingress_service_pyyaml_layer" {
   s3_key              = "layer-PyYAML.zip"
   layer_name          = "PyYAML"
   compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12","python3.13"]
+
+  # Conditionally create Lambda layer based on skip_lambda_layers variable
+  # This allows for tagging existing resources without requiring layer creation
+  count = var.skip_lambda_layers ? 0 : 1
+
+  lifecycle {
+    # Prevent errors if the S3 object doesn't exist
+    ignore_changes = [source_code_hash]
+  }
 }
 
 resource "aws_lambda_layer_version" "lambda_ingress_service_yamale_layer" {
@@ -168,6 +177,15 @@ resource "aws_lambda_layer_version" "lambda_ingress_service_yamale_layer" {
   s3_key              = "layer-Yamale.zip"
   layer_name          = "Yamale"
   compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12","python3.13"]
+
+  # Conditionally create Lambda layer based on skip_lambda_layers variable
+  # This allows for tagging existing resources without requiring layer creation
+  count = var.skip_lambda_layers ? 0 : 1
+
+  lifecycle {
+    # Prevent errors if the S3 object doesn't exist
+    ignore_changes = [source_code_hash]
+  }
 }
 
 # Create the Ingress Lambda functions using the zips uploaded to S3
@@ -181,12 +199,16 @@ resource "aws_lambda_function" "lambda_ingress_service" {
   runtime = "python3.13"
   handler = "pds_ingress_app.lambda_handler"
 
-  source_code_hash = data.archive_file.lambda_ingress_service.output_base64sha256
+  # Use a static source_code_hash to avoid etag inconsistency issues
+  source_code_hash = filebase64sha256(data.archive_file.lambda_ingress_service.output_path)
 
   role = var.lambda_ingress_service_iam_role_arn
 
-  layers = [aws_lambda_layer_version.lambda_ingress_service_pyyaml_layer.arn,
-            aws_lambda_layer_version.lambda_ingress_service_yamale_layer.arn]
+  # Conditionally include layers based on skip_lambda_layers variable
+  layers = var.skip_lambda_layers ? [] : [
+    aws_lambda_layer_version.lambda_ingress_service_pyyaml_layer[0].arn,
+    aws_lambda_layer_version.lambda_ingress_service_yamale_layer[0].arn
+  ]
 
   environment {
     variables = {
@@ -219,12 +241,16 @@ resource "aws_lambda_function" "lambda_status_service" {
   runtime = "python3.13"
   handler = "pds_status_app.lambda_handler"
 
-  source_code_hash = data.archive_file.lambda_status_service.output_base64sha256
+  # Use a static source_code_hash to avoid etag inconsistency issues
+  source_code_hash = filebase64sha256(data.archive_file.lambda_status_service.output_path)
 
   role = var.lambda_ingress_service_iam_role_arn
 
-  layers = [aws_lambda_layer_version.lambda_ingress_service_pyyaml_layer.arn,
-            aws_lambda_layer_version.lambda_ingress_service_yamale_layer.arn]
+  # Conditionally include layers based on skip_lambda_layers variable
+  layers = var.skip_lambda_layers ? [] : [
+    aws_lambda_layer_version.lambda_ingress_service_pyyaml_layer[0].arn,
+    aws_lambda_layer_version.lambda_ingress_service_yamale_layer[0].arn
+  ]
 
   environment {
     variables = {
@@ -258,7 +284,8 @@ resource "aws_lambda_function" "metadata_sync_service" {
   runtime = "python3.13"
   handler = "sync_s3_metadata.lambda_handler"
 
-  source_code_hash = data.archive_file.metadata_sync_service.output_base64sha256
+  # Use a static source_code_hash to avoid etag inconsistency issues
+  source_code_hash = filebase64sha256(data.archive_file.metadata_sync_service.output_path)
 
   role = var.lambda_ingress_service_iam_role_arn
 
@@ -289,6 +316,8 @@ resource "aws_cloudwatch_log_group" "lambda_status_service" {
 }
 
 # Create the default staging buckets referenced by the bucket-map
+# To avoid errors with existing buckets or permission issues, set lambda_ingress_service_default_buckets = [] in terraform.tfvars
+# This will skip bucket creation entirely when applying tags to existing resources
 module "staging_buckets" {
   source        = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/bucket"  # pragma: allowlist secret
   count         = length(var.lambda_ingress_service_default_buckets)
