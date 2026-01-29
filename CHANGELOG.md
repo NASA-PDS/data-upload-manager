@@ -1,8 +1,16 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-01-29)
+## [2.3.0](https://github.com/NASA-PDS/data-upload-manager/tree/2.3.0) (2026-01-29)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.2.3...«unknown»)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/release/2.3.0...2.3.0)
+
+**Other closed issues:**
+
+- Update terraform to include required tags [\#328](https://github.com/NASA-PDS/data-upload-manager/issues/328)
+
+## [release/2.3.0](https://github.com/NASA-PDS/data-upload-manager/tree/release/2.3.0) (2026-01-29)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.2.3...release/2.3.0)
 
 **Requirements:**
 
