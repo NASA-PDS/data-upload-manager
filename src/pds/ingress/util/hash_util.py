@@ -28,7 +28,7 @@ def md5_for_path(ingress_path, block_size=4096):
 
     """
     # Calculate the MD5 checksum of the file payload
-    md5 = hashlib.md5()
+    md5 = hashlib.md5(usedforsecurity=False)
     with open(ingress_path, "rb") as object_file:
         while chunk := object_file.read(block_size):
             md5.update(chunk)
