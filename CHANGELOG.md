@@ -1,16 +1,16 @@
 # Changelog
 
-## [2.3.0](https://github.com/NASA-PDS/data-upload-manager/tree/2.3.0) (2026-01-29)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-01-31)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/release/2.3.0...2.3.0)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.3.0...«unknown»)
 
-**Other closed issues:**
+**Defects:**
 
-- Update terraform to include required tags [\#328](https://github.com/NASA-PDS/data-upload-manager/issues/328)
+- DUM client MD5 hash generation does not work on FIPS-enabled systems [\#337](https://github.com/NASA-PDS/data-upload-manager/issues/337) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
 
-## [release/2.3.0](https://github.com/NASA-PDS/data-upload-manager/tree/release/2.3.0) (2026-01-29)
+## [v2.3.0](https://github.com/NASA-PDS/data-upload-manager/tree/v2.3.0) (2026-01-29)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.2.3...release/2.3.0)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.2.3...v2.3.0)
 
 **Requirements:**
 
@@ -28,6 +28,7 @@
 **Other closed issues:**
 
 - B13.1 Deliver Manager [\#331](https://github.com/NASA-PDS/data-upload-manager/issues/331)
+- Update terraform to include required tags [\#328](https://github.com/NASA-PDS/data-upload-manager/issues/328)
 - Run and Test DUM for Uploading Web Logs [\#294](https://github.com/NASA-PDS/data-upload-manager/issues/294)
 
 ## [v2.2.3](https://github.com/NASA-PDS/data-upload-manager/tree/v2.2.3) (2025-10-22)
