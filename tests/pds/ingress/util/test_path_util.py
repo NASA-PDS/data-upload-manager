@@ -208,6 +208,48 @@ class PathUtilTest(unittest.TestCase):
         self.assertFalse(PathUtil.validate_gzip_extension("/path/to/file"))
         self.assertFalse(PathUtil.validate_gzip_extension(""))
 
+    def test_resolve_ingress_paths_skip_symlinks(self):
+        """Test that resolve_ingress_paths() correctly handles symlinks when follow_symlinks=False"""
+        # Create a directory structure with real files
+        real_dir = join(self.working_dir.name, "real_data")
+        os.makedirs(real_dir)
+        os.system(f"touch {join(real_dir, 'real_file.txt')}")
+
+        # Create a symlinked directory
+        symlink_dir = join(self.working_dir.name, "symlink_data")
+        os.symlink(real_dir, symlink_dir)
+
+        # Create a symlinked file
+        symlink_file = join(self.working_dir.name, "symlink_file.txt")
+        os.symlink(join(real_dir, "real_file.txt"), symlink_file)
+
+        # Create a regular file for comparison
+        os.system(f"touch {join(self.working_dir.name, 'regular_file.txt')}")
+
+        # Test with follow_symlinks=True (default behavior)
+        with get_path_progress_bar([self.working_dir.name]) as pbar:
+            resolved_paths = PathUtil.resolve_ingress_paths([self.working_dir.name], [], [], pbar, follow_symlinks=True)
+
+        # Should include files from both real and symlinked paths
+        self.assertIn(abspath(join(real_dir, "real_file.txt")), resolved_paths)
+        self.assertIn(abspath(join(symlink_dir, "real_file.txt")), resolved_paths)
+        self.assertIn(abspath(symlink_file), resolved_paths)
+        self.assertIn(abspath(join(self.working_dir.name, "regular_file.txt")), resolved_paths)
+
+        # Test with follow_symlinks=False
+        with get_path_progress_bar([self.working_dir.name]) as pbar:
+            resolved_paths = PathUtil.resolve_ingress_paths(
+                [self.working_dir.name], [], [], pbar, follow_symlinks=False
+            )
+
+        # Should include only the real file and regular file, not symlinked paths
+        self.assertIn(abspath(join(real_dir, "real_file.txt")), resolved_paths)
+        self.assertIn(abspath(join(self.working_dir.name, "regular_file.txt")), resolved_paths)
+        # Symlinked directory contents should not be included
+        self.assertNotIn(abspath(join(symlink_dir, "real_file.txt")), resolved_paths)
+        # Symlinked file should not be included
+        self.assertNotIn(abspath(symlink_file), resolved_paths)
+
 
 if __name__ == "__main__":
     unittest.main()
