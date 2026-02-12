@@ -38,9 +38,9 @@ class PathUtilTest(unittest.TestCase):
         """Test the resolve_ingress_paths() function"""
         # Create some dummy files and directories to test with
         Path(join(self.working_dir.name, 'top_level_file.txt')).touch()
-        Path(join(self.working_dir.name, 'dir_one')).mkdir()
+        Path(join(self.working_dir.name, 'dir_one')).mkdir(parents=True)
         Path(join(self.working_dir.name, 'dir_one', 'mid_level_file.txt')).touch()
-        Path(join(self.working_dir.name, 'dir_one', 'dir_two')).mkdir()
+        Path(join(self.working_dir.name, 'dir_one', 'dir_two')).mkdir(parents=True)
         Path(join(self.working_dir.name, 'dir_one', 'dir_two', 'low_level_file.txt')).touch()
 
         # Test with fully resolved paths
