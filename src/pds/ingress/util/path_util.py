@@ -86,7 +86,7 @@ class PathUtil:
                     ]
 
                     resolved_paths = PathUtil.resolve_ingress_paths(
-                        product_paths, includes, excludes, pbar, resolved_paths, follow_symlinks
+                        product_paths, includes, excludes, pbar, resolved_paths, follow_symlinks=follow_symlinks
                     )
             else:
                 logger.warning("Encountered path (%s) that is neither a file nor directory, skipping...", abs_user_path)
