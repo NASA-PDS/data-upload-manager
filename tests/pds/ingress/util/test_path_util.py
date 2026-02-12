@@ -215,13 +215,14 @@ class PathUtilTest(unittest.TestCase):
         os.makedirs(real_dir)
         os.system(f"touch {join(real_dir, 'real_file.txt')}")
 
-        # Create a symlinked directory
+        # Create a symlinked directory and file, skipping the test if symlinks are not supported
         symlink_dir = join(self.working_dir.name, "symlink_data")
-        os.symlink(real_dir, symlink_dir)
-
-        # Create a symlinked file
         symlink_file = join(self.working_dir.name, "symlink_file.txt")
-        os.symlink(join(real_dir, "real_file.txt"), symlink_file)
+        try:
+            os.symlink(real_dir, symlink_dir)
+            os.symlink(join(real_dir, "real_file.txt"), symlink_file)
+        except OSError:
+            self.skipTest("Symbolic links are not supported or permissions do not allow creating them on this platform.")
 
         # Create a regular file for comparison
         os.system(f"touch {join(self.working_dir.name, 'regular_file.txt')}")
