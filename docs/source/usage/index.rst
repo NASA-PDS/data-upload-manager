@@ -62,6 +62,20 @@ the "trimmed" path for each ingested file to replace the specified path prefix w
 ensuring that all weblog files are routed to a specific S3 bucket used for web analytics.
 Because of this, the ``--prefix`` argument must be provided when using the ``--weblogs`` argument.
 
+.. warning::
+
+   **All weblog files must be gzip-compressed (.gz extension).** When using ``--weblogs``,
+   the client validates that every file in the request has a ``.gz`` extension **before**
+   any uploads begin. If even a single non-gzipped file is present in the input file set,
+   the entire request will fail immediately with no files being uploaded.
+
+   For example, if you attempt to upload a directory containing both ``access.log.gz`` and
+   ``access.log.txt``, the upload will abort with an error listing the non-gzipped files.
+   To successfully upload, either:
+
+   1. Compress all files with gzip before uploading, or
+   2. Use the ``--exclude`` argument to filter out non-gzipped files (e.g., ``--exclude "*.txt"``)
+
 The ``pds-ingress-client`` by default utilizes all available CPUs on the
 local machine to perform parallelized ingress requests to the ingress service. The exact
 number of threads can be controlled via the ``--num-threads`` argument.
@@ -99,9 +113,29 @@ to S3. The Manifest will then be re-written to the path specified by `--manifest
 any new files encountered. In this way, a Manifest file can expand across executions of DUM to serve
 as a sort of cache for file information.
 
+Understanding Batch Processing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 The batch size utilized by Steps 3 and 4 can be configured within the INI config provided to the
-DUM client. The number of batches processed in parallel can be controlled via the `--num-threads`
-command-line argument.
+DUM client via the ``batch_size`` setting in the ``[OTHER]`` section. The number of batches processed
+in parallel can be controlled via the ``--num-threads`` command-line argument.
+
+During execution, the client splits the input file set into batches and processes them in parallel.
+Log messages clearly indicate this batching behavior::
+
+    INFO MainThread main : Using batch size of 250
+    INFO MainThread main : Request (500 files) split into 2 batches
+
+Each batch is then prepared and uploaded independently. If individual files within a batch fail to
+upload (due to network issues, permission errors, etc.), those files are tracked separately and
+retried at the end of the ingress process. The remaining files in the batch continue to upload
+normally - a single file failure does not cause the entire batch to fail.
+
+.. note::
+
+   The batching described here applies to the **upload phase** (Steps 3-4). Pre-flight validation
+   checks (such as the gzip validation for weblog uploads) are performed on the **entire input file set**
+   before batching occurs. If pre-flight validation fails, no files will be uploaded.
 
 By default, at completion of an ingress request (Step 5), the DUM client provides a summary of the
 results of the transfer::
