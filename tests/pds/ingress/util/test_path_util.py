@@ -37,11 +37,11 @@ class PathUtilTest(unittest.TestCase):
     def test_resolve_ingress_paths(self):
         """Test the resolve_ingress_paths() function"""
         # Create some dummy files and directories to test with
-        Path(join(self.working_dir.name, 'top_level_file.txt')).touch()
-        os.makedirs(join(self.working_dir.name, 'dir_one'))
-        Path(join(self.working_dir.name, 'dir_one', 'mid_level_file.txt')).touch()
-        os.makedirs(join(self.working_dir.name, 'dir_one', 'dir_two'))
-        Path(join(self.working_dir.name, 'dir_one', 'dir_two', 'low_level_file.txt')).touch()
+        Path(self.working_dir.name, 'top_level_file.txt').touch()
+        Path(self.working_dir.name, 'dir_one').mkdir()
+        Path(self.working_dir.name, 'dir_one', 'mid_level_file.txt').touch()
+        Path(self.working_dir.name, 'dir_one', 'dir_two').mkdir()
+        Path(self.working_dir.name, 'dir_one', 'dir_two', 'low_level_file.txt').touch()
 
         # Test with fully resolved paths
         with get_path_progress_bar([self.working_dir.name]) as pbar:
@@ -67,12 +67,12 @@ class PathUtilTest(unittest.TestCase):
     def test_ingress_path_filtering(self):
         """Test the resolve_ingress_paths() function with include and exclude filters"""
         # Create some dummy files to test with
-        Path(join(self.working_dir.name, 'file.txt')).touch()
-        Path(join(self.working_dir.name, 'file.xml')).touch()
-        Path(join(self.working_dir.name, 'file.dat')).touch()
-        Path(join(self.working_dir.name, 'data.txt')).touch()
-        Path(join(self.working_dir.name, 'data.xml')).touch()
-        Path(join(self.working_dir.name, 'data.dat')).touch()
+        Path(self.working_dir.name, 'file.txt').touch()
+        Path(self.working_dir.name, 'file.xml').touch()
+        Path(self.working_dir.name, 'file.dat').touch()
+        Path(self.working_dir.name, 'data.txt').touch()
+        Path(self.working_dir.name, 'data.xml').touch()
+        Path(self.working_dir.name, 'data.dat').touch()
 
         # Test with no filters
         includes = []
@@ -214,7 +214,7 @@ class PathUtilTest(unittest.TestCase):
         # Create a directory structure with real files
         real_dir = join(self.working_dir.name, "real_data")
         os.makedirs(real_dir)
-        Path(join(real_dir, 'real_file.txt')).touch()
+        Path(real_dir, 'real_file.txt').touch()
 
         # Create a symlinked directory
         symlink_dir = join(self.working_dir.name, "symlink_data")
@@ -225,7 +225,7 @@ class PathUtilTest(unittest.TestCase):
         os.symlink(join(real_dir, "real_file.txt"), symlink_file)
 
         # Create a regular file for comparison
-        Path(join(self.working_dir.name, 'regular_file.txt')).touch()
+        Path(self.working_dir.name, 'regular_file.txt').touch()
 
         # Test with follow_symlinks=True (default behavior)
         with get_path_progress_bar([self.working_dir.name]) as pbar:
