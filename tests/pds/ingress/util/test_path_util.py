@@ -38,9 +38,9 @@ class PathUtilTest(unittest.TestCase):
         """Test the resolve_ingress_paths() function"""
         # Create some dummy files and directories to test with
         Path(self.working_dir.name, 'top_level_file.txt').touch()
-        Path(self.working_dir.name, 'dir_one').mkdir()
+        Path(self.working_dir.name, 'dir_one').mkdir(parents=True)
         Path(self.working_dir.name, 'dir_one', 'mid_level_file.txt').touch()
-        Path(self.working_dir.name, 'dir_one', 'dir_two').mkdir()
+        Path(self.working_dir.name, 'dir_one', 'dir_two').mkdir(parents=True)
         Path(self.working_dir.name, 'dir_one', 'dir_two', 'low_level_file.txt').touch()
 
         # Test with fully resolved paths
@@ -216,13 +216,14 @@ class PathUtilTest(unittest.TestCase):
         os.makedirs(real_dir)
         Path(real_dir, 'real_file.txt').touch()
 
-        # Create a symlinked directory
+        # Create a symlinked directory and file, skipping the test if symlinks are not supported
         symlink_dir = join(self.working_dir.name, "symlink_data")
-        os.symlink(real_dir, symlink_dir)
-
-        # Create a symlinked file
         symlink_file = join(self.working_dir.name, "symlink_file.txt")
-        os.symlink(join(real_dir, "real_file.txt"), symlink_file)
+        try:
+            os.symlink(real_dir, symlink_dir)
+            os.symlink(join(real_dir, "real_file.txt"), symlink_file)
+        except OSError:
+            self.skipTest("Symbolic links are not supported or permissions do not allow creating them on this platform.")
 
         # Create a regular file for comparison
         Path(self.working_dir.name, 'regular_file.txt').touch()
