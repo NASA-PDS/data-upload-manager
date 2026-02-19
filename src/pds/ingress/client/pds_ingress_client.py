@@ -478,11 +478,13 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
     # User is unauthorized (user is not in the required Cognito user group)
     #
     elif response.status_code == HTTPStatus.UNAUTHORIZED:
-        logger.error(Color.red(
-            "You are not authorized to use the ingestion service (401 Unauthorized).\n"
-            "Your account may not be in the required user group.\n"
-            "Please contact PDS Engineering for access."
-        ))
+        logger.error(
+            Color.red(
+                "You are not authorized to use the ingestion service (401 Unauthorized).\n"
+                "Your account may not be in the required user group.\n"
+                "Please contact PDS Engineering for access."
+            )
+        )
 
     #
     # All other non-200 errors are treated as internal service failures.
@@ -854,6 +856,13 @@ def setup_argparser():
         help="Derive the full set of ingress paths without performing any submission requests to the server.",
     )
     parser.add_argument(
+        "--skip-symlinks",
+        action="store_true",
+        help="Do not follow symbolic links when resolving ingress paths. "
+        "Use this option to avoid uploading duplicate data when files "
+        "are symlinked into multiple locations.",
+    )
+    parser.add_argument(
         "--log-level",
         "-l",
         type=str,
@@ -919,8 +928,13 @@ def main(args):
     # Derive the full list of ingress paths based on the set of paths requested
     # by the user
     logger.info("Determining paths for ingress...")
+    follow_symlinks = not args.skip_symlinks
+    if args.skip_symlinks:
+        logger.info("Skipping symbolic links during path resolution")
     with get_path_progress_bar(args.ingress_paths) as pbar:
-        resolved_ingress_paths = PathUtil.resolve_ingress_paths(args.ingress_paths, args.includes, args.excludes, pbar)
+        resolved_ingress_paths = PathUtil.resolve_ingress_paths(
+            args.ingress_paths, args.includes, args.excludes, pbar, follow_symlinks=follow_symlinks
+        )
 
     # Initialize the summary table, and populate the "unprocessed" table the set
     # of resolved ingress paths

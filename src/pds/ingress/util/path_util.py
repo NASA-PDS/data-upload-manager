@@ -16,7 +16,7 @@ class PathUtil:
     """Provides methods for working with local file system paths."""
 
     @staticmethod
-    def resolve_ingress_paths(user_paths, includes, excludes, pbar, resolved_paths=None):
+    def resolve_ingress_paths(user_paths, includes, excludes, pbar, resolved_paths=None, follow_symlinks=True):
         """
         Iterates over the list of user-provided paths to derive the final
         set of file paths to request ingress for.
@@ -35,6 +35,10 @@ class PathUtil:
         resolved_paths : list of str, optional
             The list of paths resolved so far. For top-level callers, this should
             be left as None.
+        follow_symlinks : bool, optional
+            Whether to follow symbolic links when walking directories. Defaults
+            to True for backward compatibility. Set to False to skip symlinks
+            and avoid uploading duplicate data.
 
         Returns
         -------
@@ -60,13 +64,18 @@ class PathUtil:
             if os.path.isfile(abs_user_path):
                 pbar.update()
 
+                # Skip symlinked files if follow_symlinks is False
+                if not follow_symlinks and os.path.islink(abs_user_path):
+                    logger.debug("Skipping symlinked file %s", abs_user_path)
+                    continue
+
                 if PathUtil.filter_file(abs_user_path, includes, excludes):
                     logger.debug("Filtering path %s based on include/exclude filters", abs_user_path)
                     continue
 
                 resolved_paths.append(abs_user_path)
             elif os.path.isdir(abs_user_path):
-                for grouping in os.walk(abs_user_path, topdown=True, followlinks=True):
+                for grouping in os.walk(abs_user_path, topdown=True, followlinks=follow_symlinks):
                     dirpath, _, filenames = grouping
 
                     # TODO: add option to include hidden files
@@ -77,7 +86,7 @@ class PathUtil:
                     ]
 
                     resolved_paths = PathUtil.resolve_ingress_paths(
-                        product_paths, includes, excludes, pbar, resolved_paths
+                        product_paths, includes, excludes, pbar, resolved_paths, follow_symlinks=follow_symlinks
                     )
             else:
                 logger.warning("Encountered path (%s) that is neither a file nor directory, skipping...", abs_user_path)

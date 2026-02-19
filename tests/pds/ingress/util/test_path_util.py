@@ -5,6 +5,7 @@ import unittest
 from importlib.resources import files
 from os.path import abspath
 from os.path import join
+from pathlib import Path
 
 from pds.ingress.util.path_util import PathUtil
 from pds.ingress.util.progress_util import get_path_progress_bar
@@ -36,11 +37,11 @@ class PathUtilTest(unittest.TestCase):
     def test_resolve_ingress_paths(self):
         """Test the resolve_ingress_paths() function"""
         # Create some dummy files and directories to test with
-        os.system(f"touch {join(self.working_dir.name, 'top_level_file.txt')}")
-        os.system(f"mkdir {join(self.working_dir.name, 'dir_one')}")
-        os.system(f"touch {join(self.working_dir.name, 'dir_one', 'mid_level_file.txt')}")
-        os.system(f"mkdir {join(self.working_dir.name, 'dir_one', 'dir_two')}")
-        os.system(f"touch {join(self.working_dir.name, 'dir_one', 'dir_two', 'low_level_file.txt')}")
+        Path(self.working_dir.name, 'top_level_file.txt').touch()
+        Path(self.working_dir.name, 'dir_one').mkdir(parents=True)
+        Path(self.working_dir.name, 'dir_one', 'mid_level_file.txt').touch()
+        Path(self.working_dir.name, 'dir_one', 'dir_two').mkdir(parents=True)
+        Path(self.working_dir.name, 'dir_one', 'dir_two', 'low_level_file.txt').touch()
 
         # Test with fully resolved paths
         with get_path_progress_bar([self.working_dir.name]) as pbar:
@@ -66,12 +67,12 @@ class PathUtilTest(unittest.TestCase):
     def test_ingress_path_filtering(self):
         """Test the resolve_ingress_paths() function with include and exclude filters"""
         # Create some dummy files to test with
-        os.system(f"touch {join(self.working_dir.name, 'file.txt')}")
-        os.system(f"touch {join(self.working_dir.name, 'file.xml')}")
-        os.system(f"touch {join(self.working_dir.name, 'file.dat')}")
-        os.system(f"touch {join(self.working_dir.name, 'data.txt')}")
-        os.system(f"touch {join(self.working_dir.name, 'data.xml')}")
-        os.system(f"touch {join(self.working_dir.name, 'data.dat')}")
+        Path(self.working_dir.name, 'file.txt').touch()
+        Path(self.working_dir.name, 'file.xml').touch()
+        Path(self.working_dir.name, 'file.dat').touch()
+        Path(self.working_dir.name, 'data.txt').touch()
+        Path(self.working_dir.name, 'data.xml').touch()
+        Path(self.working_dir.name, 'data.dat').touch()
 
         # Test with no filters
         includes = []
@@ -207,6 +208,49 @@ class PathUtilTest(unittest.TestCase):
         self.assertFalse(PathUtil.validate_gzip_extension("/path/to/file.gz.bak"))
         self.assertFalse(PathUtil.validate_gzip_extension("/path/to/file"))
         self.assertFalse(PathUtil.validate_gzip_extension(""))
+
+    def test_resolve_ingress_paths_skip_symlinks(self):
+        """Test that resolve_ingress_paths() correctly handles symlinks when follow_symlinks=False"""
+        # Create a directory structure with real files
+        real_dir = join(self.working_dir.name, "real_data")
+        os.makedirs(real_dir)
+        Path(real_dir, 'real_file.txt').touch()
+
+        # Create a symlinked directory and file, skipping the test if symlinks are not supported
+        symlink_dir = join(self.working_dir.name, "symlink_data")
+        symlink_file = join(self.working_dir.name, "symlink_file.txt")
+        try:
+            os.symlink(real_dir, symlink_dir)
+            os.symlink(join(real_dir, "real_file.txt"), symlink_file)
+        except OSError:
+            self.skipTest("Symbolic links are not supported or permissions do not allow creating them on this platform.")
+
+        # Create a regular file for comparison
+        Path(self.working_dir.name, 'regular_file.txt').touch()
+
+        # Test with follow_symlinks=True (default behavior)
+        with get_path_progress_bar([self.working_dir.name]) as pbar:
+            resolved_paths = PathUtil.resolve_ingress_paths([self.working_dir.name], [], [], pbar, follow_symlinks=True)
+
+        # Should include files from both real and symlinked paths
+        self.assertIn(abspath(join(real_dir, "real_file.txt")), resolved_paths)
+        self.assertIn(abspath(join(symlink_dir, "real_file.txt")), resolved_paths)
+        self.assertIn(abspath(symlink_file), resolved_paths)
+        self.assertIn(abspath(join(self.working_dir.name, "regular_file.txt")), resolved_paths)
+
+        # Test with follow_symlinks=False
+        with get_path_progress_bar([self.working_dir.name]) as pbar:
+            resolved_paths = PathUtil.resolve_ingress_paths(
+                [self.working_dir.name], [], [], pbar, follow_symlinks=False
+            )
+
+        # Should include only the real file and regular file, not symlinked paths
+        self.assertIn(abspath(join(real_dir, "real_file.txt")), resolved_paths)
+        self.assertIn(abspath(join(self.working_dir.name, "regular_file.txt")), resolved_paths)
+        # Symlinked directory contents should not be included
+        self.assertNotIn(abspath(join(symlink_dir, "real_file.txt")), resolved_paths)
+        # Symlinked file should not be included
+        self.assertNotIn(abspath(symlink_file), resolved_paths)
 
 
 if __name__ == "__main__":
