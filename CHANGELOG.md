@@ -1,13 +1,21 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-02-12)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-02-19)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.3.0...«unknown»)
+
+**Requirements:**
+
+- As a data provider, I want to skip following symlinks during ingress [\#340](https://github.com/NASA-PDS/data-upload-manager/issues/340)
 
 **Defects:**
 
 - DUM client MD5 hash generation does not work on FIPS-enabled systems [\#337](https://github.com/NASA-PDS/data-upload-manager/issues/337) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
 - Upload of gzip files does not happen if it is batched with non-gzip files [\#336](https://github.com/NASA-PDS/data-upload-manager/issues/336) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
+
+**Other closed issues:**
+
+- Incorporate WAF configuration with API Gateway Terraform module [\#252](https://github.com/NASA-PDS/data-upload-manager/issues/252)
 
 ## [v2.3.0](https://github.com/NASA-PDS/data-upload-manager/tree/v2.3.0) (2026-01-29)
 
