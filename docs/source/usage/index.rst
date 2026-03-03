@@ -13,6 +13,17 @@ To see the usage documentation, you can run the following::
 
     $ pds-ingress-client --help
 
+Command-Line Arguments Reference
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. argparse::
+   :module: pds.ingress.client.pds_ingress_client
+   :func: setup_argparser
+   :prog: pds-ingress-client
+
+Usage Notes
+^^^^^^^^^^^
+
 The client application only has two arguments which must provided on each invocation,
 at least one path to files or directories to be uploaded, and the name of the PDS
 node the submission is on behalf of (via the ``--node`` argument).
@@ -21,7 +32,11 @@ When specifying the list of paths to be uploaded, any paths corresponding to
 directories will be automatically recursed by the client script, and each file
 within the directory will be included in the set uploaded to PDS Cloud. Any
 sub-directories will be similarly recursed to find any additional files within,
-until the entire directory tree is traversed.
+until the entire directory tree is traversed. **By default, symbolic links are
+followed during path resolution**, meaning that symlinked files and directories
+will be included in the upload set. To prevent uploading duplicate data when
+files are symlinked into multiple locations within a data delivery structure,
+use the ``--skip-symlinks`` flag to skip symbolic links during traversal.
 
 The client script provides ``--include`` and ``--exclude`` arguments which can
 be used to filter the set of files included in the upload request. Both arguments
