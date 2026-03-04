@@ -41,7 +41,9 @@ When utilizing the DUM Client script (`pds-ingress-client`), the following workf
 
 Determination of the input file set is determined in Step 1 by resolving the paths providing on
 the command-line to the DUM client. Any directories provided are recursed to determine the full set
-of files within. Any paths provided are included as-is into the input file set.
+of files within. Any paths provided are included as-is into the input file set. **By default, symbolic
+links are followed during path resolution.** To avoid uploading duplicate data when files are symlinked
+into multiple locations, use the `--skip-symlinks` flag to skip symbolic links during traversal.
 
 Depending on the size of the input file set, the Manifest file creation in Step 2 can become
 time-consuming due to the hashing of each file in the input file set. To save time, the `--manifest-path`
