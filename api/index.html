@@ -102,6 +102,7 @@
                           <span class="p">[</span><span class="o">--</span><span class="n">log</span><span class="o">-</span><span class="n">path</span> <span class="n">LOG_PATH</span><span class="p">]</span>
                           <span class="p">[</span><span class="o">--</span><span class="n">manifest</span><span class="o">-</span><span class="n">path</span> <span class="n">MANIFEST_PATH</span><span class="p">]</span>
                           <span class="p">[</span><span class="o">--</span><span class="n">report</span><span class="o">-</span><span class="n">path</span> <span class="n">REPORT_PATH</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">dry</span><span class="o">-</span><span class="n">run</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">skip</span><span class="o">-</span><span class="n">symlinks</span><span class="p">]</span>
                           <span class="p">[</span><span class="o">--</span><span class="n">log</span><span class="o">-</span><span class="n">level</span> <span class="p">{</span><span class="n">warn</span><span class="p">,</span><span class="n">warning</span><span class="p">,</span><span class="n">info</span><span class="p">,</span><span class="n">debug</span><span class="p">}]</span> <span class="p">[</span><span class="o">--</span><span class="n">version</span><span class="p">]</span>
                           <span class="n">file_or_dir</span> <span class="p">[</span><span class="n">file_or_dir</span> <span class="o">...</span><span class="p">]</span>
 </pre></div>
@@ -157,6 +158,10 @@
 </dd>
 <dt><kbd>--dry-run</kbd></dt>
 <dd><p>Derive the full set of ingress paths without performing any submission requests to the server.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+<dt><kbd>--skip-symlinks</kbd></dt>
+<dd><p>Do not follow symbolic links when resolving ingress paths. Use this option to avoid uploading duplicate data when files are symlinked into multiple locations.</p>
 <p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
 </dd>
 <dt><kbd>--log-level, -l</kbd></dt>

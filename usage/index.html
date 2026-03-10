@@ -49,8 +49,19 @@
 <li class="toctree-l1"><a class="reference internal" href="../installation/index.html">📦 Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../development/index.html">👩‍💻 Development</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">🏃‍ ️Usage</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#pds-ingress-client-description">pds-ingress-client Description</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#data-upload-manager-client-workflow">Data Upload Manager Client Workflow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pds-ingress-client-description">pds-ingress-client Description</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#command-line-arguments-reference">Command-Line Arguments Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pds.ingress.client.pds_ingress_client-setup_argparser-positional-arguments">Positional Arguments</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pds.ingress.client.pds_ingress_client-setup_argparser-named-arguments">Named Arguments</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#usage-notes">Usage Notes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#data-upload-manager-client-workflow">Data Upload Manager Client Workflow</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#understanding-batch-processing">Understanding Batch Processing</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#automatic-retry-of-failed-uploads">Automatic Retry of Failed Uploads</a></li>
 </ul>
 </li>
@@ -96,6 +107,92 @@ be available for use on the command-line.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pds-ingress-client --help
 </pre></div>
 </div>
+<section id="command-line-arguments-reference">
+<h3>Command-Line Arguments Reference<a class="headerlink" href="#command-line-arguments-reference" title="Link to this heading"></a></h3>
+<p><p>Client side script used to perform ingress request to the DUM service in AWS.</p>
+</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">usage</span><span class="p">:</span> <span class="n">pds</span><span class="o">-</span><span class="n">ingress</span><span class="o">-</span><span class="n">client</span> <span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">c</span> <span class="n">CONFIG_PATH</span><span class="p">]</span>
+                          <span class="o">-</span><span class="n">n</span> <span class="p">{</span><span class="n">atm</span><span class="p">,</span><span class="n">eng</span><span class="p">,</span><span class="n">geo</span><span class="p">,</span><span class="n">img</span><span class="p">,</span><span class="n">naif</span><span class="p">,</span><span class="n">ppi</span><span class="p">,</span><span class="n">rs</span><span class="p">,</span><span class="n">rms</span><span class="p">,</span><span class="n">sbn</span><span class="p">}</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">prefix</span> <span class="n">PREFIX</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">weblogs</span> <span class="n">LOG_TYPE</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">force</span><span class="o">-</span><span class="n">overwrite</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">include</span> <span class="n">PATTERN</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">exclude</span> <span class="n">PATTERN</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">num</span><span class="o">-</span><span class="n">threads</span> <span class="n">NUM_THREADS</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">log</span><span class="o">-</span><span class="n">path</span> <span class="n">LOG_PATH</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">manifest</span><span class="o">-</span><span class="n">path</span> <span class="n">MANIFEST_PATH</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">report</span><span class="o">-</span><span class="n">path</span> <span class="n">REPORT_PATH</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">dry</span><span class="o">-</span><span class="n">run</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">skip</span><span class="o">-</span><span class="n">symlinks</span><span class="p">]</span>
+                          <span class="p">[</span><span class="o">--</span><span class="n">log</span><span class="o">-</span><span class="n">level</span> <span class="p">{</span><span class="n">warn</span><span class="p">,</span><span class="n">warning</span><span class="p">,</span><span class="n">info</span><span class="p">,</span><span class="n">debug</span><span class="p">}]</span> <span class="p">[</span><span class="o">--</span><span class="n">version</span><span class="p">]</span>
+                          <span class="n">file_or_dir</span> <span class="p">[</span><span class="n">file_or_dir</span> <span class="o">...</span><span class="p">]</span>
+</pre></div>
+</div>
+<section id="pds.ingress.client.pds_ingress_client-setup_argparser-positional-arguments">
+<h4>Positional Arguments<a class="headerlink" href="#pds.ingress.client.pds_ingress_client-setup_argparser-positional-arguments" title="Link to this heading"></a></h4>
+<dl class="option-list">
+<dt><kbd>file_or_dir</kbd></dt>
+<dd><p>One or more paths to the files to ingest to S3. For each directory path is provided, this script will automatically derive all sub-paths for inclusion with the ingress request.</p>
+</dd>
+</dl>
+</section>
+<section id="pds.ingress.client.pds_ingress_client-setup_argparser-named-arguments">
+<h4>Named Arguments<a class="headerlink" href="#pds.ingress.client.pds_ingress_client-setup_argparser-named-arguments" title="Link to this heading"></a></h4>
+<dl class="option-list">
+<dt><kbd>-c, --config-path</kbd></dt>
+<dd><p>Path to the INI config for use with this client. If not provided, the default config (/github/workspace/src/pds/ingress/conf.default.ini) is used.</p>
+</dd>
+<dt><kbd>-n, --node</kbd></dt>
+<dd><p>Possible choices: atm, eng, geo, img, naif, ppi, rs, rms, sbn</p>
+<p>PDS node identifier of the ingress requestor. This value is used by the Ingress service to derive the S3 upload location. Argument is case-insensitive.</p>
+</dd>
+<dt><kbd>--prefix, -p</kbd></dt>
+<dd><p>Specify a path prefix to be trimmed from each resolved ingest path such that is is not included with the request to the Ingress Service. For example, specifying –prefix “/home/user” would modify paths such as “/home/user/bundle/file.xml” to just “bundle/file.xml”. This can be useful for controlling which parts of a directory structure should be included with the S3 upload location returned by the Ingress Service.</p>
+</dd>
+<dt><kbd>--weblogs, -w</kbd></dt>
+<dd><p>Denotes the upload request as being for LOG_TYPE web logs. All uploaded files will be routed to a special S3 location reserved for web log files. LOG_TYPE denotes the type of web logs being uploaded, and becomes part of the destination upload path. If provided, –prefix must be provided as well.</p>
+</dd>
+<dt><kbd>--force-overwrite, -f</kbd></dt>
+<dd><p>By default, the DUM service determines if a given file has already been ingested to the PDS Cloud and has not changed. If so, ingress of the file is skipped. Use this flag to override this behavior and forcefully overwrite any existing versions of files within the PDS Cloud.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+<dt><kbd>--include, -i</kbd></dt>
+<dd><p>Specify a file path pattern to match against when determining which files should be included with an Ingress request. Unix-style wildcard patterns are supported. Include patterns are always applied prior to any Exclude patterns. This argument can be specified multiple times to configure multiple include patterns. Include patterns are evaluated in the order they provided.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">[]</span></code></p>
+</dd>
+<dt><kbd>--exclude, -e</kbd></dt>
+<dd><p>Specify a file path pattern to match against when determining which files should be excluded from an Ingress request. Unix-style wildcard patterns are supported. Exclude patterns are always applied after any Include patterns. This argument can be specified multiple times to configure multiple exclude patterns. Exclude patterns are evaluated in the order they provided.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">[]</span></code></p>
+</dd>
+<dt><kbd>--num-threads, -t</kbd></dt>
+<dd><p>Specify the number of threads to use when uploading files to S3 in parallel. By default, all available cores are used.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">4</span></code></p>
+</dd>
+<dt><kbd>--log-path</kbd></dt>
+<dd><p>Specify a file path to write logging statements to. These will include some of the messages logged to the console, as well as additional messages about the status of each file/batch transfer. By default, the log file is created in a temporary location if this parameter is not provided. If provided, this argument takes precedence over what is provided for OTHER.log_file_path in the INI config.</p>
+</dd>
+<dt><kbd>--manifest-path</kbd></dt>
+<dd><p>Specify a file path to a JSON manifiest of all files indexed for inclusion in the current ingress request. If the provided path is not an existing file, then the manifest will be written to that location. If the path already exists, this script will read the manifiest, and skip checksum generation for any paths that are already specified. If not provided, no manifiest is written or read.</p>
+</dd>
+<dt><kbd>--report-path, -r</kbd></dt>
+<dd><p>Specify a path to write a JSON summary report containing the full listing of all files ingressed, skipped or failed. By default, no report is created.</p>
+</dd>
+<dt><kbd>--dry-run</kbd></dt>
+<dd><p>Derive the full set of ingress paths without performing any submission requests to the server.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+<dt><kbd>--skip-symlinks</kbd></dt>
+<dd><p>Do not follow symbolic links when resolving ingress paths. Use this option to avoid uploading duplicate data when files are symlinked into multiple locations.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+<dt><kbd>--log-level, -l</kbd></dt>
+<dd><p>Possible choices: warn, warning, info, debug</p>
+<p>Sets the Logging level for logged messages. If not provided, the logging level set in the INI config is used instead.</p>
+</dd>
+<dt><kbd>--version</kbd></dt>
+<dd><p>Print the Data Upload Manager release version and exit.</p>
+</dd>
+</dl>
+</section>
+</section>
+<section id="usage-notes">
+<h3>Usage Notes<a class="headerlink" href="#usage-notes" title="Link to this heading"></a></h3>
 <p>The client application only has two arguments which must provided on each invocation,
 at least one path to files or directories to be uploaded, and the name of the PDS
 node the submission is on behalf of (via the <code class="docutils literal notranslate"><span class="pre">--node</span></code> argument).</p>
@@ -103,7 +200,11 @@ node the submission is on behalf of (via the <code class="docutils literal notra
 directories will be automatically recursed by the client script, and each file
 within the directory will be included in the set uploaded to PDS Cloud. Any
 sub-directories will be similarly recursed to find any additional files within,
-until the entire directory tree is traversed.</p>
+until the entire directory tree is traversed. <strong>By default, symbolic links are
+followed during path resolution</strong>, meaning that symlinked files and directories
+will be included in the upload set. To prevent uploading duplicate data when
+files are symlinked into multiple locations within a data delivery structure,
+use the <code class="docutils literal notranslate"><span class="pre">--skip-symlinks</span></code> flag to skip symbolic links during traversal.</p>
 <p>The client script provides <code class="docutils literal notranslate"><span class="pre">--include</span></code> and <code class="docutils literal notranslate"><span class="pre">--exclude</span></code> arguments which can
 be used to filter the set of files included in the upload request. Both arguments
 support Unix shell-style wildcards (e.g. <code class="docutils literal notranslate"><span class="pre">*.xml</span></code>), and can be specified multiple
@@ -136,6 +237,20 @@ The type of log files (e.g. <code class="docutils literal notranslate"><span cla
 the “trimmed” path for each ingested file to replace the specified path prefix with <code class="docutils literal notranslate"><span class="pre">weblog/</span></code>,
 ensuring that all weblog files are routed to a specific S3 bucket used for web analytics.
 Because of this, the <code class="docutils literal notranslate"><span class="pre">--prefix</span></code> argument must be provided when using the <code class="docutils literal notranslate"><span class="pre">--weblogs</span></code> argument.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><strong>All weblog files must be gzip-compressed (.gz extension).</strong> When using <code class="docutils literal notranslate"><span class="pre">--weblogs</span></code>,
+the client validates that every file in the request has a <code class="docutils literal notranslate"><span class="pre">.gz</span></code> extension <strong>before</strong>
+any uploads begin. If even a single non-gzipped file is present in the input file set,
+the entire request will fail immediately with no files being uploaded.</p>
+<p>For example, if you attempt to upload a directory containing both <code class="docutils literal notranslate"><span class="pre">access.log.gz</span></code> and
+<code class="docutils literal notranslate"><span class="pre">access.log.txt</span></code>, the upload will abort with an error listing the non-gzipped files.
+To successfully upload, either:</p>
+<ol class="arabic simple">
+<li><p>Compress all files with gzip before uploading, or</p></li>
+<li><p>Use the <code class="docutils literal notranslate"><span class="pre">--exclude</span></code> argument to filter out non-gzipped files (e.g., <code class="docutils literal notranslate"><span class="pre">--exclude</span> <span class="pre">&quot;*.txt&quot;</span></code>)</p></li>
+</ol>
+</div>
 <p>The <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code> by default utilizes all available CPUs on the
 local machine to perform parallelized ingress requests to the ingress service. The exact
 number of threads can be controlled via the <code class="docutils literal notranslate"><span class="pre">--num-threads</span></code> argument.</p>
@@ -146,6 +261,7 @@ number of threads can be controlled via the <code class="docutils literal notran
 <li><p><code class="docutils literal notranslate"><span class="pre">--log-path</span></code> : Specifies a path to write a trace log of the ingress request which does not go to the console. Can be useful for troubleshooting tranfer failures.</p></li>
 </ul>
 <p>Lastly, the <code class="docutils literal notranslate"><span class="pre">--version</span></code> option may be used to verify the version number of installed DUM client.</p>
+</section>
 </section>
 <section id="data-upload-manager-client-workflow">
 <h2>Data Upload Manager Client Workflow<a class="headerlink" href="#data-upload-manager-client-workflow" title="Link to this heading"></a></h2>
@@ -169,9 +285,27 @@ read Manifest will reuse the precomputed values within, saving upfront time prio
 to S3. The Manifest will then be re-written to the path specified by <cite>–manifest-path</cite> to include
 any new files encountered. In this way, a Manifest file can expand across executions of DUM to serve
 as a sort of cache for file information.</p>
+<section id="understanding-batch-processing">
+<h3>Understanding Batch Processing<a class="headerlink" href="#understanding-batch-processing" title="Link to this heading"></a></h3>
 <p>The batch size utilized by Steps 3 and 4 can be configured within the INI config provided to the
-DUM client. The number of batches processed in parallel can be controlled via the <cite>–num-threads</cite>
-command-line argument.</p>
+DUM client via the <code class="docutils literal notranslate"><span class="pre">batch_size</span></code> setting in the <code class="docutils literal notranslate"><span class="pre">[OTHER]</span></code> section. The number of batches processed
+in parallel can be controlled via the <code class="docutils literal notranslate"><span class="pre">--num-threads</span></code> command-line argument.</p>
+<p>During execution, the client splits the input file set into batches and processes them in parallel.
+Log messages clearly indicate this batching behavior:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">INFO</span> <span class="n">MainThread</span> <span class="n">main</span> <span class="p">:</span> <span class="n">Using</span> <span class="n">batch</span> <span class="n">size</span> <span class="n">of</span> <span class="mi">250</span>
+<span class="n">INFO</span> <span class="n">MainThread</span> <span class="n">main</span> <span class="p">:</span> <span class="n">Request</span> <span class="p">(</span><span class="mi">500</span> <span class="n">files</span><span class="p">)</span> <span class="n">split</span> <span class="n">into</span> <span class="mi">2</span> <span class="n">batches</span>
+</pre></div>
+</div>
+<p>Each batch is then prepared and uploaded independently. If individual files within a batch fail to
+upload (due to network issues, permission errors, etc.), those files are tracked separately and
+retried at the end of the ingress process. The remaining files in the batch continue to upload
+normally - a single file failure does not cause the entire batch to fail.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The batching described here applies to the <strong>upload phase</strong> (Steps 3-4). Pre-flight validation
+checks (such as the gzip validation for weblog uploads) are performed on the <strong>entire input file set</strong>
+before batching occurs. If pre-flight validation fails, no files will be uploaded.</p>
+</div>
 <p>By default, at completion of an ingress request (Step 5), the DUM client provides a summary of the
 results of the transfer:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Ingress</span> <span class="n">Summary</span> <span class="n">Report</span> <span class="k">for</span> <span class="mi">2025</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">25</span> <span class="mi">11</span><span class="p">:</span><span class="mi">41</span><span class="p">:</span><span class="mf">29.507022</span>
@@ -213,6 +347,7 @@ can be written to disk via the <cite>–report-path</cite> command-line argument
 <p>Lastly, a detailed log file containing trace statements for each file/batch uploaded can be written
 to disk via the <cite>–log-path</cite> command-line argument. The log file path may also be specifed within
 the INI config.</p>
+</section>
 </section>
 <section id="automatic-retry-of-failed-uploads">
 <h2>Automatic Retry of Failed Uploads<a class="headerlink" href="#automatic-retry-of-failed-uploads" title="Link to this heading"></a></h2>
