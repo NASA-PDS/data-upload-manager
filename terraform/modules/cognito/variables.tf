@@ -1,109 +1,27 @@
+# Variables for DUM Cognito Client Setup Using Shared Cognito Infrastructure
 
-variable "user_pool_name" {
+variable "pds_common_cognito_user_pool_id_ssm_parameter_name" {
   type        = string
-  description = "Name of the Cognito User Pool"
-  default     = "nucleus-dum-cognito-user-pool"
+  description = "SSM parameter name that stores the shared PDS Cognito User Pool ID"
+  default     = "/pds/cds-infra/cognito/user-pool/user-pool-id"
 }
 
-variable "user_pool_domain" {
+variable "dum_cognito_auth_client_id_ssm_parameter_name" {
   type        = string
-  description = "Unique domain name for the DUM Cognito Pool"
-  default     = "pds-nucleus-dum"
+  description = "SSM parameter name used by DUM to store its Cognito app client ID"
+  default     = "/pds/dum/cognito-auth-client-id"
 }
 
-variable "email_invitation_subject" {
+variable "cognito_user_pool_client_name" {
   type        = string
-  description = "Subject line for use with invitation emails"
-  default     = "PDS Data Upload Manager Temporary Credentials"
+  description = "Name of the DUM Cognito app client"
+  default     = "pds-dum-auth-client"
 }
 
-variable "email_invitation_message" {
-  type        = string
-  description = "Message body for use with invitation emails"
-  default     = "Your PDS Data Upload Manager username is {username} and temporary password is {####}. You must change this password the next time you log in."
-}
-
-variable "sms_text_invitation_message" {
-  type        = string
-  description = "Message body for use with SMS text invitations"
-  default     = "Your username is {username} and temporary password is {####}"
-}
-
-variable "ssm_param_cognito_user_pool_id" {
-  type        = string
-  description = "SSM Parameter location for securely storing the Cognito User Pool ID"
-  default     = "/pds/dum/cognito/cognito-user-pool/user-pool-id"
-}
-
-variable "ssm_param_cognito_user_pool_client_id" {
-  type        = string
-  description = "SSM Parameter location for securely storing the Cognito User Pool Client ID"
-  default     = "/pds/dum/cognito/cognito-user-pool/user-pool-client-id"
-}
-
-variable "nucleus_dum_cognito_user_groups" {
-  description = "List of the PDS DUM Cognito User Groups"
-  type = list(
-    object(
-      {
-        name        = string
-        description = string
-      }
-    )
-  )
-  default = [
-    {
-      name        = "PDS_ATM_USERS",
-      description = "User group for PDS Atmospheres Node"
-    },
-    {
-      name        = "PDS_ENG_USERS"
-      description = "User group for PDS Engineering Node"
-    },
-    {
-      name        = "PDS_GEO_USERS"
-      description = "User group for PDS Geosciences Node"
-    },
-    {
-      name        = "PDS_IMG_USERS"
-      description = "User group for PDS Cartography and Imaging Sciences Discipline Node"
-    },
-    {
-      name        = "PDS_NAIF_USERS"
-      description = "User group for PDS Navigational and Ancillary Information Facility Node"
-    },
-    {
-      name        = "PDS_PPI_USERS"
-      description = "User group for PDS Planetary Plasma Interactions Node"
-    },
-    {
-      name        = "PDS_RS_USERS"
-      description = "User group for PDS Radio Science Node"
-    },
-    {
-      name        = "PDS_RMS_USERS",
-      description = "User group for PDS Ring-Moon Systems Node"
-    },
-    {
-      name        = "PDS_SBN_USERS",
-      description = "User group for PDS Small Bodies Node"
-    }
-  ]
-}
-
-variable "nucleus_dum_cognito_initial_users" {
-  description = "Optional list of users and group to pre-populate the User Pool with"
-  type = list(
-    object(
-      {
-        username = string
-        password = string
-        group    = string
-        email    = string
-      }
-    )
-  )
-  default = []
+variable "callback_urls" {
+  type        = list(string)
+  description = "Callback URLs for the DUM Cognito app client"
+  default     = ["http://localhost:3000"]
 }
 
 variable "tags" {

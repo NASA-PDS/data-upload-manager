@@ -2,8 +2,8 @@
 
 # Instantiate bucket-map.yaml based on the selected venue
 resource "local_file" "bucket_map" {
-    content  = templatefile("${path.root}/../src/pds/ingress/service/config/bucket-map.yaml.tmpl", { venue = var.venue })
-    filename = "${path.root}/../src/pds/ingress/service/config/bucket-map.yaml"
+  content  = templatefile("${path.root}/../src/pds/ingress/service/config/bucket-map.yaml.tmpl", { venue = var.venue })
+  filename = "${path.root}/../src/pds/ingress/service/config/bucket-map.yaml"
 }
 
 # Zip the lambda function contents
@@ -11,8 +11,10 @@ data "archive_file" "lambda_ingress_service" {
   type        = "zip"
   source_dir  = "${path.root}/../src/pds/ingress/service"
   output_path = "${path.module}/files/dum-ingress-service.zip"
-  excludes    = ["${path.root}/../src/pds/ingress/service/config/bucket-map.yaml.tmpl",
-                 "${path.root}/../src/pds/ingress/service/pds_status_app.py"]
+  excludes = [
+    "${path.root}/../src/pds/ingress/service/config/bucket-map.yaml.tmpl",
+    "${path.root}/../src/pds/ingress/service/pds_status_app.py"
+  ]
 
   depends_on = [local_file.bucket_map]
 }
@@ -21,25 +23,29 @@ data "archive_file" "lambda_status_service" {
   type        = "zip"
   source_dir  = "${path.root}/../src/pds/ingress/service"
   output_path = "${path.module}/files/dum-status-service.zip"
-  excludes    = ["${path.root}/../src/pds/ingress/service/config/bucket-map.yaml.tmpl",
-                 "${path.root}/../src/pds/ingress/service/pds_ingress_app.py"]
+  excludes = [
+    "${path.root}/../src/pds/ingress/service/config/bucket-map.yaml.tmpl",
+    "${path.root}/../src/pds/ingress/service/pds_ingress_app.py"
+  ]
 }
 
 data "archive_file" "metadata_sync_service" {
   type        = "zip"
   source_dir  = "${path.root}/../src/pds/ingress/service"
   output_path = "${path.module}/files/metadata-sync-service.zip"
-  excludes    = ["${path.root}/../src/pds/ingress/service/config",
-                 "${path.root}/../src/pds/ingress/service/util",
-                 "${path.root}/../src/pds/ingress/service/pds_status_app.py",
-                 "${path.root}/../src/pds/ingress/service/pds_ingress_app.py"]
+  excludes = [
+    "${path.root}/../src/pds/ingress/service/config",
+    "${path.root}/../src/pds/ingress/service/util",
+    "${path.root}/../src/pds/ingress/service/pds_status_app.py",
+    "${path.root}/../src/pds/ingress/service/pds_ingress_app.py"
+  ]
 }
 
 data "aws_caller_identity" "current" {}
 
 # Deploy the zips to S3
 module "lambda_bucket" {
-  source        = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/bucket"  # pragma: allowlist secret
+  source        = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/bucket" # pragma: allowlist secret
   bucket_name   = var.lambda_s3_bucket_name
   partition     = var.lambda_s3_bucket_partition
   bucket_policy = <<POLICY
@@ -88,21 +94,21 @@ module "lambda_bucket" {
 }
 
 module "lambda_ingress_service_s3_object" {
-  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object"  # pragma: allowlist secret
+  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object" # pragma: allowlist secret
   bucket      = module.lambda_bucket.bucket_id
   key         = "dum-ingress-service.zip"
   source_path = data.archive_file.lambda_ingress_service.output_path
 }
 
 module "lambda_status_service_s3_object" {
-  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object"  # pragma: allowlist secret
+  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object" # pragma: allowlist secret
   bucket      = module.lambda_bucket.bucket_id
   key         = "dum-status-service.zip"
   source_path = data.archive_file.lambda_status_service.output_path
 }
 
 module "metadata_sync_service_s3_object" {
-  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object"  # pragma: allowlist secret
+  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object" # pragma: allowlist secret
   bucket      = module.lambda_bucket.bucket_id
   key         = "metadata-sync-service.zip"
   source_path = data.archive_file.metadata_sync_service.output_path
@@ -139,7 +145,7 @@ resource "null_resource" "lambda_ingress_service_yamale_layer" {
 }
 
 module "lambda_ingress_service_pyyaml_layer_s3_object" {
-  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object"  # pragma: allowlist secret
+  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object" # pragma: allowlist secret
   bucket      = module.lambda_bucket.bucket_id
   key         = "layer-PyYAML.zip"
   source_path = "${path.module}/files/pyyaml/layer-PyYAML.zip"
@@ -148,7 +154,7 @@ module "lambda_ingress_service_pyyaml_layer_s3_object" {
 }
 
 module "lambda_ingress_service_yamale_layer_s3_object" {
-  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object"  # pragma: allowlist secret
+  source      = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/object" # pragma: allowlist secret
   bucket      = module.lambda_bucket.bucket_id
   key         = "layer-Yamale.zip"
   source_path = "${path.module}/files/yamale/layer-Yamale.zip"
@@ -160,7 +166,7 @@ resource "aws_lambda_layer_version" "lambda_ingress_service_pyyaml_layer" {
   s3_bucket           = module.lambda_bucket.bucket_id
   s3_key              = "layer-PyYAML.zip"
   layer_name          = "PyYAML"
-  compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12","python3.13"]
+  compatible_runtimes = ["python3.9", "python3.10", "python3.11", "python3.12", "python3.13"]
 
   # Conditionally create Lambda layer based on skip_lambda_layers variable
   # This allows for tagging existing resources without requiring layer creation
@@ -176,7 +182,7 @@ resource "aws_lambda_layer_version" "lambda_ingress_service_yamale_layer" {
   s3_bucket           = module.lambda_bucket.bucket_id
   s3_key              = "layer-Yamale.zip"
   layer_name          = "Yamale"
-  compatible_runtimes = ["python3.9","python3.10","python3.11","python3.12","python3.13"]
+  compatible_runtimes = ["python3.9", "python3.10", "python3.11", "python3.12", "python3.13"]
 
   # Conditionally create Lambda layer based on skip_lambda_layers variable
   # This allows for tagging existing resources without requiring layer creation
@@ -199,8 +205,8 @@ resource "aws_lambda_function" "lambda_ingress_service" {
   runtime = "python3.13"
   handler = "pds_ingress_app.lambda_handler"
 
-  # Use a static source_code_hash to avoid etag inconsistency issues
-  source_code_hash = filebase64sha256(data.archive_file.lambda_ingress_service.output_path)
+  # Use archive_file hash to avoid missing file timing issues
+  source_code_hash = data.archive_file.lambda_ingress_service.output_base64sha256
 
   role = var.lambda_ingress_service_iam_role_arn
 
@@ -212,12 +218,12 @@ resource "aws_lambda_function" "lambda_ingress_service" {
 
   environment {
     variables = {
-      BUCKET_MAP_FILE            = "bucket-map.yaml",
-      BUCKET_MAP_LOCATION        = "config",
-      BUCKET_MAP_SCHEMA_FILE     = "bucket-map.schema",
-      BUCKET_MAP_SCHEMA_LOCATION = "config",
-      LOG_LEVEL                  = "INFO",
-      VERSION_LOCATION           = "config",
+      BUCKET_MAP_FILE            = "bucket-map.yaml"
+      BUCKET_MAP_LOCATION        = "config"
+      BUCKET_MAP_SCHEMA_FILE     = "bucket-map.schema"
+      BUCKET_MAP_SCHEMA_LOCATION = "config"
+      LOG_LEVEL                  = "INFO"
+      VERSION_LOCATION           = "config"
       VERSION_FILE               = "VERSION.txt"
       ENDPOINT_URL               = var.lambda_ingress_localstack_context ? "http://localhost.localstack.cloud:4566" : ""
       EXPECTED_BUCKET_OWNER      = var.expected_bucket_owner
@@ -241,8 +247,8 @@ resource "aws_lambda_function" "lambda_status_service" {
   runtime = "python3.13"
   handler = "pds_status_app.lambda_handler"
 
-  # Use a static source_code_hash to avoid etag inconsistency issues
-  source_code_hash = filebase64sha256(data.archive_file.lambda_status_service.output_path)
+  # Use archive_file hash to avoid missing file timing issues
+  source_code_hash = data.archive_file.lambda_status_service.output_base64sha256
 
   role = var.lambda_ingress_service_iam_role_arn
 
@@ -254,12 +260,12 @@ resource "aws_lambda_function" "lambda_status_service" {
 
   environment {
     variables = {
-      BUCKET_MAP_FILE            = "bucket-map.yaml",
-      BUCKET_MAP_LOCATION        = "config",
-      BUCKET_MAP_SCHEMA_FILE     = "bucket-map.schema",
-      BUCKET_MAP_SCHEMA_LOCATION = "config",
-      LOG_LEVEL                  = "INFO",
-      VERSION_LOCATION           = "config",
+      BUCKET_MAP_FILE            = "bucket-map.yaml"
+      BUCKET_MAP_LOCATION        = "config"
+      BUCKET_MAP_SCHEMA_FILE     = "bucket-map.schema"
+      BUCKET_MAP_SCHEMA_LOCATION = "config"
+      LOG_LEVEL                  = "INFO"
+      VERSION_LOCATION           = "config"
       VERSION_FILE               = "VERSION.txt"
       ENDPOINT_URL               = var.lambda_ingress_localstack_context ? "http://localhost.localstack.cloud:4566" : ""
       SMTP_CONFIG_SSM_KEY_PATH   = "/pds/dum/smtp/"
@@ -284,14 +290,14 @@ resource "aws_lambda_function" "metadata_sync_service" {
   runtime = "python3.13"
   handler = "sync_s3_metadata.lambda_handler"
 
-  # Use a static source_code_hash to avoid etag inconsistency issues
-  source_code_hash = filebase64sha256(data.archive_file.metadata_sync_service.output_path)
+  # Use archive_file hash to avoid missing file timing issues
+  source_code_hash = data.archive_file.metadata_sync_service.output_base64sha256
 
   role = var.lambda_ingress_service_iam_role_arn
 
   environment {
     variables = {
-      LOG_LEVEL = "INFO"
+      LOG_LEVEL             = "INFO"
       EXPECTED_BUCKET_OWNER = var.expected_bucket_owner
     }
   }
@@ -319,7 +325,7 @@ resource "aws_cloudwatch_log_group" "lambda_status_service" {
 # To avoid errors with existing buckets or permission issues, set lambda_ingress_service_default_buckets = [] in terraform.tfvars
 # This will skip bucket creation entirely when applying tags to existing resources
 module "staging_buckets" {
-  source        = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/bucket"  # pragma: allowlist secret
+  source        = "git@github.com:NASA-PDS/pds-tf-modules.git//terraform/modules/s3/bucket" # pragma: allowlist secret
   count         = length(var.lambda_ingress_service_default_buckets)
   bucket_name   = "${var.lambda_ingress_service_default_buckets[count.index].name}-${var.venue}"
   partition     = var.lambda_s3_bucket_partition

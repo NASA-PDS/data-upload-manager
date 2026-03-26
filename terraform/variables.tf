@@ -1,4 +1,3 @@
-
 variable "project" {
   type        = string
   description = "Project name"
@@ -13,132 +12,128 @@ variable "cicd" {
 
 variable "region" {
   type        = string
+  description = "AWS region for deployed resources"
   default     = "us-west-2"
-  description = "AWS region to allocate AWS resources to"
 }
 
 variable "profile" {
   type        = string
-  description = "Name of the AWS account profile"
+  description = "AWS account profile name"
 }
 
 variable "credential_file" {
   type        = string
-  description = "Path to an AWS credentials file on the local machine"
+  description = "Path to the AWS credentials file on the local machine"
 }
 
 variable "venue" {
   type        = string
-  description = "Name of the venue to be deployed to. Should be one of [dev,test,prod]"
+  description = "Deployment environment. Expected values: dev, test, or prod"
 }
 
 variable "lambda_s3_bucket_name" {
   type        = string
-  description = "Name of the S3 bucket to upload Lambda artifacts to"
-}
-
-variable "cloudwatch_iam_role_name" {
-  type        = string
-  description = "IAM Role name used for CloudWatch Logging"
+  description = "Name of the S3 bucket used to upload Lambda artifacts"
 }
 
 variable "api_gateway_endpoint_type" {
   type        = string
+  description = "API Gateway endpoint type. Expected values: PRIVATE or REGIONAL"
   default     = "PRIVATE"
-  description = "The endpoint type to assign to the API Gateway. Should be one of PRIVATE or REGIONAL"
 }
 
 variable "api_gateway_lambda_role_arn" {
   type        = string
-  description = "ARN for an IAM role which has permissions for both API Gateway and Lambda"
+  description = "ARN of the IAM role with permissions required for API Gateway and Lambda"
 }
 
-# TODO: this may go away when API is deployed as REGIONAL instead of PRIVATE
+# TODO: Remove if API is always REGIONAL
 variable "api_gateway_policy_source_vpc" {
   type        = string
-  description = "ID of the VPC which is allowed to talk to the Private API Gateway deployment"
+  description = "VPC ID allowed to access the private API Gateway deployment"
 }
 
 variable "lambda_ingress_service_iam_role_arn" {
   type        = string
-  description = "IAM role ARN to allocate to the Ingress Service Lambda function"
+  description = "IAM role ARN assigned to the ingress service Lambda function"
 }
 
 variable "lambda_authorizer_iam_role_arn" {
   type        = string
-  description = "IAM role ARN to allocate to the Lambda Authorizer function"
+  description = "IAM role ARN assigned to the Lambda authorizer function"
 }
 
 variable "localstack_context" {
   type        = bool
+  description = "Whether DUM is being deployed to a Localstack instance"
   default     = false
-  description = "Flag indicating whether DUM is to be deployed to a Localstack instance"
 }
 
-variable "nucleus_dum_cognito_initial_users" {
-  type = list(
-    object(
-      {
-        username = string
-        password = string
-        group    = string
-        email    = string
-      }
-    )
-  )
-  description = "List of Cognito users to pre-populate the User Pool with"
+# Cognito (shared + DUM client)
+variable "pds_common_cognito_user_pool_id_ssm_parameter_name" {
+  type        = string
+  description = "SSM parameter name that stores the shared PDS common Cognito user pool ID"
+  default     = "/pds/cds-infra/cognito/user-pool/user-pool-id"
+}
+
+variable "dum_cognito_auth_client_id_ssm_parameter_name" {
+  type        = string
+  description = "SSM parameter name used to store the DUM Cognito app client ID"
+  default     = "/pds/dum/cognito-auth-client-id"
+}
+
+variable "cognito_user_pool_client_name" {
+  type        = string
+  description = "Name of the DUM Cognito app client"
+  default     = "pds-dum-auth-client"
 }
 
 variable "nucleus_dum_client_cloudwatch_log_group" {
   type        = string
+  description = "Name of the CloudWatch log group used by the DUM ingress client script"
   default     = "/pds/nucleus/dum/client-log-group"
-  description = "Name of the CloudWatch Log Group for use with the DUM Ingress Client script"
 }
 
 variable "lambda_ingress_service_default_buckets" {
-  type = list(
-    object(
-      {
-        name        = string
-        description = string
-      }
-    )
-  )
-  description = "List of the default S3 staging buckets to create for each PDS Node, each name will be appended with the designated venue name to form the final bucket name"
+  type = list(object({
+    name        = string
+    description = string
+  }))
+  description = "List of default S3 staging buckets to create for each PDS node. Each bucket name is suffixed with the selected venue"
 }
 
 variable "expected_bucket_owner" {
   type        = string
-  description = "The AWS Account ID that is expected to own the S3 buckets. Used for security verification."
+  description = "AWS account ID expected to own the S3 buckets, used for security verification"
   default     = ""
 }
 
-# Mandatory tag variables
+# Tags
 variable "tag_tenant" {
   type        = string
-  description = "Owner Discipline Node (en, sbn, img, atm etc.)"
+  description = "Owner discipline node, such as en, sbn, img, or atm"
   default     = "en"
 }
 
 variable "tag_venue" {
   type        = string
-  description = "Environment (pds-cds-dev, pds-cds-prod)"
+  description = "Environment tag, such as pds-cds-dev or pds-cds-prod"
   default     = "pds-cds-dev"
 }
 
 variable "tag_component" {
   type        = string
-  description = "Component name (dum, nucleus, registry, etc.)"
+  description = "Component name, such as dum, nucleus, or registry"
   default     = "dum"
 }
 
 variable "tag_cicd" {
   type        = string
-  description = "Deployment method (iac, cd, etc.)"
+  description = "Deployment method tag, such as iac or cd"
   default     = "iac"
 }
 
 variable "tag_managedby" {
   type        = string
-  description = "PDS Team Email"
+  description = "PDS team email address"
 }
