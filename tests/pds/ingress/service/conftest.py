@@ -1,5 +1,6 @@
 import shutil
 from importlib.resources import files
+import filecmp
 
 import pytest
 
@@ -14,4 +15,10 @@ def version_txt_in_test_config():
     """
     src = str(files("pds.ingress").joinpath("VERSION.txt"))
     dst = str(files("tests.pds.ingress").joinpath("service/config/VERSION.txt"))
-    shutil.copy(src, dst)
+    try:
+        # Only copy when the destination is missing or has different content,
+        # to avoid unnecessarily updating the file's mtime in the working tree.
+        if not filecmp.cmp(src, dst, shallow=False):
+            shutil.copy(src, dst)
+    except FileNotFoundError:
+        shutil.copy(src, dst)
