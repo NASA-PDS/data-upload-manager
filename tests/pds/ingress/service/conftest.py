@@ -1,6 +1,6 @@
+import filecmp
 import shutil
 from importlib.resources import files
-import filecmp
 
 import pytest
 
