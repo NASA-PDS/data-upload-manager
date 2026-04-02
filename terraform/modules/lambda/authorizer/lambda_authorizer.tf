@@ -62,8 +62,6 @@ resource "aws_lambda_function" "lambda_authorizer" {
       COGNITO_USER_POOL_ID   = var.lambda_authorizer_cognito_pool_id
       COGNITO_CLIENT_ID_LIST = var.lambda_authorizer_cognito_client_id
       LOCALSTACK_CONTEXT     = var.lambda_authorizer_localstack_context
-      # Consistent group naming with Ingress service
-      USER_GROUP             = "PDS_SBN_USERS"
     }
   }
 

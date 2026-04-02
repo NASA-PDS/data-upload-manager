@@ -205,7 +205,6 @@ resource "aws_lambda_function" "lambda_ingress_service" {
       VERSION_FILE               = "VERSION.txt"
       ENDPOINT_URL               = var.lambda_ingress_localstack_context ? "http://localhost.localstack.cloud:4566" : ""
       EXPECTED_BUCKET_OWNER      = var.expected_bucket_owner
-      USER_GROUP                 = "PDS_SBN_USERS"
     }
   }
 
@@ -241,7 +240,6 @@ resource "aws_lambda_function" "lambda_status_service" {
       ENDPOINT_URL               = var.lambda_ingress_localstack_context ? "http://localhost.localstack.cloud:4566" : ""
       SMTP_CONFIG_SSM_KEY_PATH   = "/pds/dum/smtp/"
       EXPECTED_BUCKET_OWNER      = var.expected_bucket_owner
-      USER_GROUP                 = "PDS_SBN_USERS"
     }
   }
 
