@@ -1,12 +1,11 @@
+# Outputs for DUM Cognito Client Setup Using Shared Cognito Infrastructure
 
-output "nucleus_dum_cognito_user_pool_id" {
-  value = aws_ssm_parameter.nucleus_dum_cognito_user_pool_id_parameter.value
+output "pds_common_cognito_user_pool_id" {
+  description = "Shared PDS Cognito User Pool ID used by DUM"
+  value       = data.aws_ssm_parameter.pds_common_cognito_user_pool_id.value
 }
 
-output "nucleus_dum_cognito_user_pool_client_id" {
-  value = aws_ssm_parameter.nucleus_dum_cognito_user_pool_client_id_parameter.value
-}
-
-output "nucleus_dum_cognito_users" {
-  value = [var.nucleus_dum_cognito_initial_users.*.username]
+output "dum_cognito_auth_client_id" {
+  description = "DUM Cognito app client ID"
+  value       = aws_cognito_user_pool_client.dum_auth_client.id
 }

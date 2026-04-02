@@ -59,7 +59,10 @@ resource "aws_lambda_event_source_mapping" "lambda_status_service_sqs_trigger" {
 module "nucleus_dum_cognito" {
   source = "./modules/cognito"
 
-  nucleus_dum_cognito_initial_users = var.nucleus_dum_cognito_initial_users
+  pds_common_cognito_user_pool_id_ssm_parameter_name = var.pds_common_cognito_user_pool_id_ssm_parameter_name
+  dum_cognito_auth_client_id_ssm_parameter_name      = var.dum_cognito_auth_client_id_ssm_parameter_name
+  cognito_user_pool_client_name                      = var.cognito_user_pool_client_name
+
   tags = {
     tenant    = var.tag_tenant
     venue     = var.tag_venue
@@ -74,9 +77,10 @@ module "nucleus_dum_lambda_authorizer" {
 
   lambda_s3_bucket_name                = var.lambda_s3_bucket_name
   lambda_authorizer_iam_role_arn       = var.lambda_authorizer_iam_role_arn
-  lambda_authorizer_cognito_pool_id    = module.nucleus_dum_cognito.nucleus_dum_cognito_user_pool_id
-  lambda_authorizer_cognito_client_id  = module.nucleus_dum_cognito.nucleus_dum_cognito_user_pool_client_id
+  lambda_authorizer_cognito_pool_id    = module.nucleus_dum_cognito.pds_common_cognito_user_pool_id
+  lambda_authorizer_cognito_client_id  = module.nucleus_dum_cognito.dum_cognito_auth_client_id
   lambda_authorizer_localstack_context = var.localstack_context
+
   tags = {
     tenant    = var.tag_tenant
     venue     = var.tag_venue
