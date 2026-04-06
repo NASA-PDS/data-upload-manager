@@ -11,6 +11,7 @@ The PDS Data Delivery Manager has the following prerequisties:
 - `Docker` for Terraform to build and package Lambda functions.
     - Minimum Version: Docker Engine 20.10+ or Docker Desktop 4.x+.
     - Architecture: If deploying from an ARM64 machine (e.g., Apple M1/M2/M3) to x86_64 Lambdas, ensure Docker is configured to support `linux/amd64` builds.
+- `Node.js` `Version 18.x` is required for the Authorizer Lambda. While the Terraform build process manages this via Docker (using `node:18-slim`), local development should align with this version to ensure dependency consistency.
 
 ## User Quickstart
 
