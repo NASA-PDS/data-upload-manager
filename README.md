@@ -8,6 +8,9 @@ The PDS Data Delivery Manager has the following prerequisties:
 
 - `python3` for running the client application and unit tests (Python 3.13 or later)
 - `terraform` for creating and deploying DUM server components to AWS
+- `Docker` for Terraform to build and package Lambda functions.
+    - Minimum Version: Docker Engine 20.10+ or Docker Desktop 4.x+.
+    - Architecture: If deploying from an ARM64 machine (e.g., Apple M1/M2/M3) to x86_64 Lambdas, ensure Docker is configured to support `linux/amd64` builds.
 
 ## User Quickstart
 
