@@ -172,3 +172,38 @@ You can build this projects' docs with:
 You can access the build files in the following directory relative to the project root:
 
     build/sphinx/html/
+
+
+### Migration Steps for Existing Deployments
+
+If you are migrating from an existing deployment, follow these steps in order to transition to the new **Python 3.13** and **Docker-based** build system:
+
+1. **Install and Start Docker**  
+   Install Docker Desktop or Docker Engine and ensure the daemon is running. Docker is now a **mandatory** dependency for compiling Linux-compatible binaries.
+
+2. **Clear Local Build Artifacts**  
+   Remove existing temporary files to prevent version conflicts between Python 3.11/3.12 and 3.13:
+   ```bash
+   rm -rf terraform/modules/lambda/service/files/
+   rm -rf terraform/modules/lambda/authorizer/files/
+   ```
+
+3. **Initialize and Refresh Terraform**  
+   Update providers and synchronize the state with the new `null_resource` logic:
+   ```bash
+   cd terraform/
+   terraform init -upgrade
+   terraform refresh
+   ```
+
+4. **Deploy Infrastructure**  
+   Execute the deployment to build the new Python 3.13 layers and Node.js 18 authorizer:
+   ```bash
+   terraform apply
+   ```
+
+5. **Verify Runtime and Authorizer**  
+   Confirm that:
+   - Lambda functions are using **Python 3.13**
+   - The authorizer is running on **Node.js 18**
+   - Files can be uploaded using DUM client
