@@ -1,5 +1,13 @@
 # Changelog
 
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-04-09)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.4.2...«unknown»)
+
+**Other closed issues:**
+
+- Avoid creating Cognito user pool in DUM and use shared user pool [\#348](https://github.com/NASA-PDS/data-upload-manager/issues/348)
+
 ## [v2.4.2](https://github.com/NASA-PDS/data-upload-manager/tree/v2.4.2) (2026-03-10)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.4.0...v2.4.2)
