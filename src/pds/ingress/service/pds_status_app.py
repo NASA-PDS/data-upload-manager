@@ -174,7 +174,7 @@ def process_manifest(request_node, manifest, bucket_map):
     """
     results = {}
 
-    node_bucket_map = bucket_map["MAP"]["NODES"].get(request_node.upper())
+    node_bucket_map = bucket_map["NODES"].get(request_node.upper())
 
     if not node_bucket_map:
         raise RuntimeError(f"No bucket map entries configured for node ID {request_node}")
