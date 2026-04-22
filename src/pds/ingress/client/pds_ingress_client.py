@@ -676,36 +676,30 @@ def ingress_multipart_file_to_s3(ingress_response, batch_index, batch_pbar):
             file_handle.close()
 
         # Complete the multipart upload
-        logger.info(Color.green_bold("Completing Multipart Upload for %s", trimmed_path))
+        logger.info(Color.green_bold(f"Completing Multipart Upload for {trimmed_path}"))
         response = requests.post(upload_complete_url, data=parts_to_xml(completed_parts))
         response.raise_for_status()
 
-        logger.info(Color.green_bold("Batch %d : %s Multipart Upload complete", batch_index, trimmed_path))
+        logger.info(Color.green_bold(f"Batch {batch_index} : {trimmed_path} Multipart Upload complete"))
         update_summary_table(SUMMARY_TABLE, "uploaded", ingress_path)
     elif response_result == HTTPStatus.NO_CONTENT:
         logger.info(
             Color.blue_bold(
-                "Batch %d : Skipping ingress for %s, reason %s",
-                batch_index,
-                trimmed_path,
-                ingress_response.get("message"),
+                f"Batch {batch_index} : Skipping ingress for {trimmed_path}, reason {ingress_response.get('message')}"
             )
         )
         update_summary_table(SUMMARY_TABLE, "skipped", ingress_path)
     elif response_result == HTTPStatus.NOT_FOUND:
         logger.warning(
             Color.red_bold(
-                "Batch %d : Ingress failed for %s, reason: %s",
-                batch_index,
-                trimmed_path,
-                ingress_response.get("message"),
+                f"Batch {batch_index} : Ingress failed for {trimmed_path}, reason: {ingress_response.get('message')}"
             )
         )
         update_summary_table(SUMMARY_TABLE, "failed", ingress_path)
     else:
         logger.error(
             Color.red_bold(
-                "Batch %d : Unexepected response code (%d) from Ingress service", batch_index, response_result
+                f"Batch {batch_index} : Unexepected response code ({response_result}) from Ingress service"
             )
         )
         raise RuntimeError
