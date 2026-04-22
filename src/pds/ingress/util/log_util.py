@@ -9,6 +9,7 @@ with the ingress client.
 """
 import json
 import logging
+import re
 import sys
 import tempfile
 from datetime import datetime
@@ -392,10 +393,17 @@ class CloudWatchHandler(BufferingHandler):
         console_logger = get_logger(__name__, cloudwatch=False, file=False)
 
         try:
+            # Strip ANSI escape codes from log messages before sending to CloudWatch
+            ansi_escape = re.compile(r'\x1b\[[0-9;]*m')
+
             log_events = [
                 {
                     "timestamp": int(round(record.created)) * MILLI_PER_SEC,
-                    "message": f"{record.levelname} {record.threadName} {record.name}:{record.funcName} {record.message}",
+                    "message": ansi_escape.sub(
+                        '',
+                        f"{record.levelname} {record.threadName} {record.name}:{record.funcName} {record.message}"
+                    ),
+
                 }
                 for record in self.buffer
             ]
