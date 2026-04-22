@@ -1,8 +1,16 @@
 # Changelog
 
-## [release/2.5.0](https://github.com/NASA-PDS/data-upload-manager/tree/release/2.5.0) (2026-04-09)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-04-22)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.4.2...release/2.5.0)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.0...«unknown»)
+
+**Other closed issues:**
+
+- Deploy Data Upload Manager \(DUM\) to production [\#346](https://github.com/NASA-PDS/data-upload-manager/issues/346)
+
+## [v2.5.0](https://github.com/NASA-PDS/data-upload-manager/tree/v2.5.0) (2026-04-13)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.4.2...v2.5.0)
 
 **Other closed issues:**
 
