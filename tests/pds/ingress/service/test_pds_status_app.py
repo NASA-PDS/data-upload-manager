@@ -76,7 +76,16 @@ class PDSStatusAppTest(unittest.TestCase):
         """Test processing of a parsed manifest"""
         parsed_manifest = json.loads(self.test_manifest)
 
-        test_bucket_map = {"MAP": {"NODES": {"ENG": {"default": {"bucket": {"name": "pds-eng-staging-test"}}}}}}
+        test_bucket_map = {
+            "NODES": {
+                "ENG": {
+                    "buckets": {
+                        "staging": {"name": "pds-eng-staging-test"},
+                        "archive": {"name": "pds-eng-archive-test"}
+                    }
+                }
+            }
+        }
 
         mock_get_ingress_status = MagicMock(return_value="Uploaded")
         expected_key = list(parsed_manifest.keys())[0]
