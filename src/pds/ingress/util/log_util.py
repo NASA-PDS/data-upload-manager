@@ -395,12 +395,12 @@ class CloudWatchHandler(BufferingHandler):
         try:
             # Strip ANSI escape codes from log messages before sending to CloudWatch
             ansi_escape = re.compile(r'\x1b\[[0-9;]*m')
-            
+
             log_events = [
                 {
                     "timestamp": int(round(record.created)) * MILLI_PER_SEC,
                     "message": ansi_escape.sub(
-                        '', 
+                        '',
                         f"{record.levelname} {record.threadName} {record.name}:{record.funcName} {record.message}"
                     ),
 
