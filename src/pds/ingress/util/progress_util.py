@@ -9,10 +9,9 @@ states of an upload request.
 """
 import multiprocessing
 
+from pds.ingress.util.path_util import PathUtil
 from tqdm import tqdm
 from tqdm.asyncio import tqdm_asyncio
-
-from pds.ingress.util.path_util import PathUtil
 
 PATH_BAR = None
 MANIFEST_BAR = None
