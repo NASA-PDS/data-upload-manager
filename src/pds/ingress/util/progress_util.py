@@ -8,10 +8,11 @@ states of an upload request.
 
 """
 import multiprocessing
-import os
 
 from tqdm import tqdm
 from tqdm.asyncio import tqdm_asyncio
+
+from pds.ingress.util.path_util import PathUtil
 
 PATH_BAR = None
 MANIFEST_BAR = None
@@ -25,7 +26,7 @@ LIGHT_GREEN = "#05E520"
 """Hex code for a light green color"""
 
 
-def get_path_progress_bar(user_paths):
+def get_path_progress_bar(user_paths, includes=None, excludes=None, follow_symlinks=True):
     """
     Initializes (if necessary) and returns the Path Resolution progress bar using
     the number of files to be resolved for ingress.
@@ -34,6 +35,12 @@ def get_path_progress_bar(user_paths):
     ----------
     user_paths : list of str
         The list of paths to resolve provided by the user on the command-line.
+    includes : list of str, optional
+        List of patterns defining which files to include for ingress.
+    excludes : list of str, optional
+        List of patterns defining which files to exclude from ingress.
+    follow_symlinks : bool, optional
+        Whether to follow symbolic links when walking directories.
 
     Returns
     -------
@@ -44,13 +51,9 @@ def get_path_progress_bar(user_paths):
     global PATH_BAR
 
     if PATH_BAR is None:
-        total_files = 0
-
-        for user_path in user_paths:
-            abs_user_path = os.path.abspath(user_path)
-            for _, _, files in os.walk(abs_user_path):
-                # Ignore hidden files
-                total_files += len([file for file in files if not file.startswith(".")])
+        includes = includes or []
+        excludes = excludes or []
+        total_files = PathUtil.count_resolvable_ingress_paths(user_paths, includes, excludes, follow_symlinks)
 
         PATH_BAR = tqdm(
             total=total_files,

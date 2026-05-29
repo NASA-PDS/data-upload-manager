@@ -7,6 +7,7 @@ from os.path import abspath
 from os.path import join
 from pathlib import Path
 
+from pds.ingress.util import progress_util
 from pds.ingress.util.path_util import PathUtil
 from pds.ingress.util.progress_util import get_path_progress_bar
 
@@ -27,6 +28,7 @@ class PathUtilTest(unittest.TestCase):
 
     def setUp(self) -> None:
         """Create a temporary directory that each test can populate as necessary"""
+        progress_util.PATH_BAR = None
         self.working_dir = tempfile.TemporaryDirectory(prefix="test_path_util_", suffix="_temp", dir=os.curdir)
 
     def tearDown(self) -> None:
@@ -140,6 +142,94 @@ class PathUtilTest(unittest.TestCase):
         self.assertNotIn(abspath(join(self.working_dir.name, "data.txt")), resolved_ingress_paths)
         self.assertNotIn(abspath(join(self.working_dir.name, "data.xml")), resolved_ingress_paths)
 
+    def test_excluded_directories_are_pruned_during_path_resolution(self):
+        """Test that excluded directories are not walked during path resolution"""
+        included_dir = join(self.working_dir.name, "included")
+        excluded_dir = join(self.working_dir.name, "excluded")
+        nested_excluded_dir = join(excluded_dir, "nested")
+
+        os.makedirs(included_dir)
+        os.makedirs(nested_excluded_dir)
+        Path(included_dir, "included.txt").touch()
+        Path(excluded_dir, "excluded.txt").touch()
+        Path(nested_excluded_dir, "nested_excluded.txt").touch()
+
+        excludes = [abspath(excluded_dir)]
+
+        with get_path_progress_bar([self.working_dir.name], [], excludes) as pbar:
+            resolved_ingress_paths = PathUtil.resolve_ingress_paths([self.working_dir.name], [], excludes, pbar)
+
+        self.assertEqual(pbar.total, 1)
+        self.assertEqual(pbar.n, 1)
+        self.assertEqual(len(resolved_ingress_paths), 1)
+        self.assertIn(abspath(join(included_dir, "included.txt")), resolved_ingress_paths)
+        self.assertNotIn(abspath(join(excluded_dir, "excluded.txt")), resolved_ingress_paths)
+        self.assertNotIn(abspath(join(nested_excluded_dir, "nested_excluded.txt")), resolved_ingress_paths)
+
+    def test_count_resolvable_ingress_paths_respects_excluded_directories(self):
+        """Test that the path progress total ignores pruned excluded directories"""
+        included_dir = join(self.working_dir.name, "included")
+        excluded_dir = join(self.working_dir.name, "excluded")
+        nested_excluded_dir = join(excluded_dir, "nested")
+
+        os.makedirs(included_dir)
+        os.makedirs(nested_excluded_dir)
+        Path(included_dir, "included.txt").touch()
+        Path(excluded_dir, "excluded.txt").touch()
+        Path(nested_excluded_dir, "nested_excluded.txt").touch()
+
+        excludes = [abspath(excluded_dir)]
+
+        self.assertEqual(PathUtil.count_resolvable_ingress_paths([self.working_dir.name], [], excludes), 1)
+
+    def test_deep_exclude_globs_do_not_prune_parent_directories(self):
+        """Test that descendant exclude globs do not prune their parent directories"""
+        included_dir = join(self.working_dir.name, "included")
+        excluded_dir = join(self.working_dir.name, "excluded")
+
+        os.makedirs(included_dir)
+        os.makedirs(excluded_dir)
+        Path(included_dir, "included.dat").touch()
+        Path(excluded_dir, "excluded.dat").touch()
+        Path(excluded_dir, "excluded.tmp").touch()
+
+        excludes = [join(abspath(excluded_dir), "*.tmp")]
+
+        with get_path_progress_bar([self.working_dir.name], [], excludes) as pbar:
+            resolved_ingress_paths = PathUtil.resolve_ingress_paths([self.working_dir.name], [], excludes, pbar)
+
+        self.assertEqual(pbar.total, 2)
+        self.assertEqual(pbar.n, 2)
+        self.assertEqual(len(resolved_ingress_paths), 2)
+        self.assertIn(abspath(join(included_dir, "included.dat")), resolved_ingress_paths)
+        self.assertIn(abspath(join(excluded_dir, "excluded.dat")), resolved_ingress_paths)
+        self.assertNotIn(abspath(join(excluded_dir, "excluded.tmp")), resolved_ingress_paths)
+
+    def test_nested_include_and_exclude_filters_share_count_and_resolution_semantics(self):
+        """Test that nested include and exclude filters agree in count and resolution paths"""
+        included_dir = join(self.working_dir.name, "bundle", "included")
+        excluded_dir = join(self.working_dir.name, "bundle", "excluded")
+
+        os.makedirs(included_dir)
+        os.makedirs(excluded_dir)
+        Path(included_dir, "keep.xml").touch()
+        Path(included_dir, "skip.dat").touch()
+        Path(excluded_dir, "drop.xml").touch()
+
+        includes = [join(abspath(self.working_dir.name), "bundle", "*", "*.xml")]
+        excludes = [abspath(excluded_dir)]
+
+        with get_path_progress_bar([self.working_dir.name], includes, excludes) as pbar:
+            resolved_ingress_paths = PathUtil.resolve_ingress_paths([self.working_dir.name], includes, excludes, pbar)
+
+        self.assertEqual(PathUtil.count_resolvable_ingress_paths([self.working_dir.name], includes, excludes), 1)
+        self.assertEqual(pbar.total, 1)
+        self.assertEqual(pbar.n, 1)
+        self.assertEqual(len(resolved_ingress_paths), 1)
+        self.assertIn(abspath(join(included_dir, "keep.xml")), resolved_ingress_paths)
+        self.assertNotIn(abspath(join(included_dir, "skip.dat")), resolved_ingress_paths)
+        self.assertNotIn(abspath(join(excluded_dir, "drop.xml")), resolved_ingress_paths)
+
     def test_trim_ingress_path(self):
         """Test the trim_ingress_path() function"""
         ingress_paths = [
@@ -251,6 +341,20 @@ class PathUtilTest(unittest.TestCase):
         self.assertNotIn(abspath(join(symlink_dir, "real_file.txt")), resolved_paths)
         # Symlinked file should not be included
         self.assertNotIn(abspath(symlink_file), resolved_paths)
+        self.assertEqual(
+            PathUtil.count_resolvable_ingress_paths([self.working_dir.name], [], [], follow_symlinks=False),
+            2,
+        )
+
+        # A symlinked directory provided directly as a top-level path should also be
+        # skipped when follow_symlinks=False, matching the symlinked file behavior
+        progress_util.PATH_BAR = None
+        with get_path_progress_bar([symlink_dir], [], [], follow_symlinks=False) as pbar:
+            resolved_paths = PathUtil.resolve_ingress_paths([symlink_dir], [], [], pbar, follow_symlinks=False)
+
+        self.assertEqual(pbar.total, 0)
+        self.assertEqual(pbar.n, 0)
+        self.assertEqual(len(resolved_paths), 0)
 
 
 if __name__ == "__main__":
