@@ -138,6 +138,11 @@ class PathUtil:
                         logger.debug("Skipping symlinked directory %s", abs_user_path)
                     continue
 
+                if PathUtil.filter_directory(abs_user_path, excludes):
+                    if logger:
+                        logger.debug("Filtering directory %s based on exclude filters", abs_user_path)
+                    continue
+
                 for dirpath, dirnames, filenames in os.walk(abs_user_path, topdown=True, followlinks=follow_symlinks):
                     PathUtil.prune_excluded_directories(dirpath, dirnames, excludes)
 
