@@ -1,8 +1,16 @@
 # Changelog
 
-## [release/2.5.5](https://github.com/NASA-PDS/data-upload-manager/tree/release/2.5.5) (2026-04-22)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-06-15)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.0...release/2.5.5)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.5...«unknown»)
+
+**Defects:**
+
+- DUM v2.4.2 CloudWatch Logs SerializationException Errors [\#352](https://github.com/NASA-PDS/data-upload-manager/issues/352) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
+
+## [v2.5.5](https://github.com/NASA-PDS/data-upload-manager/tree/v2.5.5) (2026-04-22)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.0...v2.5.5)
 
 **Other closed issues:**
 
