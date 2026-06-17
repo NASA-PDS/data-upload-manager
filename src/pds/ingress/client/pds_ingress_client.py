@@ -800,6 +800,7 @@ def setup_argparser():
         help="Specify a file path pattern to match against when determining "
         "which files should be excluded from an Ingress request. "
         "Unix-style wildcard patterns are supported. "
+        "Patterns that match a directory path exclude that entire directory tree. "
         "Exclude patterns are always applied after any Include patterns. "
         "This argument can be specified multiple times to configure multiple "
         "exclude patterns. Exclude patterns are evaluated in the order they provided.",
@@ -925,7 +926,9 @@ def main(args):
     follow_symlinks = not args.skip_symlinks
     if args.skip_symlinks:
         logger.info("Skipping symbolic links during path resolution")
-    with get_path_progress_bar(args.ingress_paths) as pbar:
+    with get_path_progress_bar(
+        args.ingress_paths, args.includes, args.excludes, follow_symlinks=follow_symlinks
+    ) as pbar:
         resolved_ingress_paths = PathUtil.resolve_ingress_paths(
             args.ingress_paths, args.includes, args.excludes, pbar, follow_symlinks=follow_symlinks
         )

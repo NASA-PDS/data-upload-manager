@@ -16,6 +16,32 @@ class PathUtil:
     """Provides methods for working with local file system paths."""
 
     @staticmethod
+    def count_resolvable_ingress_paths(user_paths, includes, excludes, follow_symlinks=True):
+        """
+        Counts the number of non-hidden files that would be evaluated for ingress
+        after applying directory-level exclude pruning and file filters.
+
+        Parameters
+        ----------
+        user_paths : list of str
+            The collection of user-requested paths to include with the ingress
+            request. Can be any combination of file and directory paths.
+        includes : list of str
+            List of patterns defining which files to include for ingress.
+        excludes : list of str
+            List of patterns defining which files to exclude from ingress.
+        follow_symlinks : bool, optional
+            Whether to follow symbolic links when walking directories.
+
+        Returns
+        -------
+        int
+            Count of files that should be evaluated for ingress.
+
+        """
+        return sum(1 for _ in PathUtil._iter_resolvable_ingress_paths(user_paths, includes, excludes, follow_symlinks))
+
+    @staticmethod
     def resolve_ingress_paths(user_paths, includes, excludes, pbar, resolved_paths=None, follow_symlinks=True):
         """
         Iterates over the list of user-provided paths to derive the final
@@ -53,46 +79,144 @@ class PathUtil:
         # Initialize the list of resolved paths if necessary
         resolved_paths = resolved_paths or list()
 
+        for ingress_path in PathUtil._iter_resolvable_ingress_paths(
+            user_paths, includes, excludes, follow_symlinks, logger
+        ):
+            resolved_paths.append(ingress_path)
+            pbar.update()
+
+        return resolved_paths
+
+    @staticmethod
+    def _iter_resolvable_ingress_paths(user_paths, includes, excludes, follow_symlinks=True, logger=None):
+        """
+        Yields file paths that should be evaluated for ingress.
+
+        Parameters
+        ----------
+        user_paths : list of str
+            The collection of user-requested paths to include with the ingress
+            request. Can be any combination of file and directory paths.
+        includes : list of str
+            List of patterns defining which files to include for ingress.
+        excludes : list of str
+            List of patterns defining which files to exclude from ingress.
+        follow_symlinks : bool, optional
+            Whether to follow symbolic links when walking directories.
+        logger : logging.Logger, optional
+            Logger to emit skip/filter details to.
+
+        Yields
+        ------
+        str
+            Absolute file path accepted by the include/exclude filters.
+
+        """
         for user_path in user_paths:
             abs_user_path = os.path.abspath(user_path)
 
             if not os.path.exists(abs_user_path):
-                pbar.update()
-                logger.warning("Encountered path (%s) that does not actually exist, skipping...", abs_user_path)
+                if logger:
+                    logger.warning("Encountered path (%s) that does not actually exist, skipping...", abs_user_path)
                 continue
 
             if os.path.isfile(abs_user_path):
-                pbar.update()
-
-                # Skip symlinked files if follow_symlinks is False
                 if not follow_symlinks and os.path.islink(abs_user_path):
-                    logger.debug("Skipping symlinked file %s", abs_user_path)
+                    if logger:
+                        logger.debug("Skipping symlinked file %s", abs_user_path)
                     continue
 
                 if PathUtil.filter_file(abs_user_path, includes, excludes):
-                    logger.debug("Filtering path %s based on include/exclude filters", abs_user_path)
+                    if logger:
+                        logger.debug("Filtering path %s based on include/exclude filters", abs_user_path)
                     continue
 
-                resolved_paths.append(abs_user_path)
+                yield abs_user_path
             elif os.path.isdir(abs_user_path):
-                for grouping in os.walk(abs_user_path, topdown=True, followlinks=follow_symlinks):
-                    dirpath, _, filenames = grouping
+                if not follow_symlinks and os.path.islink(abs_user_path):
+                    if logger:
+                        logger.debug("Skipping symlinked directory %s", abs_user_path)
+                    continue
+
+                if PathUtil.filter_directory(abs_user_path, excludes):
+                    if logger:
+                        logger.debug("Filtering directory %s based on exclude filters", abs_user_path)
+                    continue
+
+                for dirpath, dirnames, filenames in os.walk(abs_user_path, topdown=True, followlinks=follow_symlinks):
+                    PathUtil.prune_excluded_directories(dirpath, dirnames, excludes)
 
                     # TODO: add option to include hidden files
-                    # TODO: add support for include/exclude path filters
-                    product_paths = [
-                        os.path.join(dirpath, filename)
-                        for filename in filter(lambda name: not name.startswith("."), filenames)
-                    ]
+                    for filename in filter(lambda name: not name.startswith("."), filenames):
+                        file_path = os.path.join(dirpath, filename)
 
-                    resolved_paths = PathUtil.resolve_ingress_paths(
-                        product_paths, includes, excludes, pbar, resolved_paths, follow_symlinks=follow_symlinks
-                    )
-            else:
+                        if not follow_symlinks and os.path.islink(file_path):
+                            if logger:
+                                logger.debug("Skipping symlinked file %s", file_path)
+                            continue
+
+                        if PathUtil.filter_file(file_path, includes, excludes):
+                            if logger:
+                                logger.debug("Filtering path %s based on include/exclude filters", file_path)
+                            continue
+
+                        yield file_path
+            elif logger:
                 logger.warning("Encountered path (%s) that is neither a file nor directory, skipping...", abs_user_path)
-                pbar.update()
 
-        return resolved_paths
+    @staticmethod
+    def prune_excluded_directories(dirpath, dirnames, excludes):
+        """
+        Prunes excluded child directories from an os.walk() dirnames list.
+
+        Parameters
+        ----------
+        dirpath : str
+            Directory currently being walked.
+        dirnames : list of str
+            Child directory names from os.walk(). This list is modified in place.
+        excludes : list of str
+            List of exclude patterns to apply.
+
+        """
+        if not excludes:
+            return
+
+        dirnames[:] = [
+            dirname
+            for dirname in dirnames
+            if not PathUtil.filter_directory(os.path.join(dirpath, dirname), excludes)
+        ]
+
+    @staticmethod
+    def filter_directory(dir_path, excludes):
+        """
+        Determines if the provided directory path should be pruned based on
+        exclude patterns.
+
+        Parameters
+        ----------
+        dir_path : str
+            The directory path to filter.
+        excludes : list of str
+            List of exclude patterns to apply.
+
+        Returns
+        -------
+        bool
+            True if the directory should be pruned, False otherwise.
+
+        """
+        if not excludes:
+            return False
+
+        normalized_dir_path = os.path.normpath(dir_path)
+        for pattern in excludes:
+            normalized_pattern = os.path.normpath(pattern)
+            if fnmatch.fnmatch(normalized_dir_path, normalized_pattern):
+                return True
+
+        return False
 
     @staticmethod
     def trim_ingress_path(ingress_path, prefix=None):

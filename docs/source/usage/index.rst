@@ -45,6 +45,11 @@ times to include or exclude multiple patterns. The ``--include`` argument is app
 first, followed by the ``--exclude`` argument. If no ``--include`` arguments are
 provided, all files are included by default.
 
+When an ``--exclude`` pattern matches a directory path, that entire directory tree
+is pruned during path resolution and is never traversed. Patterns that only match
+files deeper within a directory (e.g. ``/data/logs/*.tmp``) filter just the matching
+files and leave the rest of the directory intact.
+
 Specifying the node ID of the requestor is accomplished via the ``--node`` argument,
 specifying one of the following node name values: ``atm,eng,geo,img,naif,ppi,rs,rms,sbn``
 
