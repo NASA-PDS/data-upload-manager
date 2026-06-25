@@ -230,6 +230,35 @@ class PathUtilTest(unittest.TestCase):
         self.assertNotIn(abspath(join(included_dir, "skip.dat")), resolved_ingress_paths)
         self.assertNotIn(abspath(join(excluded_dir, "drop.xml")), resolved_ingress_paths)
 
+    def test_resolve_ingress_paths_preserves_explicitly_passed_empty_list(self):
+        """Test that resolve_ingress_paths() does not replace an explicitly passed [] with a new list"""
+        Path(self.working_dir.name, "file.txt").touch()
+
+        caller_list = []
+        with get_path_progress_bar([self.working_dir.name]) as pbar:
+            result = PathUtil.resolve_ingress_paths([self.working_dir.name], [], [], pbar, resolved_paths=caller_list)
+
+        self.assertIs(result, caller_list)
+        self.assertEqual(len(result), 1)
+
+    def test_get_path_progress_bar_recomputes_total_for_different_params(self):
+        """Test that get_path_progress_bar() recomputes total when called with different filter parameters"""
+        Path(self.working_dir.name, "keep.txt").touch()
+        Path(self.working_dir.name, "drop.xml").touch()
+
+        with get_path_progress_bar([self.working_dir.name], [], []) as first_bar:
+            first_total = first_bar.total
+
+        progress_util.PATH_BAR = None
+        progress_util._PATH_BAR_PARAMS = None
+
+        excludes = [join(abspath(self.working_dir.name), "*.xml")]
+        with get_path_progress_bar([self.working_dir.name], [], excludes) as second_bar:
+            second_total = second_bar.total
+
+        self.assertEqual(first_total, 2)
+        self.assertEqual(second_total, 1)
+
     def test_trim_ingress_path(self):
         """Test the trim_ingress_path() function"""
         ingress_paths = [
