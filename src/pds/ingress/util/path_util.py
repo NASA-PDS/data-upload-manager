@@ -76,8 +76,8 @@ class PathUtil:
         # Use a logger with no console output to avoid interfering with tqdm output
         logger = get_logger("resove_ingress_paths", console=False)
 
-        # Initialize the list of resolved paths if necessary
-        resolved_paths = resolved_paths or list()
+        if resolved_paths is None:
+            resolved_paths = list()
 
         for ingress_path in PathUtil._iter_resolvable_ingress_paths(
             user_paths, includes, excludes, follow_symlinks, logger
