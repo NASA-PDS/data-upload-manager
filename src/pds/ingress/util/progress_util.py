@@ -54,7 +54,7 @@ def get_path_progress_bar(user_paths, includes=None, excludes=None, follow_symli
     excludes = excludes or []
     call_params = (tuple(user_paths), tuple(includes), tuple(excludes), follow_symlinks)
 
-    if PATH_BAR is None or getattr(PATH_BAR, "disable", False) or _PATH_BAR_PARAMS != call_params:
+    if PATH_BAR is None or _PATH_BAR_PARAMS != call_params:
         if PATH_BAR is not None:
             PATH_BAR.close()
         total_files = PathUtil.count_resolvable_ingress_paths(user_paths, includes, excludes, follow_symlinks)
@@ -70,6 +70,16 @@ def get_path_progress_bar(user_paths, includes=None, excludes=None, follow_symli
         _PATH_BAR_PARAMS = call_params
 
     return PATH_BAR
+
+
+def close_path_progress_bar():
+    """Closes the Path Resolution progress bar and resets global state."""
+    global PATH_BAR, _PATH_BAR_PARAMS
+
+    if PATH_BAR is not None:
+        PATH_BAR.close()
+        PATH_BAR = None
+    _PATH_BAR_PARAMS = None
 
 
 def get_manifest_progress_bar(total):

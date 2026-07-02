@@ -7,8 +7,8 @@ from os.path import abspath
 from os.path import join
 from pathlib import Path
 
-from pds.ingress.util import progress_util
 from pds.ingress.util.path_util import PathUtil
+from pds.ingress.util.progress_util import close_path_progress_bar
 from pds.ingress.util.progress_util import get_path_progress_bar
 
 
@@ -28,8 +28,7 @@ class PathUtilTest(unittest.TestCase):
 
     def setUp(self) -> None:
         """Create a temporary directory that each test can populate as necessary"""
-        progress_util.PATH_BAR = None
-        progress_util._PATH_BAR_PARAMS = None
+        close_path_progress_bar()
         self.working_dir = tempfile.TemporaryDirectory(prefix="test_path_util_", suffix="_temp", dir=os.curdir)
 
     def tearDown(self) -> None:
@@ -259,10 +258,7 @@ class PathUtilTest(unittest.TestCase):
             self.assertEqual(second_total, 1)
             self.assertIsNot(first_bar, second_bar)
         finally:
-            if progress_util.PATH_BAR is not None:
-                progress_util.PATH_BAR.close()
-                progress_util.PATH_BAR = None
-            progress_util._PATH_BAR_PARAMS = None
+            close_path_progress_bar()
 
     def test_trim_ingress_path(self):
         """Test the trim_ingress_path() function"""
@@ -382,7 +378,7 @@ class PathUtilTest(unittest.TestCase):
 
         # A symlinked directory provided directly as a top-level path should also be
         # skipped when follow_symlinks=False, matching the symlinked file behavior
-        progress_util.PATH_BAR = None
+        close_path_progress_bar()
         with get_path_progress_bar([symlink_dir], [], [], follow_symlinks=False) as pbar:
             resolved_paths = PathUtil.resolve_ingress_paths([symlink_dir], [], [], pbar, follow_symlinks=False)
 
