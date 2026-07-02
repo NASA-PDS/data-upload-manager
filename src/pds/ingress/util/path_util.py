@@ -74,7 +74,7 @@ class PathUtil:
 
         """
         # Use a logger with no console output to avoid interfering with tqdm output
-        logger = get_logger("resove_ingress_paths", console=False)
+        logger = get_logger("resolve_ingress_paths", console=False)
 
         if resolved_paths is None:
             resolved_paths = list()

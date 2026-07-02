@@ -29,6 +29,7 @@ class PathUtilTest(unittest.TestCase):
     def setUp(self) -> None:
         """Create a temporary directory that each test can populate as necessary"""
         progress_util.PATH_BAR = None
+        progress_util._PATH_BAR_PARAMS = None
         self.working_dir = tempfile.TemporaryDirectory(prefix="test_path_util_", suffix="_temp", dir=os.curdir)
 
     def tearDown(self) -> None:
@@ -246,18 +247,22 @@ class PathUtilTest(unittest.TestCase):
         Path(self.working_dir.name, "keep.txt").touch()
         Path(self.working_dir.name, "drop.xml").touch()
 
-        with get_path_progress_bar([self.working_dir.name], [], []) as first_bar:
+        excludes = [join(abspath(self.working_dir.name), "*.xml")]
+        try:
+            first_bar = get_path_progress_bar([self.working_dir.name], [], [])
             first_total = first_bar.total
 
-        progress_util.PATH_BAR = None
-        progress_util._PATH_BAR_PARAMS = None
-
-        excludes = [join(abspath(self.working_dir.name), "*.xml")]
-        with get_path_progress_bar([self.working_dir.name], [], excludes) as second_bar:
+            second_bar = get_path_progress_bar([self.working_dir.name], [], excludes)
             second_total = second_bar.total
 
-        self.assertEqual(first_total, 2)
-        self.assertEqual(second_total, 1)
+            self.assertEqual(first_total, 2)
+            self.assertEqual(second_total, 1)
+            self.assertIsNot(first_bar, second_bar)
+        finally:
+            if progress_util.PATH_BAR is not None:
+                progress_util.PATH_BAR.close()
+                progress_util.PATH_BAR = None
+            progress_util._PATH_BAR_PARAMS = None
 
     def test_trim_ingress_path(self):
         """Test the trim_ingress_path() function"""
