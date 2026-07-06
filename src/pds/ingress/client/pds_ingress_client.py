@@ -935,6 +935,14 @@ def main(args):
         )
     close_path_progress_bar()
 
+    nonexistent_paths = [p for p in args.ingress_paths if not os.path.exists(os.path.abspath(p))]
+    if nonexistent_paths:
+        for p in nonexistent_paths:
+            logger.warning(Color.yellow("Path does not exist and will be skipped: %s"), p)
+        if not resolved_ingress_paths:
+            logger.error("No valid ingress paths found. Exiting.")
+            sys.exit(1)
+
     # Initialize the summary table, and populate the "unprocessed" table the set
     # of resolved ingress paths
     SUMMARY_TABLE = initialize_summary_table()
