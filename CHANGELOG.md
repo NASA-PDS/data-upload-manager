@@ -6,6 +6,7 @@
 
 **Defects:**
 
+- DUM does not verify file path for weblog uploads [\#365](https://github.com/NASA-PDS/data-upload-manager/issues/365)
 - DUM v2.4.2 CloudWatch Logs SerializationException Errors [\#352](https://github.com/NASA-PDS/data-upload-manager/issues/352) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 
 ## [v2.5.5](https://github.com/NASA-PDS/data-upload-manager/tree/v2.5.5) (2026-04-22)
