@@ -8,7 +8,13 @@
 
 - DUM does not verify file path for weblog uploads [\#365](https://github.com/NASA-PDS/data-upload-manager/issues/365) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 - Follow-up: address Copilot code quality findings from PR \#356 [\#361](https://github.com/NASA-PDS/data-upload-manager/issues/361) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
+- Ingress path resolution does not prune excluded directories before traversal [\#358](https://github.com/NASA-PDS/data-upload-manager/issues/358) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 - DUM v2.4.2 CloudWatch Logs SerializationException Errors [\#352](https://github.com/NASA-PDS/data-upload-manager/issues/352) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
+
+**Other closed issues:**
+
+- Update IP allowlist to include all PDS node IPs [\#360](https://github.com/NASA-PDS/data-upload-manager/issues/360)
+- Update configuration to support node web log uploads [\#359](https://github.com/NASA-PDS/data-upload-manager/issues/359)
 
 ## [v2.5.5](https://github.com/NASA-PDS/data-upload-manager/tree/v2.5.5) (2026-04-22)
 
