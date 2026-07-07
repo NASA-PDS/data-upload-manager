@@ -38,6 +38,7 @@ from pds.ingress.util.node_util import NodeUtil
 from pds.ingress.util.path_util import PathUtil
 from pds.ingress.util.progress_util import close_batch_progress_bars
 from pds.ingress.util.progress_util import close_ingress_total_progress_bar
+from pds.ingress.util.progress_util import close_path_progress_bar
 from pds.ingress.util.progress_util import get_available_batch_progress_bar
 from pds.ingress.util.progress_util import get_ingress_total_progress_bar
 from pds.ingress.util.progress_util import get_manifest_progress_bar
@@ -932,6 +933,7 @@ def main(args):
         resolved_ingress_paths = PathUtil.resolve_ingress_paths(
             args.ingress_paths, args.includes, args.excludes, pbar, follow_symlinks=follow_symlinks
         )
+    close_path_progress_bar()
 
     # Initialize the summary table, and populate the "unprocessed" table the set
     # of resolved ingress paths

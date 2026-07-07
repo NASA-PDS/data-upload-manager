@@ -14,6 +14,7 @@ from tqdm import tqdm
 from tqdm.asyncio import tqdm_asyncio
 
 PATH_BAR = None
+_PATH_BAR_PARAMS = None  # (user_paths_tuple, includes_tuple, excludes_tuple, follow_symlinks) used to build PATH_BAR
 MANIFEST_BAR = None
 TOTAL_INGRESS_BAR = None
 BATCH_BARS = []
@@ -47,11 +48,15 @@ def get_path_progress_bar(user_paths, includes=None, excludes=None, follow_symli
         The initialized global instance of the Path Resolution progress bar.
 
     """
-    global PATH_BAR
+    global PATH_BAR, _PATH_BAR_PARAMS
 
-    if PATH_BAR is None:
-        includes = includes or []
-        excludes = excludes or []
+    includes = includes or []
+    excludes = excludes or []
+    call_params = (tuple(user_paths), tuple(includes), tuple(excludes), follow_symlinks)
+
+    if PATH_BAR is None or _PATH_BAR_PARAMS != call_params:
+        if PATH_BAR is not None:
+            PATH_BAR.close()
         total_files = PathUtil.count_resolvable_ingress_paths(user_paths, includes, excludes, follow_symlinks)
 
         PATH_BAR = tqdm(
@@ -62,8 +67,19 @@ def get_path_progress_bar(user_paths, includes=None, excludes=None, follow_symli
             colour=LIGHT_GREEN,
             bar_format="{l_bar}{bar:60}| {n_fmt}/{total_fmt} Files",
         )
+        _PATH_BAR_PARAMS = call_params
 
     return PATH_BAR
+
+
+def close_path_progress_bar():
+    """Closes the Path Resolution progress bar and resets global state."""
+    global PATH_BAR, _PATH_BAR_PARAMS
+
+    if PATH_BAR is not None:
+        PATH_BAR.close()
+        PATH_BAR = None
+    _PATH_BAR_PARAMS = None
 
 
 def get_manifest_progress_bar(total):
