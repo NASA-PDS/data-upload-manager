@@ -323,6 +323,15 @@ def setup_cloudwatch_log(logger, config):
     return logger
 
 
+def _is_auth_error(exc):
+    """Returns True for 401/403 HTTP errors that should not be retried."""
+    return (
+        isinstance(exc, requests.exceptions.HTTPError)
+        and exc.response is not None
+        and exc.response.status_code in (401, 403)
+    )
+
+
 class CloudWatchHandler(BufferingHandler):
     """
     Specialization of the BufferingHandler class that submits all buffered log
@@ -420,7 +429,17 @@ class CloudWatchHandler(BufferingHandler):
                             "Localstack context detected, skipping submission of logs to CloudWatch since it is not yet supported"
                         )
             except requests.exceptions.HTTPError as err:
-                raise RuntimeError(f"{str(err)} : {err.response.text}") from err
+                if _is_auth_error(err):
+                    if CONSOLE_HANDLER and not CONSOLE_HANDLER.stream.closed:
+                        console_logger.warning(
+                            "Skipping CloudWatch log submission: not authorized to access the log endpoint (%d). "
+                            "Session logs were not uploaded.",
+                            err.response.status_code,
+                        )
+                    self.buffer.clear()
+                    return
+                response_body = err.response.text if err.response is not None else "(no response body)"
+                raise RuntimeError(f"{str(err)} : {response_body}") from err
 
             self.buffer.clear()
         except Exception as err:
@@ -432,12 +451,7 @@ class CloudWatchHandler(BufferingHandler):
         finally:
             self.release()
 
-    @backoff.on_exception(
-        backoff.expo,
-        Exception,
-        max_time=120,
-        logger=__name__,
-    )
+    @backoff.on_exception(backoff.expo, Exception, max_time=120, logger=__name__, giveup=_is_auth_error)
     def send_log_events_to_cloud_watch(self, log_events):
         """
         Bundles the provided log events into a JSON payload and submits it
