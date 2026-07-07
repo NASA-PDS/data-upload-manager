@@ -197,3 +197,56 @@ class LogUtilTest(unittest.TestCase):
 
         # Ensure we retried once for a connection error
         self.assertEqual(mock_requests_post.call_count, 2)
+
+    def test_send_log_events_to_cloud_watch_no_retry_on_auth_error(self):
+        """401 and 403 responses must not be retried — they indicate a permanent auth failure."""
+        logger = log_util.get_logger(
+            "test_send_log_events_to_cloud_watch_no_retry_on_auth_error", console=False, file=False
+        )
+
+        log_util.CLOUDWATCH_HANDLER.bearer_token = "Bearer faketoken"
+        log_util.CLOUDWATCH_HANDLER.node_id = "eng"
+
+        for status_code in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
+            log_util.CLOUDWATCH_HANDLER._stream_created = True
+            # Log via the normal emit() path so record.message is populated by format()
+            logger.info("Test message for %s", status_code)
+
+            auth_response = Response()
+            auth_response.status_code = status_code
+            auth_response._content = b'{"message": "Unauthorized"}'
+
+            mock_requests_post = MagicMock(side_effect=[auth_response])
+
+            with self.assertLogs(level="WARNING") as cm:
+                with patch.object(log_util.requests, "post", mock_requests_post):
+                    log_util.CLOUDWATCH_HANDLER.flush()
+
+            # Must bail after the first attempt — no retries
+            self.assertEqual(mock_requests_post.call_count, 1, f"Expected no retry for {status_code}")
+
+            # Buffer must be cleared even though submission failed
+            self.assertEqual(len(log_util.CLOUDWATCH_HANDLER.buffer), 0, f"Buffer not cleared after {status_code}")
+
+            # User must see a clear warning, not the generic "Unable to submit" message
+            self.assertTrue(
+                any("not authorized" in line.lower() for line in cm.output),
+                f"Expected auth warning in log output for {status_code}, got: {cm.output}",
+            )
+
+    def test_is_auth_error(self):
+        """_is_auth_error returns True only for 401/403 HTTPErrors with a response attached."""
+        auth_response_401 = Response()
+        auth_response_401.status_code = HTTPStatus.UNAUTHORIZED
+
+        auth_response_403 = Response()
+        auth_response_403.status_code = HTTPStatus.FORBIDDEN
+
+        other_response = Response()
+        other_response.status_code = HTTPStatus.INTERNAL_SERVER_ERROR
+
+        self.assertTrue(log_util._is_auth_error(requests.exceptions.HTTPError(response=auth_response_401)))
+        self.assertTrue(log_util._is_auth_error(requests.exceptions.HTTPError(response=auth_response_403)))
+        self.assertFalse(log_util._is_auth_error(requests.exceptions.HTTPError(response=other_response)))
+        self.assertFalse(log_util._is_auth_error(requests.exceptions.HTTPError(response=None)))
+        self.assertFalse(log_util._is_auth_error(ValueError("not an HTTP error")))
