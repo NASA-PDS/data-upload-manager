@@ -1,12 +1,13 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-06-17)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-07-07)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.5...«unknown»)
 
 **Defects:**
 
-- DUM does not verify file path for weblog uploads [\#365](https://github.com/NASA-PDS/data-upload-manager/issues/365)
+- DUM does not verify file path for weblog uploads [\#365](https://github.com/NASA-PDS/data-upload-manager/issues/365) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
+- Follow-up: address Copilot code quality findings from PR \#356 [\#361](https://github.com/NASA-PDS/data-upload-manager/issues/361) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 - DUM v2.4.2 CloudWatch Logs SerializationException Errors [\#352](https://github.com/NASA-PDS/data-upload-manager/issues/352) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 
 ## [v2.5.5](https://github.com/NASA-PDS/data-upload-manager/tree/v2.5.5) (2026-04-22)
