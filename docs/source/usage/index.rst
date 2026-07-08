@@ -420,10 +420,6 @@ The ``--prefix`` argument is required when ``--weblogs`` is used::
 
 Add ``--prefix /your/local/log/directory`` to the command.
 
-.. References:
-.. _backoff: https://pypi.org/project/backoff/
-.. _installation: ../installation/index.html
-
 **Upload fails with "401 (Unauthorized)" message**
 
 You have an account but do not have access to the node which you've identified yourself as (e.g., ``--node img``)::
@@ -438,3 +434,7 @@ You have an account but do not have access to the node which you've identified y
     Please contact PDS Engineering for access.
 
 Contact PDS Engineering with the node of which you are a member and require access to.
+
+.. References:
+.. _backoff: https://pypi.org/project/backoff/
+.. _installation: ../installation/index.html
