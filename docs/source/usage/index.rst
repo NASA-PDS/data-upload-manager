@@ -424,7 +424,7 @@ Add ``--prefix /your/local/log/directory`` to the command.
 
 You have an account but do not have access to the node which you've identified yourself as (e.g., ``--node img``)::
 
-    Performing Cognito authentication for user <username>    
+    Performing Cognito authentication for user <username>
     Authentication successful
     ...
     ----------------------------------------------
