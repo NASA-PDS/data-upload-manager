@@ -11,7 +11,6 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-
 from pds.ingress.client.pds_ingress_client import check_authorization
 
 

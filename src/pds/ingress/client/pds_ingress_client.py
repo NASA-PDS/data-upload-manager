@@ -166,8 +166,6 @@ def check_authorization(node_id, api_gateway_config):
     request_batch_for_ingress.
 
     """
-    global BEARER_TOKEN
-
     logger = get_logger("check_authorization")
     logger.info("No files found for ingress. Verifying authorization...")
 
