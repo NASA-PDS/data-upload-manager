@@ -5,7 +5,6 @@ These tests verify that unauthorized users receive clear error messages
 even when attempting to upload empty directories or nonexistent files.
 """
 import json
-import sys
 from http import HTTPStatus
 from unittest.mock import MagicMock
 from unittest.mock import patch
