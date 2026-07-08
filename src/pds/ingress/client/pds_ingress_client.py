@@ -169,9 +169,9 @@ def check_authorization(node_id, api_gateway_config):
     logger = get_logger("check_authorization")
     logger.info("No files found for ingress. Verifying authorization...")
 
-    # Make a test request with an empty batch to trigger authorization check
-    # If unauthorized, request_batch_for_ingress will handle the error and exit
-    request_batch_for_ingress([], 0, node_id, False, api_gateway_config)
+    # Make a test request with an empty batch to trigger authorization check.
+    # Use the undecorated function to bypass retries and fail fast.
+    request_batch_for_ingress.__wrapped__([], 0, node_id, False, api_gateway_config, request_timeout=15)
 
 
 def _process_batch(batch_index, request_batch, node_id, force_overwrite, api_gateway_config, total_pbar):
@@ -388,7 +388,7 @@ def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pb
 
 
 @backoff.on_exception(backoff.expo, Exception, max_time=120, on_backoff=backoff_handler, logger=None)
-def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwrite, api_gateway_config):
+def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwrite, api_gateway_config, request_timeout=600):
     """
     Submits a batch of ingress requests to the PDS Ingress App API.
 
@@ -407,6 +407,8 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
     api_gateway_config : dict
         Dictionary or dictionary-like containing key/value pairs used to
         configure the API Gateway endpoint url.
+    request_timeout : int, optional
+        Request timeout in seconds.
 
     Returns
     -------
@@ -445,7 +447,7 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
     # Simulate a random failure for the batch request if configured to do so
     with simulate_batch_request_failure(api_gateway_url.split("?")[0]):
         response = requests.post(
-            api_gateway_url, params=params, data=json.dumps(request_batch), headers=headers, timeout=600
+            api_gateway_url, params=params, data=json.dumps(request_batch), headers=headers, timeout=request_timeout
         )
 
     elapsed_time = time.time() - start_time
@@ -976,7 +978,7 @@ def main(args):
             # Authenticate and check authorization
             cognito_config = config["COGNITO"]
 
-            if not cognito_config["username"] and cognito_config["password"]:
+            if not cognito_config["username"] or not cognito_config["password"]:
                 raise ValueError("Username and Password must be specified in the COGNITO portion of the INI config")
 
             authentication_result = AuthUtil.perform_cognito_authentication(cognito_config)

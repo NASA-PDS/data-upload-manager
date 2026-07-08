@@ -121,3 +121,4 @@ class TestAuthorizationCheck:
         assert "Authorization" in headers
         assert headers["Authorization"] == "mock-bearer-token"
         assert headers["content-type"] == "application/json"
+        assert call_args[1]["timeout"] == 15
