@@ -1,8 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-07-07)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-07-08)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.5...«unknown»)
+
+**Requirements:**
+
+- As a node, I want clear documentation on uploading weblogs [\#366](https://github.com/NASA-PDS/data-upload-manager/issues/366)
 
 **Defects:**
 
