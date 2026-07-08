@@ -146,6 +146,36 @@ def perform_ingress(request_batches, node_id, force_overwrite, api_gateway_confi
         return  # return so we can still output a report file
 
 
+def check_authorization(node_id, api_gateway_config):
+    """
+    Performs an early authorization check by making a minimal test request
+    to the API Gateway. This ensures that unauthorized users receive a clear
+    error message even when uploading empty directories or nonexistent files.
+
+    Parameters
+    ----------
+    node_id : str
+        The PDS Node Identifier to associate with the authorization check.
+    api_gateway_config : dict
+        Dictionary containing configuration details for the API Gateway instance.
+
+    Notes
+    -----
+    This function will exit the program if authorization fails, displaying
+    the appropriate error message via the existing error handling in
+    request_batch_for_ingress.
+
+    """
+    global BEARER_TOKEN
+
+    logger = get_logger("check_authorization")
+    logger.info("No files found for ingress. Verifying authorization...")
+
+    # Make a test request with an empty batch to trigger authorization check
+    # If unauthorized, request_batch_for_ingress will handle the error and exit
+    request_batch_for_ingress([], 0, node_id, False, api_gateway_config)
+
+
 def _process_batch(batch_index, request_batch, node_id, force_overwrite, api_gateway_config, total_pbar):
     """
     Performs the steps to process a single batch of ingress requests.
@@ -939,9 +969,28 @@ def main(args):
     if nonexistent_paths:
         for p in nonexistent_paths:
             logger.warning(Color.yellow("Path does not exist and will be skipped: %s"), p)
-        if not resolved_ingress_paths:
-            logger.error("No valid ingress paths found. Exiting.")
-            sys.exit(1)
+
+    # If no valid paths were found, check authorization before exiting
+    # This ensures unauthorized users get a clear error message even when
+    # uploading empty directories or nonexistent files
+    if not resolved_ingress_paths:
+        if not args.dry_run:
+            # Authenticate and check authorization
+            cognito_config = config["COGNITO"]
+
+            if not cognito_config["username"] and cognito_config["password"]:
+                raise ValueError("Username and Password must be specified in the COGNITO portion of the INI config")
+
+            authentication_result = AuthUtil.perform_cognito_authentication(cognito_config)
+            BEARER_TOKEN = AuthUtil.create_bearer_token(authentication_result)
+
+            # Perform authorization check with empty batch
+            # If unauthorized, this will display the clear error message and exit
+            check_authorization(args.node, config["API_GATEWAY"])
+
+        # If we reach here, user is authorized but there are no files to upload
+        logger.error("No valid ingress paths found. Exiting.")
+        sys.exit(1)
 
     # Initialize the summary table, and populate the "unprocessed" table the set
     # of resolved ingress paths
