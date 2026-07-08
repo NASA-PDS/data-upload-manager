@@ -78,8 +78,9 @@ in AWS would resolve to ``bundle/file.xml``.
 The ``--weblogs LOG_TYPE`` argument can be used to indicate that weblog files are being uploaded.
 The type of log files (e.g. ``apache``, ``nginx``, etc.) should be specified as the
 ``LOG_TYPE`` argument. When this flag is provided, the client will automatically adjust
-the "trimmed" path for each ingested file to replace the specified path prefix with ``weblog/``,
-ensuring that all weblog files are routed to a specific S3 bucket used for web analytics.
+the "trimmed" path for each ingested file to replace the specified path prefix with
+``weblogs/<node>-<log_type>/``, ensuring that all weblog files are routed to the S3
+bucket used for web analytics.
 Because of this, the ``--prefix`` argument must be provided when using the ``--weblogs`` argument.
 
 .. warning::
@@ -95,6 +96,8 @@ Because of this, the ``--prefix`` argument must be provided when using the ``--w
 
    1. Compress all files with gzip before uploading, or
    2. Use the ``--exclude`` argument to filter out non-gzipped files (e.g., ``--exclude "*.txt"``)
+
+See the `Uploading Weblogs`_ section below for a complete walkthrough.
 
 The ``pds-ingress-client`` by default utilizes all available CPUs on the
 local machine to perform parallelized ingress requests to the ingress service. The exact
@@ -256,6 +259,181 @@ Files that still fail to upload during this final attempt are recorded in the fi
     Bytes transferred: 0
 
 Should persistent failures like this occur, they should be communicated to the PDS Operations team for investigation.
+
+Uploading Weblogs
+-----------------
+
+PDS nodes can upload web server log files directly to the PDS web analytics S3 bucket using the
+``--weblogs`` flag. This section walks through the full process.
+
+Prerequisites
+^^^^^^^^^^^^^
+
+Before uploading weblogs, ensure the following:
+
+1. **Your DUM client is installed and configured** — see the installation_ instructions for
+   creating your INI config file.
+2. **Log files are gzip-compressed** — every file must have a ``.gz`` extension. The client
+   will reject the entire upload if any non-gzipped file is detected.
+3. **You know your node ID** — one of ``atm``, ``eng``, ``geo``, ``img``, ``naif``, ``ppi``,
+   ``rms``, ``sbn``.
+
+Compressing Log Files
+^^^^^^^^^^^^^^^^^^^^^
+
+If your log files are not already compressed, gzip them before uploading::
+
+    $ gzip /path/to/logs/access.log
+    $ gzip /path/to/logs/*.log
+
+This produces files with a ``.gz`` extension (e.g., ``access.log.gz``).
+
+Uploading
+^^^^^^^^^
+
+Use the ``--weblogs LOG_TYPE`` argument along with ``--prefix`` to upload weblogs. ``LOG_TYPE``
+identifies the type of web server generating the logs (e.g., ``apache``, ``nginx``, ``iis``,
+``tomcat``). The value is case-insensitive and becomes part of the S3 destination path.
+
+**Required arguments for weblog uploads:**
+
+- ``--node NODE_ID`` — your PDS node identifier
+- ``--weblogs LOG_TYPE`` — designates the upload as weblogs and specifies the log type
+- ``--prefix PATH`` — the local path prefix to strip from uploaded file paths
+- ``file_or_dir`` - the local path of the files to upload. The value for ``--prefix PATH`` is a substring of this value
+
+**Example:**
+
+Suppose your compressed log files are stored under ``/data/weblogs/`` and you want to upload
+them on behalf of the SBN node using Apache-format logs::
+
+    $ pds-ingress-client \
+        -c /path/to/config.ini \
+        --node sbn \
+        --weblogs apache \
+        --prefix /data/weblogs \
+        -- /data/weblogs/
+
+How the Destination Path Is Constructed
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When ``--weblogs`` is specified, the client replaces the ``--prefix`` value in each file path
+with ``weblogs/<node>-<log_type>/``. For example, with ``--node sbn``, ``--weblogs apache``,
+and ``--prefix /data/weblogs``, a local file at:
+
+.. code-block::
+
+    /data/weblogs/2025/01/access.log.gz
+
+is uploaded to S3 as:
+
+.. code-block::
+
+    weblogs/sbn-apache/2025/01/access.log.gz
+
+Organizing Logs with Subdirectories
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. important::
+
+   The directory structure **below** the ``--prefix`` path is preserved in S3. This means
+   that if all your log files sit directly in ``--prefix`` with no subdirectories, they will
+   all land in a single flat S3 directory. For easier downstream grouping by application,
+   domain, or server, **organize your logs into subdirectories on disk before uploading**.
+
+For example, suppose you host multiple web applications and collect logs from each. Rather
+than keeping all logs flat under ``/data/weblogs/``::
+
+    /data/weblogs/
+    ├── pds.nasa.gov_access.log.gz
+    ├── pds.nasa.gov_error.log.gz
+    ├── sbn.psi.edu_access.log.gz
+    └── sbn.psi.edu_error.log.gz
+
+organize them into subdirectories by application or domain::
+
+    /data/weblogs/
+    ├── pds.nasa.gov/
+    │   ├── access.log.gz
+    │   └── error.log.gz
+    └── sbn.psi.edu/
+        ├── access.log.gz
+        └── error.log.gz
+
+With ``--prefix /data/weblogs``, the second layout uploads to S3 as::
+
+    weblogs/sbn-apache/pds.nasa.gov/access.log.gz
+    weblogs/sbn-apache/pds.nasa.gov/error.log.gz
+    weblogs/sbn-apache/sbn.psi.edu/access.log.gz
+    weblogs/sbn-apache/sbn.psi.edu/error.log.gz
+
+This makes it straightforward to query or process logs for a specific application without
+filtering a large flat directory.
+
+You can also upload logs for a single application at a time by pointing DUM at a specific
+subdirectory and setting ``--prefix`` to its parent::
+
+    $ pds-ingress-client \
+        -c /path/to/config.ini \
+        --node sbn \
+        --weblogs apache \
+        --prefix /data/weblogs \
+        -- /data/weblogs/pds.nasa.gov/
+
+This uploads only ``pds.nasa.gov/`` logs, preserving the subdirectory name in the S3 path.
+
+Verifying Before Upload
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Use ``--dry-run`` to preview which files will be uploaded and confirm the correct set is
+selected, without actually submitting anything::
+
+    $ pds-ingress-client \
+        -c /path/to/config.ini \
+        --node sbn \
+        --weblogs apache \
+        --prefix /data/weblogs \
+        --dry-run \
+        -- /data/weblogs/
+
+Common Issues
+^^^^^^^^^^^^^
+
+**Upload fails with "non-gzipped files" error**
+
+The client checks every file before uploading begins. If any file lacks a ``.gz`` extension,
+you will see an error like::
+
+    ERROR: The following files are not gzipped (.gz):
+      /data/weblogs/access.log
+    ValueError: Weblog uploads require gzipped files. Found 1 non-gzipped file(s). ...
+
+Compress the listed files with ``gzip`` and retry, or use ``--exclude`` to skip them::
+
+    $ pds-ingress-client ... --exclude "*.log" -- /data/weblogs/
+
+**Upload fails with "--prefix must also be provided" error**
+
+The ``--prefix`` argument is required when ``--weblogs`` is used::
+
+    ValueError: When --weblogs is specified, --prefix must also be provided.
+
+Add ``--prefix /your/local/log/directory`` to the command.
+
+**Upload fails with "401 (Unauthorized)" message**
+
+You have an account but do not have access to the node which you've identified yourself as (e.g., ``--node img``)::
+
+    Performing Cognito authentication for user <username>
+    Authentication successful
+    ...
+    ----------------------------------------------
+    Ingress request failed with HTTP status 401 (Unauthorized)
+    You are not authorized to use the ingestion service (401 Unauthorized).
+    Your account may not be in the required user group.
+    Please contact PDS Engineering for access.
+
+Contact PDS Engineering with the node of which you are a member and require access to.
 
 .. References:
 .. _backoff: https://pypi.org/project/backoff/
