@@ -276,7 +276,7 @@ Before uploading weblogs, ensure the following:
 2. **Log files are gzip-compressed** — every file must have a ``.gz`` extension. The client
    will reject the entire upload if any non-gzipped file is detected.
 3. **You know your node ID** — one of ``atm``, ``eng``, ``geo``, ``img``, ``naif``, ``ppi``,
-   ``rs``, ``rms``, ``sbn``.
+   ``rms``, ``sbn``.
 
 Compressing Log Files
 ^^^^^^^^^^^^^^^^^^^^^
@@ -297,9 +297,10 @@ identifies the type of web server generating the logs (e.g., ``apache``, ``nginx
 
 **Required arguments for weblog uploads:**
 
+- ``--node NODE_ID`` — your PDS node identifier
 - ``--weblogs LOG_TYPE`` — designates the upload as weblogs and specifies the log type
 - ``--prefix PATH`` — the local path prefix to strip from uploaded file paths
-- ``--node NODE_ID`` — your PDS node identifier
+- ``file_or_dir`` - the local path of the files to upload. The value for ``--prefix PATH`` is a substring of this value
 
 **Example:**
 
@@ -422,3 +423,18 @@ Add ``--prefix /your/local/log/directory`` to the command.
 .. References:
 .. _backoff: https://pypi.org/project/backoff/
 .. _installation: ../installation/index.html
+
+**Upload fails with "401 (Unauthorized)" message**
+
+You have an account but do not have access to the node which you've identified yourself as (e.g., ``--node img``)::
+
+    Performing Cognito authentication for user <username>    
+    Authentication successful
+    ...
+    ----------------------------------------------
+    Ingress request failed with HTTP status 401 (Unauthorized)
+    You are not authorized to use the ingestion service (401 Unauthorized).
+    Your account may not be in the required user group.
+    Please contact PDS Engineering for access.
+
+Contact PDS Engineering with the node of which you are a member and require access to.
