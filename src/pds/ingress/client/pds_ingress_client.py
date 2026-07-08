@@ -72,6 +72,26 @@ MANIFEST = dict()
 """Stores the file ingress manifest within memory"""
 
 
+def _authenticate(cognito_config):
+    """
+    Performs Cognito authentication and returns authentication result with bearer token.
+
+    Parameters
+    ----------
+    cognito_config : dict
+        Dictionary containing Cognito configuration details.
+
+    Returns
+    -------
+    tuple
+        A tuple containing (authentication_result, bearer_token).
+
+    """
+    authentication_result = AuthUtil.perform_cognito_authentication(cognito_config)
+    bearer_token = AuthUtil.create_bearer_token(authentication_result)
+    return authentication_result, bearer_token
+
+
 def prepare_batches(batched_ingress_paths, prefix):
     """
     Prepares each batch of files for ingress in parallel via the joblib library.
@@ -981,8 +1001,7 @@ def main(args):
             if not cognito_config["username"] or not cognito_config["password"]:
                 raise ValueError("Username and Password must be specified in the COGNITO portion of the INI config")
 
-            authentication_result = AuthUtil.perform_cognito_authentication(cognito_config)
-            BEARER_TOKEN = AuthUtil.create_bearer_token(authentication_result)
+            _, BEARER_TOKEN = _authenticate(cognito_config)
 
             # Perform authorization check with empty batch
             # If unauthorized, this will display the clear error message and exit
@@ -1057,12 +1076,10 @@ def main(args):
         cognito_config = config["COGNITO"]
 
         # TODO: add support for command-line username/password?
-        if not cognito_config["username"] and cognito_config["password"]:
+        if not cognito_config["username"] or not cognito_config["password"]:
             raise ValueError("Username and Password must be specified in the COGNITO portion of the INI config")
 
-        authentication_result = AuthUtil.perform_cognito_authentication(cognito_config)
-
-        BEARER_TOKEN = AuthUtil.create_bearer_token(authentication_result)
+        authentication_result, BEARER_TOKEN = _authenticate(cognito_config)
 
         # Set the bearer token on the CloudWatchHandler singleton, so it can
         # be used to authenticate submissions to the CloudWatch Logs API endpoint
