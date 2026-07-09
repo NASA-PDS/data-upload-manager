@@ -72,6 +72,26 @@ MANIFEST = dict()
 """Stores the file ingress manifest within memory"""
 
 
+def _authenticate(cognito_config):
+    """
+    Performs Cognito authentication and returns authentication result with bearer token.
+
+    Parameters
+    ----------
+    cognito_config : dict
+        Dictionary containing Cognito configuration details.
+
+    Returns
+    -------
+    tuple
+        A tuple containing (authentication_result, bearer_token).
+
+    """
+    authentication_result = AuthUtil.perform_cognito_authentication(cognito_config)
+    bearer_token = AuthUtil.create_bearer_token(authentication_result)
+    return authentication_result, bearer_token
+
+
 def prepare_batches(batched_ingress_paths, prefix):
     """
     Prepares each batch of files for ingress in parallel via the joblib library.
@@ -144,6 +164,34 @@ def perform_ingress(request_batches, node_id, force_overwrite, api_gateway_confi
     except KeyboardInterrupt:
         logger.warning("Keyboard interrupt received, halting ingress...")
         return  # return so we can still output a report file
+
+
+def check_authorization(node_id, api_gateway_config):
+    """
+    Performs an early authorization check by making a minimal test request
+    to the API Gateway. This ensures that unauthorized users receive a clear
+    error message even when uploading empty directories or nonexistent files.
+
+    Parameters
+    ----------
+    node_id : str
+        The PDS Node Identifier to associate with the authorization check.
+    api_gateway_config : dict
+        Dictionary containing configuration details for the API Gateway instance.
+
+    Notes
+    -----
+    This function will exit the program if authorization fails, displaying
+    the appropriate error message via the existing error handling in
+    request_batch_for_ingress.
+
+    """
+    logger = get_logger("check_authorization")
+    logger.info("No files found for ingress. Verifying authorization...")
+
+    # Make a test request with an empty batch to trigger authorization check.
+    # Use the undecorated function to bypass retries and fail fast.
+    request_batch_for_ingress.__wrapped__([], 0, node_id, False, api_gateway_config, request_timeout=15)
 
 
 def _process_batch(batch_index, request_batch, node_id, force_overwrite, api_gateway_config, total_pbar):
@@ -360,7 +408,7 @@ def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pb
 
 
 @backoff.on_exception(backoff.expo, Exception, max_time=120, on_backoff=backoff_handler, logger=None)
-def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwrite, api_gateway_config):
+def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwrite, api_gateway_config, request_timeout=600):
     """
     Submits a batch of ingress requests to the PDS Ingress App API.
 
@@ -379,6 +427,8 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
     api_gateway_config : dict
         Dictionary or dictionary-like containing key/value pairs used to
         configure the API Gateway endpoint url.
+    request_timeout : int, optional
+        Request timeout in seconds.
 
     Returns
     -------
@@ -417,7 +467,7 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
     # Simulate a random failure for the batch request if configured to do so
     with simulate_batch_request_failure(api_gateway_url.split("?")[0]):
         response = requests.post(
-            api_gateway_url, params=params, data=json.dumps(request_batch), headers=headers, timeout=600
+            api_gateway_url, params=params, data=json.dumps(request_batch), headers=headers, timeout=request_timeout
         )
 
     elapsed_time = time.time() - start_time
@@ -939,9 +989,27 @@ def main(args):
     if nonexistent_paths:
         for p in nonexistent_paths:
             logger.warning(Color.yellow("Path does not exist and will be skipped: %s"), p)
-        if not resolved_ingress_paths:
-            logger.error("No valid ingress paths found. Exiting.")
-            sys.exit(1)
+
+    # If no valid paths were found, check authorization before exiting
+    # This ensures unauthorized users get a clear error message even when
+    # uploading empty directories or nonexistent files
+    if not resolved_ingress_paths:
+        if not args.dry_run:
+            # Authenticate and check authorization
+            cognito_config = config["COGNITO"]
+
+            if not cognito_config["username"] or not cognito_config["password"]:
+                raise ValueError("Username and Password must be specified in the COGNITO portion of the INI config")
+
+            _, BEARER_TOKEN = _authenticate(cognito_config)
+
+            # Perform authorization check with empty batch
+            # If unauthorized, this will display the clear error message and exit
+            check_authorization(args.node, config["API_GATEWAY"])
+
+        # If we reach here, user is authorized but there are no files to upload
+        logger.error("No valid ingress paths found. Exiting.")
+        sys.exit(1)
 
     # Initialize the summary table, and populate the "unprocessed" table the set
     # of resolved ingress paths
@@ -1008,12 +1076,10 @@ def main(args):
         cognito_config = config["COGNITO"]
 
         # TODO: add support for command-line username/password?
-        if not cognito_config["username"] and cognito_config["password"]:
+        if not cognito_config["username"] or not cognito_config["password"]:
             raise ValueError("Username and Password must be specified in the COGNITO portion of the INI config")
 
-        authentication_result = AuthUtil.perform_cognito_authentication(cognito_config)
-
-        BEARER_TOKEN = AuthUtil.create_bearer_token(authentication_result)
+        authentication_result, BEARER_TOKEN = _authenticate(cognito_config)
 
         # Set the bearer token on the CloudWatchHandler singleton, so it can
         # be used to authenticate submissions to the CloudWatch Logs API endpoint
