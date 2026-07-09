@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-07-08)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-07-09)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.5...«unknown»)
 
@@ -10,6 +10,7 @@
 
 **Defects:**
 
+- DUM does not have clear output for unauthorized users \(of weblog uploads\) [\#368](https://github.com/NASA-PDS/data-upload-manager/issues/368) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 - DUM does not verify file path for weblog uploads [\#365](https://github.com/NASA-PDS/data-upload-manager/issues/365) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 - Follow-up: address Copilot code quality findings from PR \#356 [\#361](https://github.com/NASA-PDS/data-upload-manager/issues/361) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
 - Ingress path resolution does not prune excluded directories before traversal [\#358](https://github.com/NASA-PDS/data-upload-manager/issues/358) [[s.medium](https://github.com/NASA-PDS/data-upload-manager/labels/s.medium)]
