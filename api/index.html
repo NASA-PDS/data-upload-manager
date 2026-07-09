@@ -140,7 +140,7 @@
 <p>Default: <code class="docutils literal notranslate"><span class="pre">[]</span></code></p>
 </dd>
 <dt><kbd>--exclude, -e</kbd></dt>
-<dd><p>Specify a file path pattern to match against when determining which files should be excluded from an Ingress request. Unix-style wildcard patterns are supported. Exclude patterns are always applied after any Include patterns. This argument can be specified multiple times to configure multiple exclude patterns. Exclude patterns are evaluated in the order they provided.</p>
+<dd><p>Specify a file path pattern to match against when determining which files should be excluded from an Ingress request. Unix-style wildcard patterns are supported. Patterns that match a directory path exclude that entire directory tree. Exclude patterns are always applied after any Include patterns. This argument can be specified multiple times to configure multiple exclude patterns. Exclude patterns are evaluated in the order they provided.</p>
 <p>Default: <code class="docutils literal notranslate"><span class="pre">[]</span></code></p>
 </dd>
 <dt><kbd>--num-threads, -t</kbd></dt>

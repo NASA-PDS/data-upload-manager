@@ -63,6 +63,16 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#automatic-retry-of-failed-uploads">Automatic Retry of Failed Uploads</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#uploading-weblogs">Uploading Weblogs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#compressing-log-files">Compressing Log Files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#uploading">Uploading</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#how-the-destination-path-is-constructed">How the Destination Path Is Constructed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#organizing-logs-with-subdirectories">Organizing Logs with Subdirectories</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#verifying-before-upload">Verifying Before Upload</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#common-issues">Common Issues</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../terraform/index.html">🌎  Terraform</a></li>
@@ -157,7 +167,7 @@ be available for use on the command-line.</p>
 <p>Default: <code class="docutils literal notranslate"><span class="pre">[]</span></code></p>
 </dd>
 <dt><kbd>--exclude, -e</kbd></dt>
-<dd><p>Specify a file path pattern to match against when determining which files should be excluded from an Ingress request. Unix-style wildcard patterns are supported. Exclude patterns are always applied after any Include patterns. This argument can be specified multiple times to configure multiple exclude patterns. Exclude patterns are evaluated in the order they provided.</p>
+<dd><p>Specify a file path pattern to match against when determining which files should be excluded from an Ingress request. Unix-style wildcard patterns are supported. Patterns that match a directory path exclude that entire directory tree. Exclude patterns are always applied after any Include patterns. This argument can be specified multiple times to configure multiple exclude patterns. Exclude patterns are evaluated in the order they provided.</p>
 <p>Default: <code class="docutils literal notranslate"><span class="pre">[]</span></code></p>
 </dd>
 <dt><kbd>--num-threads, -t</kbd></dt>
@@ -211,6 +221,10 @@ support Unix shell-style wildcards (e.g. <code class="docutils literal notransla
 times to include or exclude multiple patterns. The <code class="docutils literal notranslate"><span class="pre">--include</span></code> argument is applied
 first, followed by the <code class="docutils literal notranslate"><span class="pre">--exclude</span></code> argument. If no <code class="docutils literal notranslate"><span class="pre">--include</span></code> arguments are
 provided, all files are included by default.</p>
+<p>When an <code class="docutils literal notranslate"><span class="pre">--exclude</span></code> pattern matches a directory path, that entire directory tree
+is pruned during path resolution and is never traversed. Patterns that only match
+files deeper within a directory (e.g. <code class="docutils literal notranslate"><span class="pre">/data/logs/*.tmp</span></code>) filter just the matching
+files and leave the rest of the directory intact.</p>
 <p>Specifying the node ID of the requestor is accomplished via the <code class="docutils literal notranslate"><span class="pre">--node</span></code> argument,
 specifying one of the following node name values: <code class="docutils literal notranslate"><span class="pre">atm,eng,geo,img,naif,ppi,rs,rms,sbn</span></code></p>
 <p>The <code class="docutils literal notranslate"><span class="pre">--dry-run</span></code> flag can be used to have <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code> determine the
@@ -234,8 +248,9 @@ in AWS would resolve to <code class="docutils literal notranslate"><span class="
 <p>The <code class="docutils literal notranslate"><span class="pre">--weblogs</span> <span class="pre">LOG_TYPE</span></code> argument can be used to indicate that weblog files are being uploaded.
 The type of log files (e.g. <code class="docutils literal notranslate"><span class="pre">apache</span></code>, <code class="docutils literal notranslate"><span class="pre">nginx</span></code>, etc.) should be specified as the
 <code class="docutils literal notranslate"><span class="pre">LOG_TYPE</span></code> argument. When this flag is provided, the client will automatically adjust
-the “trimmed” path for each ingested file to replace the specified path prefix with <code class="docutils literal notranslate"><span class="pre">weblog/</span></code>,
-ensuring that all weblog files are routed to a specific S3 bucket used for web analytics.
+the “trimmed” path for each ingested file to replace the specified path prefix with
+<code class="docutils literal notranslate"><span class="pre">weblogs/&lt;node&gt;-&lt;log_type&gt;/</span></code>, ensuring that all weblog files are routed to the S3
+bucket used for web analytics.
 Because of this, the <code class="docutils literal notranslate"><span class="pre">--prefix</span></code> argument must be provided when using the <code class="docutils literal notranslate"><span class="pre">--weblogs</span></code> argument.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
@@ -251,6 +266,7 @@ To successfully upload, either:</p>
 <li><p>Use the <code class="docutils literal notranslate"><span class="pre">--exclude</span></code> argument to filter out non-gzipped files (e.g., <code class="docutils literal notranslate"><span class="pre">--exclude</span> <span class="pre">&quot;*.txt&quot;</span></code>)</p></li>
 </ol>
 </div>
+<p>See the <a class="reference internal" href="#uploading-weblogs">Uploading Weblogs</a> section below for a complete walkthrough.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code> by default utilizes all available CPUs on the
 local machine to perform parallelized ingress requests to the ingress service. The exact
 number of threads can be controlled via the <code class="docutils literal notranslate"><span class="pre">--num-threads</span></code> argument.</p>
@@ -403,6 +419,166 @@ However, if an upload ultimately fails after all retries are exhausted it could 
 </pre></div>
 </div>
 <p>Should persistent failures like this occur, they should be communicated to the PDS Operations team for investigation.</p>
+</section>
+<section id="uploading-weblogs">
+<h2>Uploading Weblogs<a class="headerlink" href="#uploading-weblogs" title="Link to this heading"></a></h2>
+<p>PDS nodes can upload web server log files directly to the PDS web analytics S3 bucket using the
+<code class="docutils literal notranslate"><span class="pre">--weblogs</span></code> flag. This section walks through the full process.</p>
+<section id="prerequisites">
+<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h3>
+<p>Before uploading weblogs, ensure the following:</p>
+<ol class="arabic simple">
+<li><p><strong>Your DUM client is installed and configured</strong> — see the <a class="reference external" href="../installation/index.html">installation</a> instructions for
+creating your INI config file.</p></li>
+<li><p><strong>Log files are gzip-compressed</strong> — every file must have a <code class="docutils literal notranslate"><span class="pre">.gz</span></code> extension. The client
+will reject the entire upload if any non-gzipped file is detected.</p></li>
+<li><p><strong>You know your node ID</strong> — one of <code class="docutils literal notranslate"><span class="pre">atm</span></code>, <code class="docutils literal notranslate"><span class="pre">eng</span></code>, <code class="docutils literal notranslate"><span class="pre">geo</span></code>, <code class="docutils literal notranslate"><span class="pre">img</span></code>, <code class="docutils literal notranslate"><span class="pre">naif</span></code>, <code class="docutils literal notranslate"><span class="pre">ppi</span></code>,
+<code class="docutils literal notranslate"><span class="pre">rms</span></code>, <code class="docutils literal notranslate"><span class="pre">sbn</span></code>.</p></li>
+</ol>
+</section>
+<section id="compressing-log-files">
+<h3>Compressing Log Files<a class="headerlink" href="#compressing-log-files" title="Link to this heading"></a></h3>
+<p>If your log files are not already compressed, gzip them before uploading:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ gzip /path/to/logs/access.log
+$ gzip /path/to/logs/*.log
+</pre></div>
+</div>
+<p>This produces files with a <code class="docutils literal notranslate"><span class="pre">.gz</span></code> extension (e.g., <code class="docutils literal notranslate"><span class="pre">access.log.gz</span></code>).</p>
+</section>
+<section id="uploading">
+<h3>Uploading<a class="headerlink" href="#uploading" title="Link to this heading"></a></h3>
+<p>Use the <code class="docutils literal notranslate"><span class="pre">--weblogs</span> <span class="pre">LOG_TYPE</span></code> argument along with <code class="docutils literal notranslate"><span class="pre">--prefix</span></code> to upload weblogs. <code class="docutils literal notranslate"><span class="pre">LOG_TYPE</span></code>
+identifies the type of web server generating the logs (e.g., <code class="docutils literal notranslate"><span class="pre">apache</span></code>, <code class="docutils literal notranslate"><span class="pre">nginx</span></code>, <code class="docutils literal notranslate"><span class="pre">iis</span></code>,
+<code class="docutils literal notranslate"><span class="pre">tomcat</span></code>). The value is case-insensitive and becomes part of the S3 destination path.</p>
+<p><strong>Required arguments for weblog uploads:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--node</span> <span class="pre">NODE_ID</span></code> — your PDS node identifier</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--weblogs</span> <span class="pre">LOG_TYPE</span></code> — designates the upload as weblogs and specifies the log type</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--prefix</span> <span class="pre">PATH</span></code> — the local path prefix to strip from uploaded file paths</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">file_or_dir</span></code> - the local path of the files to upload. The value for <code class="docutils literal notranslate"><span class="pre">--prefix</span> <span class="pre">PATH</span></code> is a substring of this value</p></li>
+</ul>
+<p><strong>Example:</strong></p>
+<p>Suppose your compressed log files are stored under <code class="docutils literal notranslate"><span class="pre">/data/weblogs/</span></code> and you want to upload
+them on behalf of the SBN node using Apache-format logs:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pds-ingress-client \
+    -c /path/to/config.ini \
+    --node sbn \
+    --weblogs apache \
+    --prefix /data/weblogs \
+    -- /data/weblogs/
+</pre></div>
+</div>
+</section>
+<section id="how-the-destination-path-is-constructed">
+<h3>How the Destination Path Is Constructed<a class="headerlink" href="#how-the-destination-path-is-constructed" title="Link to this heading"></a></h3>
+<p>When <code class="docutils literal notranslate"><span class="pre">--weblogs</span></code> is specified, the client replaces the <code class="docutils literal notranslate"><span class="pre">--prefix</span></code> value in each file path
+with <code class="docutils literal notranslate"><span class="pre">weblogs/&lt;node&gt;-&lt;log_type&gt;/</span></code>. For example, with <code class="docutils literal notranslate"><span class="pre">--node</span> <span class="pre">sbn</span></code>, <code class="docutils literal notranslate"><span class="pre">--weblogs</span> <span class="pre">apache</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">--prefix</span> <span class="pre">/data/weblogs</span></code>, a local file at:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">weblogs</span><span class="o">/</span><span class="mi">2025</span><span class="o">/</span><span class="mi">01</span><span class="o">/</span><span class="n">access</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">gz</span>
+</pre></div>
+</div>
+<p>is uploaded to S3 as:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">weblogs</span><span class="o">/</span><span class="n">sbn</span><span class="o">-</span><span class="n">apache</span><span class="o">/</span><span class="mi">2025</span><span class="o">/</span><span class="mi">01</span><span class="o">/</span><span class="n">access</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">gz</span>
+</pre></div>
+</div>
+</section>
+<section id="organizing-logs-with-subdirectories">
+<h3>Organizing Logs with Subdirectories<a class="headerlink" href="#organizing-logs-with-subdirectories" title="Link to this heading"></a></h3>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>The directory structure <strong>below</strong> the <code class="docutils literal notranslate"><span class="pre">--prefix</span></code> path is preserved in S3. This means
+that if all your log files sit directly in <code class="docutils literal notranslate"><span class="pre">--prefix</span></code> with no subdirectories, they will
+all land in a single flat S3 directory. For easier downstream grouping by application,
+domain, or server, <strong>organize your logs into subdirectories on disk before uploading</strong>.</p>
+</div>
+<p>For example, suppose you host multiple web applications and collect logs from each. Rather
+than keeping all logs flat under <code class="docutils literal notranslate"><span class="pre">/data/weblogs/</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>/data/weblogs/
+├── pds.nasa.gov_access.log.gz
+├── pds.nasa.gov_error.log.gz
+├── sbn.psi.edu_access.log.gz
+└── sbn.psi.edu_error.log.gz
+</pre></div>
+</div>
+<p>organize them into subdirectories by application or domain:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>/data/weblogs/
+├── pds.nasa.gov/
+│   ├── access.log.gz
+│   └── error.log.gz
+└── sbn.psi.edu/
+    ├── access.log.gz
+    └── error.log.gz
+</pre></div>
+</div>
+<p>With <code class="docutils literal notranslate"><span class="pre">--prefix</span> <span class="pre">/data/weblogs</span></code>, the second layout uploads to S3 as:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">weblogs</span><span class="o">/</span><span class="n">sbn</span><span class="o">-</span><span class="n">apache</span><span class="o">/</span><span class="n">pds</span><span class="o">.</span><span class="n">nasa</span><span class="o">.</span><span class="n">gov</span><span class="o">/</span><span class="n">access</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">gz</span>
+<span class="n">weblogs</span><span class="o">/</span><span class="n">sbn</span><span class="o">-</span><span class="n">apache</span><span class="o">/</span><span class="n">pds</span><span class="o">.</span><span class="n">nasa</span><span class="o">.</span><span class="n">gov</span><span class="o">/</span><span class="n">error</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">gz</span>
+<span class="n">weblogs</span><span class="o">/</span><span class="n">sbn</span><span class="o">-</span><span class="n">apache</span><span class="o">/</span><span class="n">sbn</span><span class="o">.</span><span class="n">psi</span><span class="o">.</span><span class="n">edu</span><span class="o">/</span><span class="n">access</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">gz</span>
+<span class="n">weblogs</span><span class="o">/</span><span class="n">sbn</span><span class="o">-</span><span class="n">apache</span><span class="o">/</span><span class="n">sbn</span><span class="o">.</span><span class="n">psi</span><span class="o">.</span><span class="n">edu</span><span class="o">/</span><span class="n">error</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">gz</span>
+</pre></div>
+</div>
+<p>This makes it straightforward to query or process logs for a specific application without
+filtering a large flat directory.</p>
+<p>You can also upload logs for a single application at a time by pointing DUM at a specific
+subdirectory and setting <code class="docutils literal notranslate"><span class="pre">--prefix</span></code> to its parent:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pds-ingress-client \
+    -c /path/to/config.ini \
+    --node sbn \
+    --weblogs apache \
+    --prefix /data/weblogs \
+    -- /data/weblogs/pds.nasa.gov/
+</pre></div>
+</div>
+<p>This uploads only <code class="docutils literal notranslate"><span class="pre">pds.nasa.gov/</span></code> logs, preserving the subdirectory name in the S3 path.</p>
+</section>
+<section id="verifying-before-upload">
+<h3>Verifying Before Upload<a class="headerlink" href="#verifying-before-upload" title="Link to this heading"></a></h3>
+<p>Use <code class="docutils literal notranslate"><span class="pre">--dry-run</span></code> to preview which files will be uploaded and confirm the correct set is
+selected, without actually submitting anything:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pds-ingress-client \
+    -c /path/to/config.ini \
+    --node sbn \
+    --weblogs apache \
+    --prefix /data/weblogs \
+    --dry-run \
+    -- /data/weblogs/
+</pre></div>
+</div>
+</section>
+<section id="common-issues">
+<h3>Common Issues<a class="headerlink" href="#common-issues" title="Link to this heading"></a></h3>
+<p><strong>Upload fails with “non-gzipped files” error</strong></p>
+<p>The client checks every file before uploading begins. If any file lacks a <code class="docutils literal notranslate"><span class="pre">.gz</span></code> extension,
+you will see an error like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ERROR</span><span class="p">:</span> <span class="n">The</span> <span class="n">following</span> <span class="n">files</span> <span class="n">are</span> <span class="ow">not</span> <span class="n">gzipped</span> <span class="p">(</span><span class="o">.</span><span class="n">gz</span><span class="p">):</span>
+  <span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">weblogs</span><span class="o">/</span><span class="n">access</span><span class="o">.</span><span class="n">log</span>
+<span class="ne">ValueError</span><span class="p">:</span> <span class="n">Weblog</span> <span class="n">uploads</span> <span class="n">require</span> <span class="n">gzipped</span> <span class="n">files</span><span class="o">.</span> <span class="n">Found</span> <span class="mi">1</span> <span class="n">non</span><span class="o">-</span><span class="n">gzipped</span> <span class="n">file</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">.</span> <span class="o">...</span>
+</pre></div>
+</div>
+<p>Compress the listed files with <code class="docutils literal notranslate"><span class="pre">gzip</span></code> and retry, or use <code class="docutils literal notranslate"><span class="pre">--exclude</span></code> to skip them:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pds-ingress-client ... --exclude &quot;*.log&quot; -- /data/weblogs/
+</pre></div>
+</div>
+<p><strong>Upload fails with “–prefix must also be provided” error</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">--prefix</span></code> argument is required when <code class="docutils literal notranslate"><span class="pre">--weblogs</span></code> is used:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="ne">ValueError</span><span class="p">:</span> <span class="n">When</span> <span class="o">--</span><span class="n">weblogs</span> <span class="ow">is</span> <span class="n">specified</span><span class="p">,</span> <span class="o">--</span><span class="n">prefix</span> <span class="n">must</span> <span class="n">also</span> <span class="n">be</span> <span class="n">provided</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>Add <code class="docutils literal notranslate"><span class="pre">--prefix</span> <span class="pre">/your/local/log/directory</span></code> to the command.</p>
+<p><strong>Upload fails with “401 (Unauthorized)” message</strong></p>
+<p>You have an account but do not have access to the node which you’ve identified yourself as (e.g., <code class="docutils literal notranslate"><span class="pre">--node</span> <span class="pre">img</span></code>):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Performing</span> <span class="n">Cognito</span> <span class="n">authentication</span> <span class="k">for</span> <span class="n">user</span> <span class="o">&lt;</span><span class="n">username</span><span class="o">&gt;</span>
+<span class="n">Authentication</span> <span class="n">successful</span>
+<span class="o">...</span>
+<span class="o">----------------------------------------------</span>
+<span class="n">Ingress</span> <span class="n">request</span> <span class="n">failed</span> <span class="k">with</span> <span class="n">HTTP</span> <span class="n">status</span> <span class="mi">401</span> <span class="p">(</span><span class="n">Unauthorized</span><span class="p">)</span>
+<span class="n">You</span> <span class="n">are</span> <span class="ow">not</span> <span class="n">authorized</span> <span class="n">to</span> <span class="n">use</span> <span class="n">the</span> <span class="n">ingestion</span> <span class="n">service</span> <span class="p">(</span><span class="mi">401</span> <span class="n">Unauthorized</span><span class="p">)</span><span class="o">.</span>
+<span class="n">Your</span> <span class="n">account</span> <span class="n">may</span> <span class="ow">not</span> <span class="n">be</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">required</span> <span class="n">user</span> <span class="n">group</span><span class="o">.</span>
+<span class="n">Please</span> <span class="n">contact</span> <span class="n">PDS</span> <span class="n">Engineering</span> <span class="k">for</span> <span class="n">access</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>Contact PDS Engineering with the node of which you are a member and require access to.</p>
+</section>
 </section>
 </section>
 
