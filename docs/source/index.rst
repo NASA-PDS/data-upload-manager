@@ -29,6 +29,7 @@ Sitemap
 
     /installation/*
     /development/*
+    /operations/*
     /usage/*
     /terraform/*
     /api/*
