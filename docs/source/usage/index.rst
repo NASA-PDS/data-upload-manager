@@ -16,10 +16,7 @@ To see the usage documentation, you can run the following::
 Command-Line Arguments Reference
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. argparse::
-   :module: pds.ingress.client.pds_ingress_client
-   :func: setup_argparser
-   :prog: pds-ingress-client
+For the full command-line arguments reference, see the :doc:`Command Line API </api/index>` section.
 
 Usage Notes
 ^^^^^^^^^^^
