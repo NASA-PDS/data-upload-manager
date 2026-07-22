@@ -90,8 +90,8 @@ Because of this, the ``--prefix`` argument must be provided when using the ``--w
    any uploads begin. If even a single non-gzipped file is present in the input file set,
    the entire request will fail immediately with no files being uploaded.
 
-   For example, if you attempt to upload a directory containing both ``access.log.gz`` and
-   ``access.log.txt``, the upload will abort with an error listing the non-gzipped files.
+   For example, if you attempt to upload a directory containing both ``access.20260501.log.gz`` and
+   ``access.20260501.log``, the upload will abort with an error listing the non-gzipped files.
    To successfully upload, either:
 
    1. Compress all files with gzip before uploading, or
@@ -283,10 +283,17 @@ Compressing Log Files
 
 If your log files are not already compressed, gzip them before uploading::
 
-    $ gzip /path/to/logs/access.log
-    $ gzip /path/to/logs/*.log
+    $ gzip /path/to/logs/access.20260501.log
 
-This produces files with a ``.gz`` extension (e.g., ``access.log.gz``).
+This produces files with a ``.gz`` extension (e.g., ``access.20260501.log.gz``).
+Including the date in the filename is preferred so that individual daily log files
+remain identifiable after upload.
+
+.. note::
+
+   Only upload the log types your server actually generates. Access logs are the primary
+   log type of interest for web analytics. Error logs and other server log types are not
+   required.
 
 Uploading
 ^^^^^^^^^
@@ -323,54 +330,61 @@ and ``--prefix /data/weblogs``, a local file at:
 
 .. code-block::
 
-    /data/weblogs/2025/01/access.log.gz
+    /data/weblogs/pds.example.edu/2026/05/access.20260501.log.gz
 
 is uploaded to S3 as:
 
 .. code-block::
 
-    weblogs/sbn-apache/2025/01/access.log.gz
+    weblogs/sbn-apache/pds.example.edu/2026/05/access.20260501.log.gz
 
-Organizing Logs with Subdirectories
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Recommended Directory Structure
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. important::
 
    The directory structure **below** the ``--prefix`` path is preserved in S3. This means
    that if all your log files sit directly in ``--prefix`` with no subdirectories, they will
-   all land in a single flat S3 directory. For easier downstream grouping by application,
-   domain, or server, **organize your logs into subdirectories on disk before uploading**.
+   all land in a single flat S3 directory. Organize your logs into subdirectories on disk
+   before uploading so files from different hosts or time periods are easy to locate.
 
-For example, suppose you host multiple web applications and collect logs from each. Rather
-than keeping all logs flat under ``/data/weblogs/``::
-
-    /data/weblogs/
-    ├── pds.nasa.gov_access.log.gz
-    ├── pds.nasa.gov_error.log.gz
-    ├── sbn.psi.edu_access.log.gz
-    └── sbn.psi.edu_error.log.gz
-
-organize them into subdirectories by application or domain::
+The recommended structure is to organize by hostname, then by year and month, with
+dated log filenames::
 
     /data/weblogs/
-    ├── pds.nasa.gov/
-    │   ├── access.log.gz
-    │   └── error.log.gz
-    └── sbn.psi.edu/
-        ├── access.log.gz
-        └── error.log.gz
+    ├── pds.example1.edu/
+    │   └── 2026/
+    │       ├── 04/
+    │       │   └── access.20260430.log.gz
+    │       └── 05/
+    │           ├── access.20260501.log.gz
+    │           ├── access.20260502.log.gz
+    │           └── access.20260503.log.gz
+    └── pds.example2.edu/
+        └── 2026/
+            └── 05/
+                ├── access.20260501.log.gz
+                └── access.20260502.log.gz
 
-With ``--prefix /data/weblogs``, the second layout uploads to S3 as::
+With ``--prefix /data/weblogs``, this uploads to S3 as::
 
-    weblogs/sbn-apache/pds.nasa.gov/access.log.gz
-    weblogs/sbn-apache/pds.nasa.gov/error.log.gz
-    weblogs/sbn-apache/sbn.psi.edu/access.log.gz
-    weblogs/sbn-apache/sbn.psi.edu/error.log.gz
+    weblogs/sbn-apache/pds.example1.edu/2026/04/access.20260430.log.gz
+    weblogs/sbn-apache/pds.example1.edu/2026/05/access.20260501.log.gz
+    weblogs/sbn-apache/pds.example1.edu/2026/05/access.20260502.log.gz
+    weblogs/sbn-apache/pds.example1.edu/2026/05/access.20260503.log.gz
+    weblogs/sbn-apache/pds.example2.edu/2026/05/access.20260501.log.gz
+    weblogs/sbn-apache/pds.example2.edu/2026/05/access.20260502.log.gz
 
-This makes it straightforward to query or process logs for a specific application without
-filtering a large flat directory.
+Using hostname as the top-level directory ensures files from different hosts in the same
+node do not collide, even when multiple institutions share the same node ID. If a hostname
+changes in the future, begin uploading under the new hostname directory going forward.
 
-You can also upload logs for a single application at a time by pointing DUM at a specific
+.. note::
+
+   Only upload the log types your server actually generates. Access logs are the primary
+   log type of interest. Error logs and other server log types are not required.
+
+You can upload logs for a single host at a time by pointing DUM at a specific
 subdirectory and setting ``--prefix`` to its parent::
 
     $ pds-ingress-client \
@@ -378,9 +392,9 @@ subdirectory and setting ``--prefix`` to its parent::
         --node sbn \
         --weblogs apache \
         --prefix /data/weblogs \
-        -- /data/weblogs/pds.nasa.gov/
+        -- /data/weblogs/pds.example1.edu/
 
-This uploads only ``pds.nasa.gov/`` logs, preserving the subdirectory name in the S3 path.
+This uploads only ``pds.example1.edu/`` logs, preserving the subdirectory structure in S3.
 
 Verifying Before Upload
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -405,7 +419,7 @@ The client checks every file before uploading begins. If any file lacks a ``.gz`
 you will see an error like::
 
     ERROR: The following files are not gzipped (.gz):
-      /data/weblogs/access.log
+      /data/weblogs/pds.example.edu/access.20260501.log
     ValueError: Weblog uploads require gzipped files. Found 1 non-gzipped file(s). ...
 
 Compress the listed files with ``gzip`` and retry, or use ``--exclude`` to skip them::
@@ -419,6 +433,16 @@ The ``--prefix`` argument is required when ``--weblogs`` is used::
     ValueError: When --weblogs is specified, --prefix must also be provided.
 
 Add ``--prefix /your/local/log/directory`` to the command.
+
+.. note::
+
+   The ``--prefix`` argument may feel redundant when its value is the same as (or a parent
+   of) the upload path — you are effectively specifying the same directory twice. This is a
+   known UX limitation: ``--prefix`` is a general-purpose path-trimming argument that
+   ``--weblogs`` repurposes to determine what to replace in the S3 destination path. A future
+   improvement may allow ``--prefix`` to be inferred automatically when ``--weblogs`` is used.
+   See `GitHub issue #378 <https://github.com/NASA-PDS/data-upload-manager/issues/378>`_ for
+   tracking.
 
 **Upload fails with "401 (Unauthorized)" message**
 
@@ -434,6 +458,31 @@ You have an account but do not have access to the node which you've identified y
     Please contact PDS Engineering for access.
 
 Contact PDS Engineering with the node of which you are a member and require access to.
+
+Frequently Asked Questions
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Should log files be organized as daily logs or monthly aggregates?**
+
+Daily log files are preferred for consistency. However, however your logging system is
+configured is acceptable — the DUM client will upload whatever file structure you provide.
+
+**How far back in time should logs be submitted?**
+
+Submit logs starting from October 2025 through the current date. Logs prior to October 2025
+have already been retrieved.
+
+**What compression format is required, and what file extension should be used?**
+
+All weblog files must be gzip-compressed with a ``.gz`` suffix (e.g., ``access.20260501.log.gz``).
+This is enforced by the client — any file without a ``.gz`` extension will cause the entire
+upload to fail before any files are transferred. See the warning above in the
+`Prerequisites`_ section for details.
+
+**Should each log file be its own .gz file, or should multiple logs be aggregated into one?**
+
+Each log file should be its own individual ``.gz`` file — one ``.gz`` file per log file.
+Do not aggregate multiple log files into a single archive.
 
 .. References:
 .. _backoff: https://pypi.org/project/backoff/
