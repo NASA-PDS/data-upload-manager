@@ -31,7 +31,6 @@ Sitemap
     /development/*
     /operations/*
     /usage/*
-    /terraform/*
     /api/*
     /support/*
 

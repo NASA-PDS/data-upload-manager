@@ -105,7 +105,17 @@ Currently, there are only two ways to configure new users within the User Pool:
 * Manually add new users via the AWS Admin Console for the Cognito service. More information on how to do so can be found here: https://docs.aws.amazon.com/cognito/latest/developerguide/how-to-create-user-accounts.html
 
 
+Deploying the DUM Service
+--------------------------
+
+For instructions on deploying the DUM server-side components to AWS using Terraform,
+see the :doc:`Terraform Deployment </terraform/index>` guide.
+
+.. toctree::
+   :hidden:
+
+   /terraform/index
+
 .. References:
 .. _usage: ../usage/index.html
-.. _terraform: ../terraform/index.html
 .. _YAML: https://yaml.org
