@@ -1,8 +1,16 @@
 # Changelog
 
-## [release/2.5.6](https://github.com/NASA-PDS/data-upload-manager/tree/release/2.5.6) (2026-07-09)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-07-28)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.5...release/2.5.6)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.6...«unknown»)
+
+**Other closed issues:**
+
+- Reorganize installation docs to separate user and operator/developer content [\#376](https://github.com/NASA-PDS/data-upload-manager/issues/376)
+
+## [v2.5.6](https://github.com/NASA-PDS/data-upload-manager/tree/v2.5.6) (2026-07-09)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.5...v2.5.6)
 
 **Requirements:**
 
