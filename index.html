@@ -46,9 +46,9 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation/index.html">📦 Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="development/index.html">👩‍💻 Development</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development/index.html">👩‍💻 Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operations/index.html">⚙️ Operations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/index.html">🏃‍ ️Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="terraform/index.html">🌎  Terraform</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">Command Line API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="support/contact.html">Contact Us</a></li>
 <li class="toctree-l1"><a class="reference internal" href="support/contribute.html">Contribute</a></li>
@@ -110,25 +110,25 @@ DUM repo.</p></li>
 <li class="toctree-l3"><a class="reference internal" href="installation/index.html#running-the-client-script">Running the Client script</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="installation/index.html#upgrading-the-service">Upgrading the Service</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation/index.html#configuring-the-server-side-bucket-map">Configuring the Server side Bucket Map</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation/index.html#adding-users-to-the-aws-cognito-user-pool">Adding users to the AWS Cognito User Pool</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation/index.html#updating-the-tool">Updating the Tool</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="development/index.html">👩‍💻 Development</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="development/index.html">👩‍💻 Contributing</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="development/index.html#quick-start">Quick start</a></li>
 <li class="toctree-l2"><a class="reference internal" href="development/index.html#testing">Testing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="development/index.html#making-releases">Making Releases</a></li>
 <li class="toctree-l2"><a class="reference internal" href="development/index.html#contribute">Contribute</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="usage/index.html">🏃‍ ️Usage</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="usage/index.html#pds-ingress-client-description">pds-ingress-client Description</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="usage/index.html#command-line-arguments-reference">Command-Line Arguments Reference</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="usage/index.html#pds.ingress.client.pds_ingress_client-setup_argparser-positional-arguments">Positional Arguments</a></li>
-<li class="toctree-l4"><a class="reference internal" href="usage/index.html#pds.ingress.client.pds_ingress_client-setup_argparser-named-arguments">Named Arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operations/index.html">⚙️ Operations</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="operations/index.html#configuring-the-server-side-bucket-map">Configuring the Server Side Bucket Map</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/index.html#adding-users-to-the-aws-cognito-user-pool">Adding Users to the AWS Cognito User Pool</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/index.html#deploying-the-dum-service">Deploying the DUM Service</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="usage/index.html">🏃‍ ️Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage/index.html#pds-ingress-client-description">pds-ingress-client Description</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage/index.html#command-line-arguments-reference">Command-Line Arguments Reference</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/index.html#usage-notes">Usage Notes</a></li>
 </ul>
 </li>
@@ -142,20 +142,12 @@ DUM repo.</p></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/index.html#compressing-log-files">Compressing Log Files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/index.html#uploading">Uploading</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/index.html#how-the-destination-path-is-constructed">How the Destination Path Is Constructed</a></li>
-<li class="toctree-l3"><a class="reference internal" href="usage/index.html#organizing-logs-with-subdirectories">Organizing Logs with Subdirectories</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/index.html#recommended-directory-structure">Recommended Directory Structure</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/index.html#verifying-before-upload">Verifying Before Upload</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/index.html#common-issues">Common Issues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/index.html#frequently-asked-questions">Frequently Asked Questions</a></li>
 </ul>
 </li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="terraform/index.html">🌎  Terraform</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="terraform/index.html#deployment-scripts">Deployment Scripts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="terraform/index.html#creating-the-deployment-tfvars-file">Creating the deployment .tfvars file</a></li>
-<li class="toctree-l2"><a class="reference internal" href="terraform/index.html#setting-up-the-s3-backend">Setting up the S3 Backend</a></li>
-<li class="toctree-l2"><a class="reference internal" href="terraform/index.html#deploying-the-terraform">Deploying the Terraform</a></li>
-<li class="toctree-l2"><a class="reference internal" href="terraform/index.html#utilizing-terraform-outputs">Utilizing Terraform Outputs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="terraform/index.html#destroying-a-deployment">Destroying a Deployment</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">Command Line API</a><ul>

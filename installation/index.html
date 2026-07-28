@@ -20,7 +20,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="👩‍💻 Development" href="../development/index.html" />
+    <link rel="next" title="👩‍💻 Contributing" href="../development/index.html" />
     <link rel="prev" title="PDS Data Upload Manager" href="../index.html" /> 
 </head>
 
@@ -54,14 +54,12 @@
 <li class="toctree-l3"><a class="reference internal" href="#running-the-client-script">Running the Client script</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#upgrading-the-service">Upgrading the Service</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#configuring-the-server-side-bucket-map">Configuring the Server side Bucket Map</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#adding-users-to-the-aws-cognito-user-pool">Adding users to the AWS Cognito User Pool</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#updating-the-tool">Updating the Tool</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../development/index.html">👩‍💻 Development</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../development/index.html">👩‍💻 Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/index.html">⚙️ Operations</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usage/index.html">🏃‍ ️Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../terraform/index.html">🌎  Terraform</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">Command Line API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../support/contact.html">Contact Us</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../support/contribute.html">Contribute</a></li>
@@ -189,9 +187,9 @@ to get a usage message and ensure the client-side service is properly installed.
 also consult the <cite>usage_</cite> documentation for more details.</p>
 </section>
 </section>
-<section id="upgrading-the-service">
-<h2>Upgrading the Service<a class="headerlink" href="#upgrading-the-service" title="Link to this heading"></a></h2>
-<p>To check for and install an upgrade to the service, run the following command in
+<section id="updating-the-tool">
+<h2>Updating the Tool<a class="headerlink" href="#updating-the-tool" title="Link to this heading"></a></h2>
+<p>To check for and install an update to the tool, run the following command in
 your virtual environment:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">--</span><span class="n">upgrade</span> <span class="n">pds</span><span class="o">-</span><span class="n">data</span><span class="o">-</span><span class="n">upload</span><span class="o">-</span><span class="n">manager</span>
 </pre></div>
@@ -205,98 +203,6 @@ which the latest version of the Service may be installed into it. Consult the
 installation instructions above on how to create a new virtual environment.</p>
 </div>
 </section>
-<section id="configuring-the-server-side-bucket-map">
-<h2>Configuring the Server side Bucket Map<a class="headerlink" href="#configuring-the-server-side-bucket-map" title="Link to this heading"></a></h2>
-<p>Once the Server side components of DUM have been deployed to AWS (see <a class="reference external" href="../terraform/index.html">terraform</a> section),
-how ingested files are routed to S3 buckets is controlled via a “Bucket Map” configuration
-file which gets bundled with the “nucleus-dum-ingress-service” lambda function.</p>
-<p>The format of the file is a simple <a class="reference external" href="https://yaml.org">YAML</a> format file. An example bucket map is shown below:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">MAP</span><span class="p">:</span>
-  <span class="n">NODES</span><span class="p">:</span>
-    <span class="n">ATM</span><span class="p">:</span>
-      <span class="n">default</span><span class="p">:</span>
-        <span class="n">bucket</span><span class="p">:</span>
-          <span class="n">name</span><span class="p">:</span> <span class="n">pds</span><span class="o">-</span><span class="n">nucleus</span><span class="o">-</span><span class="n">dum</span>
-    <span class="n">ENG</span><span class="p">:</span>
-      <span class="o">-</span> <span class="n">prefix</span><span class="p">:</span> <span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">archive</span><span class="o">/</span><span class="mi">2022</span>
-        <span class="n">bucket</span><span class="p">:</span>
-          <span class="n">name</span><span class="p">:</span> <span class="n">bucket</span><span class="o">-</span><span class="k">for</span><span class="o">-</span><span class="mi">2022</span>
-          <span class="n">storage_class</span><span class="p">:</span> <span class="n">STANDARD</span>
-      <span class="o">-</span> <span class="n">prefix</span><span class="p">:</span> <span class="n">weblogs</span><span class="o">/*</span>
-        <span class="n">bucket</span><span class="p">:</span>
-          <span class="n">name</span><span class="p">:</span> <span class="n">pds</span><span class="o">-</span><span class="n">nucleus</span><span class="o">-</span><span class="n">weblogs</span>
-          <span class="n">storage_class</span><span class="p">:</span> <span class="n">STANDARD</span>
-      <span class="n">default</span><span class="p">:</span>
-        <span class="n">bucket</span><span class="p">:</span>
-          <span class="n">name</span><span class="p">:</span> <span class="n">pds</span><span class="o">-</span><span class="n">nucleus</span><span class="o">-</span><span class="n">dum</span>
-    <span class="n">GEO</span><span class="p">:</span>
-      <span class="n">default</span><span class="p">:</span>
-        <span class="n">bucket</span><span class="p">:</span>
-          <span class="n">name</span><span class="p">:</span> <span class="n">pds</span><span class="o">-</span><span class="n">nucleus</span><span class="o">-</span><span class="n">dum</span>
-    <span class="n">IMG</span><span class="p">:</span>
-      <span class="n">default</span><span class="p">:</span>
-        <span class="n">bucket</span><span class="p">:</span>
-          <span class="n">name</span><span class="p">:</span> <span class="n">pds</span><span class="o">-</span><span class="n">nucleus</span><span class="o">-</span><span class="n">dum</span>
-    <span class="n">NAIF</span><span class="p">:</span>
-      <span class="n">default</span><span class="p">:</span>
-        <span class="n">bucket</span><span class="p">:</span>
-          <span class="n">name</span><span class="p">:</span> <span class="n">pds</span><span class="o">-</span><span class="n">nucleus</span><span class="o">-</span><span class="n">dum</span>
-    <span class="n">PPI</span><span class="p">:</span>
-      <span class="n">default</span><span class="p">:</span>
-        <span class="n">bucket</span><span class="p">:</span>
-          <span class="n">name</span><span class="p">:</span> <span class="n">pds</span><span class="o">-</span><span class="n">nucleus</span><span class="o">-</span><span class="n">dum</span>
-    <span class="n">RMS</span><span class="p">:</span>
-      <span class="n">default</span><span class="p">:</span>
-        <span class="n">bucket</span><span class="p">:</span>
-          <span class="n">name</span><span class="p">:</span> <span class="n">pds</span><span class="o">-</span><span class="n">nucleus</span><span class="o">-</span><span class="n">dum</span>
-    <span class="n">RS</span><span class="p">:</span>
-      <span class="n">default</span><span class="p">:</span>
-        <span class="n">bucket</span><span class="p">:</span>
-          <span class="n">name</span><span class="p">:</span> <span class="n">pds</span><span class="o">-</span><span class="n">nucleus</span><span class="o">-</span><span class="n">dum</span>
-    <span class="n">SBN</span><span class="p">:</span>
-      <span class="n">default</span><span class="p">:</span>
-        <span class="n">bucket</span><span class="p">:</span>
-          <span class="n">name</span><span class="p">:</span> <span class="n">pds</span><span class="o">-</span><span class="n">nucleus</span><span class="o">-</span><span class="n">dum</span>
-</pre></div>
-</div>
-<p>Within the mapping is are separate entries for each PDS Node which could make
-an ingress request via the client script. Within each Node section are one or
-more entry mappings, where an expected path prefix of a file requested for ingest
-is mapped to the name of an S3 bucket where the file should be uploaded to.</p>
-<p>In the above example, we can see that a default mapping is configured for all
-nodes (except ENG) that instructs the Ingress Lambda function to route all files to the <code class="docutils literal notranslate"><span class="pre">pds-nucleus-dum</span></code>
-bucket. This is the mapping that is used when no other mapping for a path prefix exists.</p>
-<p>Within the <code class="docutils literal notranslate"><span class="pre">ENG</span></code> section, we also see that a mapping from the <code class="docutils literal notranslate"><span class="pre">path/to/archive/2022</span></code>
-path prefix to the <code class="docutils literal notranslate"><span class="pre">bucket-for-2022</span></code>, is also defined. This means that any requests
-file paths that begin with <code class="docutils literal notranslate"><span class="pre">path/to/archive/2022</span></code> will be routed to the <code class="docutils literal notranslate"><span class="pre">bucket-for-2022</span></code>
-bucket during upload.</p>
-<p>Bucket configuration settings can also be provided for each mapping.
-Consult the current bucket map schema (available within the DUM repo under <code class="docutils literal notranslate"><span class="pre">src/pds/ingress/service/config</span></code>)
-for the full set of available options.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">--prefix</span></code> argument of the <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code> script can be instrumental to ensure
-that paths requested for ingress have a prefix that matches one of the mappings expected by
-the bucket config. Consult the <a class="reference external" href="../usage/index.html">usage</a> page for the <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code> for more details
-on using the <code class="docutils literal notranslate"><span class="pre">--prefix</span></code> argument.</p>
-</div>
-<p>Should there ever be a need to make modifications to the bucket map used with a
-deployment of the DUM service, changes can be made to the file directly from within the
-AWS Console Lambda Code Source editor window. Be sure that the function is redeployed after
-any updates are made to the bucket map to ensure they take affect for subsequent ingress reqeusts.</p>
-</section>
-<section id="adding-users-to-the-aws-cognito-user-pool">
-<h2>Adding users to the AWS Cognito User Pool<a class="headerlink" href="#adding-users-to-the-aws-cognito-user-pool" title="Link to this heading"></a></h2>
-<p>Before the client-side script can be used to request ingest of files to PDS Cloud,
-a valid user account must exist in the AWS Cognito User Pool deployed with the rest
-of the DUM Server side components. Credentials for the user must then be provided in
-the INI config used with the <code class="docutils literal notranslate"><span class="pre">pds-ingress-client</span></code> script.</p>
-<p>Currently, there are only two ways to configure new users within the User Pool:</p>
-<ul class="simple">
-<li><p>Specify the list of users to pre-populate the User Pool with via the <cite>.tfvars</cite> file used with a Terraform deployment. See the <a class="reference external" href="../terraform/index.html">terraform</a> section for more information on how to configure this.</p></li>
-<li><p>Manually add new users via the AWS Admin Console for the Cognito service. More information on how to do so can be found here: <a class="reference external" href="https://docs.aws.amazon.com/cognito/latest/developerguide/how-to-create-user-accounts.html">https://docs.aws.amazon.com/cognito/latest/developerguide/how-to-create-user-accounts.html</a></p></li>
-</ul>
-</section>
 </section>
 
 
@@ -304,7 +210,7 @@ the INI config used with the <code class="docutils literal notranslate"><span cl
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="../index.html" class="btn btn-neutral float-left" title="PDS Data Upload Manager" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="../development/index.html" class="btn btn-neutral float-right" title="👩‍💻 Development" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="../development/index.html" class="btn btn-neutral float-right" title="👩‍💻 Contributing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
