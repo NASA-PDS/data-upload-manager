@@ -308,26 +308,26 @@ identifies the type of web server generating the logs (e.g., ``apache``, ``nginx
 
 **Example:**
 
-Suppose your compressed log files are stored under ``/data/weblogs/`` and you want to upload
+Suppose your compressed log files are stored under ``/data/deliver2en/`` and you want to upload
 them on behalf of the SBN node using Apache-format logs::
 
     $ pds-ingress-client \
         -c /path/to/config.ini \
         --node sbn \
         --weblogs apache \
-        --prefix /data/weblogs \
-        -- /data/weblogs/
+        --prefix /data/deliver2en \
+        -- /data/deliver2en/
 
 How the Destination Path Is Constructed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When ``--weblogs`` is specified, the client replaces the ``--prefix`` value in each file path
 with ``weblogs/<node>-<log_type>/``. For example, with ``--node sbn``, ``--weblogs apache``,
-and ``--prefix /data/weblogs``, a local file at:
+and ``--prefix /data/deliver2en``, a local file at:
 
 .. code-block::
 
-    /data/weblogs/pds.example.edu/2026/05/access.20260501.log.gz
+    /data/deliver2en/pds.example.edu/2026/05/access.20260501.log.gz
 
 is uploaded to S3 as:
 
@@ -348,7 +348,7 @@ Recommended Directory Structure
 The recommended structure is to organize by hostname, then by year and month, with
 dated log filenames::
 
-    /data/weblogs/
+    /data/deliver2en/
     ├── pds.example1.edu/
     │   └── 2026/
     │       ├── 04/
@@ -363,7 +363,7 @@ dated log filenames::
                 ├── access.20260501.log.gz
                 └── access.20260502.log.gz
 
-With ``--prefix /data/weblogs``, this uploads to S3 as::
+With ``--prefix /data/deliver2en``, this uploads to S3 as::
 
     weblogs/sbn-apache/pds.example1.edu/2026/04/access.20260430.log.gz
     weblogs/sbn-apache/pds.example1.edu/2026/05/access.20260501.log.gz
@@ -388,8 +388,8 @@ subdirectory and setting ``--prefix`` to its parent::
         -c /path/to/config.ini \
         --node sbn \
         --weblogs apache \
-        --prefix /data/weblogs \
-        -- /data/weblogs/pds.example1.edu/
+        --prefix /data/deliver2en \
+        -- /data/deliver2en/pds.example1.edu/
 
 This uploads only ``pds.example1.edu/`` logs, preserving the subdirectory structure in S3.
 
@@ -403,9 +403,9 @@ selected, without actually submitting anything::
         -c /path/to/config.ini \
         --node sbn \
         --weblogs apache \
-        --prefix /data/weblogs \
+        --prefix /data/deliver2en \
         --dry-run \
-        -- /data/weblogs/
+        -- /data/deliver2en/
 
 Common Issues
 ^^^^^^^^^^^^^
@@ -416,12 +416,12 @@ The client checks every file before uploading begins. If any file lacks a ``.gz`
 you will see an error like::
 
     ERROR: The following files are not gzipped (.gz):
-      /data/weblogs/pds.example.edu/access.20260501.log
+      /data/deliver2en/pds.example.edu/access.20260501.log
     ValueError: Weblog uploads require gzipped files. Found 1 non-gzipped file(s). ...
 
 Compress the listed files with ``gzip`` and retry, or use ``--exclude`` to skip them::
 
-    $ pds-ingress-client ... --exclude "*.log" -- /data/weblogs/
+    $ pds-ingress-client ... --exclude "*.log" -- /data/deliver2en/
 
 **Upload fails with "--prefix must also be provided" error**
 
