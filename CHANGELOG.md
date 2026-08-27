@@ -1,10 +1,10 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-08-26)
+## [release/2.5.8](https://github.com/NASA-PDS/data-upload-manager/tree/release/2.5.8) (2026-08-26)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.7...«unknown»)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.7...release/2.5.8)
 
-**Requirements:**
+**Improvements:**
 
 - As a node, I want clarity regarding local and destination paths when uploading weblogs [\#380](https://github.com/NASA-PDS/data-upload-manager/issues/380)
 
