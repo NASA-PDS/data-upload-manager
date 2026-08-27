@@ -382,14 +382,14 @@ identifies the type of web server generating the logs (e.g., <code class="docuti
 <li><p><code class="docutils literal notranslate"><span class="pre">file_or_dir</span></code> - the local path of the files to upload. The value for <code class="docutils literal notranslate"><span class="pre">--prefix</span> <span class="pre">PATH</span></code> is a substring of this value</p></li>
 </ul>
 <p><strong>Example:</strong></p>
-<p>Suppose your compressed log files are stored under <code class="docutils literal notranslate"><span class="pre">/data/weblogs/</span></code> and you want to upload
+<p>Suppose your compressed log files are stored under <code class="docutils literal notranslate"><span class="pre">/data/deliver2en/</span></code> and you want to upload
 them on behalf of the SBN node using Apache-format logs:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pds-ingress-client \
     -c /path/to/config.ini \
     --node sbn \
     --weblogs apache \
-    --prefix /data/weblogs \
-    -- /data/weblogs/
+    --prefix /data/deliver2en \
+    -- /data/deliver2en/
 </pre></div>
 </div>
 </section>
@@ -397,8 +397,8 @@ them on behalf of the SBN node using Apache-format logs:</p>
 <h3>How the Destination Path Is Constructed<a class="headerlink" href="#how-the-destination-path-is-constructed" title="Link to this heading"></a></h3>
 <p>When <code class="docutils literal notranslate"><span class="pre">--weblogs</span></code> is specified, the client replaces the <code class="docutils literal notranslate"><span class="pre">--prefix</span></code> value in each file path
 with <code class="docutils literal notranslate"><span class="pre">weblogs/&lt;node&gt;-&lt;log_type&gt;/</span></code>. For example, with <code class="docutils literal notranslate"><span class="pre">--node</span> <span class="pre">sbn</span></code>, <code class="docutils literal notranslate"><span class="pre">--weblogs</span> <span class="pre">apache</span></code>,
-and <code class="docutils literal notranslate"><span class="pre">--prefix</span> <span class="pre">/data/weblogs</span></code>, a local file at:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">weblogs</span><span class="o">/</span><span class="n">pds</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">edu</span><span class="o">/</span><span class="mi">2026</span><span class="o">/</span><span class="mi">05</span><span class="o">/</span><span class="n">access</span><span class="mf">.20260501</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">gz</span>
+and <code class="docutils literal notranslate"><span class="pre">--prefix</span> <span class="pre">/data/deliver2en</span></code>, a local file at:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">deliver2en</span><span class="o">/</span><span class="n">pds</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">edu</span><span class="o">/</span><span class="mi">2026</span><span class="o">/</span><span class="mi">05</span><span class="o">/</span><span class="n">access</span><span class="mf">.20260501</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">gz</span>
 </pre></div>
 </div>
 <p>is uploaded to S3 as:</p>
@@ -417,7 +417,7 @@ before uploading so files from different hosts or time periods are easy to locat
 </div>
 <p>The recommended structure is to organize by hostname, then by year and month, with
 dated log filenames:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>/data/weblogs/
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>/data/deliver2en/
 ├── pds.example1.edu/
 │   └── 2026/
 │       ├── 04/
@@ -433,7 +433,7 @@ dated log filenames:</p>
             └── access.20260502.log.gz
 </pre></div>
 </div>
-<p>With <code class="docutils literal notranslate"><span class="pre">--prefix</span> <span class="pre">/data/weblogs</span></code>, this uploads to S3 as:</p>
+<p>With <code class="docutils literal notranslate"><span class="pre">--prefix</span> <span class="pre">/data/deliver2en</span></code>, this uploads to S3 as:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">weblogs</span><span class="o">/</span><span class="n">sbn</span><span class="o">-</span><span class="n">apache</span><span class="o">/</span><span class="n">pds</span><span class="o">.</span><span class="n">example1</span><span class="o">.</span><span class="n">edu</span><span class="o">/</span><span class="mi">2026</span><span class="o">/</span><span class="mi">04</span><span class="o">/</span><span class="n">access</span><span class="mf">.20260430</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">gz</span>
 <span class="n">weblogs</span><span class="o">/</span><span class="n">sbn</span><span class="o">-</span><span class="n">apache</span><span class="o">/</span><span class="n">pds</span><span class="o">.</span><span class="n">example1</span><span class="o">.</span><span class="n">edu</span><span class="o">/</span><span class="mi">2026</span><span class="o">/</span><span class="mi">05</span><span class="o">/</span><span class="n">access</span><span class="mf">.20260501</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">gz</span>
 <span class="n">weblogs</span><span class="o">/</span><span class="n">sbn</span><span class="o">-</span><span class="n">apache</span><span class="o">/</span><span class="n">pds</span><span class="o">.</span><span class="n">example1</span><span class="o">.</span><span class="n">edu</span><span class="o">/</span><span class="mi">2026</span><span class="o">/</span><span class="mi">05</span><span class="o">/</span><span class="n">access</span><span class="mf">.20260502</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">gz</span>
@@ -456,8 +456,8 @@ subdirectory and setting <code class="docutils literal notranslate"><span class=
     -c /path/to/config.ini \
     --node sbn \
     --weblogs apache \
-    --prefix /data/weblogs \
-    -- /data/weblogs/pds.example1.edu/
+    --prefix /data/deliver2en \
+    -- /data/deliver2en/pds.example1.edu/
 </pre></div>
 </div>
 <p>This uploads only <code class="docutils literal notranslate"><span class="pre">pds.example1.edu/</span></code> logs, preserving the subdirectory structure in S3.</p>
@@ -470,9 +470,9 @@ selected, without actually submitting anything:</p>
     -c /path/to/config.ini \
     --node sbn \
     --weblogs apache \
-    --prefix /data/weblogs \
+    --prefix /data/deliver2en \
     --dry-run \
-    -- /data/weblogs/
+    -- /data/deliver2en/
 </pre></div>
 </div>
 </section>
@@ -482,12 +482,12 @@ selected, without actually submitting anything:</p>
 <p>The client checks every file before uploading begins. If any file lacks a <code class="docutils literal notranslate"><span class="pre">.gz</span></code> extension,
 you will see an error like:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ERROR</span><span class="p">:</span> <span class="n">The</span> <span class="n">following</span> <span class="n">files</span> <span class="n">are</span> <span class="ow">not</span> <span class="n">gzipped</span> <span class="p">(</span><span class="o">.</span><span class="n">gz</span><span class="p">):</span>
-  <span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">weblogs</span><span class="o">/</span><span class="n">pds</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">edu</span><span class="o">/</span><span class="n">access</span><span class="mf">.20260501</span><span class="o">.</span><span class="n">log</span>
+  <span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">deliver2en</span><span class="o">/</span><span class="n">pds</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">edu</span><span class="o">/</span><span class="n">access</span><span class="mf">.20260501</span><span class="o">.</span><span class="n">log</span>
 <span class="ne">ValueError</span><span class="p">:</span> <span class="n">Weblog</span> <span class="n">uploads</span> <span class="n">require</span> <span class="n">gzipped</span> <span class="n">files</span><span class="o">.</span> <span class="n">Found</span> <span class="mi">1</span> <span class="n">non</span><span class="o">-</span><span class="n">gzipped</span> <span class="n">file</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">.</span> <span class="o">...</span>
 </pre></div>
 </div>
 <p>Compress the listed files with <code class="docutils literal notranslate"><span class="pre">gzip</span></code> and retry, or use <code class="docutils literal notranslate"><span class="pre">--exclude</span></code> to skip them:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pds-ingress-client ... --exclude &quot;*.log&quot; -- /data/weblogs/
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pds-ingress-client ... --exclude &quot;*.log&quot; -- /data/deliver2en/
 </pre></div>
 </div>
 <p><strong>Upload fails with “–prefix must also be provided” error</strong></p>
