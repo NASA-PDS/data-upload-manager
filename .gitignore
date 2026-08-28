@@ -147,3 +147,4 @@ typescript
 !.gitattributes
 !.gitignore
 !.gitkeep
+.envrc
