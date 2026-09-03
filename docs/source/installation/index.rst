@@ -100,7 +100,7 @@ Running the Client script
 
 Once the `pds-data-upload-manager` has been installed, you can run ``pds-ingress-client --help``
 to get a usage message and ensure the client-side service is properly installed. You can
-also consult the `_usage` documentation for more details.
+also consult the usage_ documentation for more details.
 
 Updating the Tool
 -----------------
