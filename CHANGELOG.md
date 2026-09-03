@@ -1,8 +1,8 @@
 # Changelog
 
-## [release/2.5.8](https://github.com/NASA-PDS/data-upload-manager/tree/release/2.5.8) (2026-08-26)
+## [v2.5.8](https://github.com/NASA-PDS/data-upload-manager/tree/v2.5.8) (2026-08-27)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.7...release/2.5.8)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.7...v2.5.8)
 
 **Improvements:**
 
