@@ -8,8 +8,8 @@ to track status of a DUM upload request.
 
 """
 import json
-import multiprocessing
 import os
+import threading
 import time
 from datetime import datetime
 from datetime import timezone
@@ -17,7 +17,7 @@ from datetime import timezone
 from pds.ingress.util.log_util import Color
 from pds.ingress.util.log_util import get_logger
 
-REPORT_LOCK = multiprocessing.Lock()
+REPORT_LOCK = threading.Lock()
 """Lock used to control write access to the summary table"""
 
 EXPECTED_MANIFEST_KEYS = ("ingress_path", "md5", "size", "last_modified")
@@ -144,7 +144,7 @@ def read_manifest_file(manifest_path):
     """
     logger = get_logger("read_manifest_path")
 
-    with open(manifest_path, "r") as infile:
+    with open(manifest_path, "r", encoding="utf-8") as infile:
         manifest = json.load(infile)
 
     # Verify the contents of the read manifest conform to what we expect for this version of DUM
@@ -172,7 +172,7 @@ def write_manifest_file(manifest, manifest_path):
         Path on disk to commit the Ingress Manifest file to.
 
     """
-    with open(manifest_path, "w") as outfile:
+    with open(manifest_path, "w", encoding="utf-8") as outfile:
         outfile.write("{\n")
 
         for index, (k, v) in enumerate(sorted(manifest.items())):
@@ -232,7 +232,7 @@ def create_report_file(args, summary_table):
     try:
         logger.info("Writing JSON summary report to %s", args.report_path)
 
-        with open(args.report_path, "w") as outfile:
+        with open(args.report_path, "w", encoding="utf-8") as outfile:
             json.dump(report, outfile, indent=4)
     except OSError as err:
         logger.warning("Failed to write summary report to %s, reason: %s", args.report_path, str(err))

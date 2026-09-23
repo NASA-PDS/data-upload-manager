@@ -249,9 +249,8 @@ class PathUtil:
         if prefix and prefix.get("old") and ingress_path.startswith(prefix["old"]):
             trimmed_ingress_path = ingress_path.replace(prefix["old"], prefix.get("new", ""), 1)
 
-            # Trim any leading slash if one was left after trimming prefix
-            if trimmed_ingress_path.startswith("/"):
-                trimmed_ingress_path = trimmed_ingress_path[1:]
+            # Trim any leading path separator left after trimming prefix (handles both / and \ on Windows)
+            trimmed_ingress_path = trimmed_ingress_path.lstrip("/\\")
 
             logger.debug("Trimmed prefix %s, new path: %s", prefix, trimmed_ingress_path)
 

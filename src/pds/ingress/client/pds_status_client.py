@@ -168,7 +168,7 @@ def main(args):
     headers = {"Content-MD5": ingress_response.get("base64_md5")}
 
     logger.info("Uploading Manifest file to S3...")
-    with open(os.path.abspath(args.manifest_path), "r") as infile:
+    with open(os.path.abspath(args.manifest_path), "r", encoding="utf-8") as infile:
         response = requests.put(s3_ingress_url, data=infile, headers=headers)
         response.raise_for_status()
 
