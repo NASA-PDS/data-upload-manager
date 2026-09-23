@@ -23,6 +23,7 @@ class LogUtilTest(unittest.TestCase):
 
     def tearDown(self):
         if log_util.FILE_HANDLER:
+            log_util.FILE_HANDLER.close()
             if os.path.exists(log_util.FILE_HANDLER.baseFilename):
                 os.unlink(log_util.FILE_HANDLER.baseFilename)
 

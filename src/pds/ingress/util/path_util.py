@@ -254,7 +254,8 @@ class PathUtil:
 
             logger.debug("Trimmed prefix %s, new path: %s", prefix, trimmed_ingress_path)
 
-        return trimmed_ingress_path
+        # Normalize Windows backslashes to forward slashes for S3 key compatibility
+        return trimmed_ingress_path.replace("\\", "/")
 
     @staticmethod
     def filter_file(file_path, includes, excludes):
