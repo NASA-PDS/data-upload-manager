@@ -350,7 +350,7 @@ class CloudWatchHandler(BufferingHandler):
 
         self.log_group_name = log_group_name
         self.api_gateway_config = api_gateway_config
-        self.creation_time = datetime.now().strftime("%s")
+        self.creation_time = str(int(datetime.now().timestamp()))
         self._bearer_token = None
         self._node_id = None
         self._stream_created = False

@@ -26,9 +26,13 @@ on:
 
 jobs:
     branch-testing:
-        name: 🪵 Branch Testing
-        runs-on: ubuntu-latest
+        name: 🪵 Branch Testing (${{matrix.os}})
+        runs-on: ${{matrix.os}}
         if: github.actor != 'pdsen-ci'
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, windows-latest]
 
         steps:
             -

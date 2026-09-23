@@ -234,6 +234,15 @@ class LogUtilTest(unittest.TestCase):
                 f"Expected auth warning in log output for {status_code}, got: {cm.output}",
             )
 
+    def test_cloudwatch_handler_init_creation_time(self):
+        """creation_time must be a valid epoch integer string on all platforms (including Windows)."""
+        config = ConfigUtil.get_config()
+        handler = log_util.CloudWatchHandler(
+            config["OTHER"]["log_group_name"], config["API_GATEWAY"]
+        )
+        self.assertTrue(handler.creation_time.isdigit(), f"creation_time is not a digit string: {handler.creation_time!r}")
+        self.assertGreater(int(handler.creation_time), 0)
+
     def test_is_auth_error(self):
         """_is_auth_error returns True only for 401/403 HTTPErrors with a response attached."""
         auth_response_401 = Response()
