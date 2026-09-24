@@ -130,7 +130,7 @@ class ConfigUtil:
 
         parser = SanitizingConfigParser()
 
-        with open(config_path, "r") as infile:
+        with open(config_path, "r", encoding="utf-8") as infile:
             parser.read_file(infile, source=os.path.basename(config_path))
 
         CONFIG = parser
@@ -263,7 +263,7 @@ def initialize_bucket_map(logger):
 
     validate_bucket_map(bucket_map_path, logger)
 
-    with open(bucket_map_path, "r") as infile:
+    with open(bucket_map_path, "r", encoding="utf-8") as infile:
         bucket_map = yaml.safe_load(infile)
 
     bucket_map = bucket_map["BUCKET_MAP"]

@@ -8,8 +8,8 @@ automatic backoff/retry of HTTP requests.
 
 """
 import importlib
-import multiprocessing
 import random
+import threading
 from contextlib import contextmanager
 from http import HTTPStatus
 
@@ -33,10 +33,10 @@ except ImportError:
     SSLError = MagicMock()
 
 
-BATCH_REQUEST_FAILURE_LOCK = multiprocessing.Lock()
+BATCH_REQUEST_FAILURE_LOCK = threading.Lock()
 """Lock used to control write access to batch failure simulation request mocker"""
 
-INGRESS_FAILURE_LOCK = multiprocessing.Lock()
+INGRESS_FAILURE_LOCK = threading.Lock()
 """Lock used to control write access to ingress failure simulation request mocker"""
 
 

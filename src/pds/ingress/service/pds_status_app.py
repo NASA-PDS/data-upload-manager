@@ -11,6 +11,7 @@ import concurrent.futures
 import json
 import logging
 import os
+import posixpath
 import smtplib
 import tempfile
 from email.mime.text import MIMEText
@@ -108,7 +109,7 @@ def parse_manifest(record):
         raise RuntimeError(f"Error downloading file, reason: {str(err)}")
 
     # Read the manifest file contents
-    with open(local_manifest_path) as infile:
+    with open(local_manifest_path, encoding="utf-8") as infile:
         manifest = json.load(infile)
 
     return request_node, return_email, manifest
@@ -142,7 +143,7 @@ def process_path(trimmed_path, file_info, request_node, node_bucket_map):
 
     destination_bucket = bucket_info["name"]
 
-    object_key = join(request_node.lower(), trimmed_path)
+    object_key = posixpath.join(request_node.lower(), trimmed_path)
 
     ingress_status = get_ingress_status(destination_bucket, object_key, file_info)
 
