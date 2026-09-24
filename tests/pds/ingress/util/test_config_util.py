@@ -175,10 +175,10 @@ class ConfigUtilTest(unittest.TestCase):
             bucket_map = initialize_bucket_map(logging.getLogger())
 
             self.assertIn("NODES", bucket_map)
-        finally:
-            os.unlink(temp_file.name)
             atm = bucket_map["NODES"]["ATM"]
             self.assertEqual(atm["buckets"]["staging"]["name"], "test-staging")
+        finally:
+            os.unlink(temp_file.name)
 
     # ------------------------------------------------------------------
     # Bucket map downloaded from S3 via mock boto3 client
