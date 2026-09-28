@@ -131,7 +131,7 @@ class LogUtilTest(unittest.TestCase):
             self.assertIn("Authorization", headers)
             self.assertIn("UserGroup", headers)
             self.assertEqual(headers["Authorization"], "Bearer faketoken")
-            self.assertEqual(headers["UserGroup"], NodeUtil.node_id_to_group_name("eng"))
+            self.assertEqual(headers["UserGroup"], ",".join(NodeUtil.node_id_to_group_names("eng")))
 
             response = requests.Response()
             response.status_code = HTTPStatus.OK

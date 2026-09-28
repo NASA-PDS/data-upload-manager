@@ -143,7 +143,7 @@ def main(args):
     params = {"node": args.node, "node_name": NodeUtil.node_id_to_long_name[args.node]}
     headers = {
         "Authorization": bearer_token,
-        "UserGroup": NodeUtil.node_id_to_group_name(args.node),
+        "UserGroup": ",".join(NodeUtil.node_id_to_group_names(args.node)),
         "ForceOverwrite": "1",  # Likely we'll repeat requests using same manifest file names, so always overwrite
         "ClientVersion": __version__,
         "content-type": "application/json",
@@ -184,7 +184,7 @@ def main(args):
 
     headers = {
         "Authorization": bearer_token,
-        "UserGroup": NodeUtil.node_id_to_group_name(args.node),
+        "UserGroup": ",".join(NodeUtil.node_id_to_group_names(args.node)),
         "ClientVersion": __version__,
         "content-type": "application/json",
         "x-amz-docs-region": api_gateway_region,

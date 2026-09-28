@@ -60,11 +60,16 @@ exports.handler = async(event, _context, callback) => {
         return;
     }
 
-    if (groups.includes(request_group)) {
+    // The UserGroup header may contain multiple comma-separated group names (e.g. for SBN which
+    // has two orgs). Authorize if the user belongs to ANY of the permitted groups for the node.
+    let permitted_groups = request_group.split(',').map(g => g.trim());
+    let authorized = permitted_groups.some(g => groups.includes(g));
+
+    if (authorized) {
         console.log("VALID TOKEN, ALLOW!!");
         callback(null, generatePolicy('user', 'Allow', event.methodArn));
     } else {
-        console.log(`Invalid request group. User belongs to: [${groups}], but requested: ${request_group}`);
+        console.log(`Invalid request group. User belongs to: [${groups}], but requested: [${permitted_groups}]`);
         callback("Unauthorized");
     }
 };
