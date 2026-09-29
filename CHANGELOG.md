@@ -1,8 +1,21 @@
 # Changelog
 
-## [release/2.5.9](https://github.com/NASA-PDS/data-upload-manager/tree/release/2.5.9) (2026-09-03)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-09-29)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.8...release/2.5.9)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.9...«unknown»)
+
+**Requirements:**
+
+- As an EN/node operator, I want clear documentation of the DUM onboarding process [\#382](https://github.com/NASA-PDS/data-upload-manager/issues/382)
+
+**Defects:**
+
+- DUM does not run correctly on Windows OS due to multiple compatibility issues [\#390](https://github.com/NASA-PDS/data-upload-manager/issues/390) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
+- DUM does not upload weblogs on Windows OS [\#387](https://github.com/NASA-PDS/data-upload-manager/issues/387) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
+
+## [v2.5.9](https://github.com/NASA-PDS/data-upload-manager/tree/v2.5.9) (2026-09-03)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.8...v2.5.9)
 
 ## [v2.5.8](https://github.com/NASA-PDS/data-upload-manager/tree/v2.5.8) (2026-08-27)
 
