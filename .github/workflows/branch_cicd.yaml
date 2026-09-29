@@ -26,9 +26,13 @@ on:
 
 jobs:
     branch-testing:
-        name: 🪵 Branch Testing
-        runs-on: ubuntu-latest
+        name: 🪵 Branch Testing (${{matrix.os}})
+        runs-on: ${{matrix.os}}
         if: github.actor != 'pdsen-ci'
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, windows-latest]
 
         steps:
             -
@@ -47,7 +51,9 @@ jobs:
                 name: 💵 Python Cache
                 uses: actions/cache@v6
                 with:
-                    path: ~/.cache/pip
+                    path: |
+                        ~/.cache/pip
+                        ~\AppData\Local\pip\Cache
                     # The "key" used to indicate a set of cached files is the operating system runner
                     # plus "py" for Python-specific builds, plus a hash of the wheels, plus "pds" because
                     # we pds-prefix everything with "pds" in PDS! 😅
@@ -56,8 +62,6 @@ jobs:
                     restore-keys: pds-${{runner.os}}-py-
             -
                 name: 🩺 Test Software
-                run:
+                run: |
                     pip install --editable '.[dev]'
-
                     tox
-                shell: bash

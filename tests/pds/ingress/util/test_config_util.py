@@ -145,9 +145,11 @@ class ConfigUtilTest(unittest.TestCase):
     # Custom bucket map loaded from temp file
     # ------------------------------------------------------------------
     def test_custom_bucket_map_from_file(self):
-        with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".yaml", prefix="tmp-bucket-map-", dir=self.test_dir
-        ) as temp_file:
+        # Use delete=False so Windows can re-open the file by name after closing
+        temp_file = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", prefix="tmp-bucket-map-", dir=self.test_dir, delete=False
+        )
+        try:
             temp_file.write(
                 """
                 BUCKET_MAP:
@@ -161,6 +163,7 @@ class ConfigUtilTest(unittest.TestCase):
                 """
             )
             temp_file.flush()
+            temp_file.close()
 
             os.environ["BUCKET_MAP_LOCATION"] = self.test_dir
             os.environ["BUCKET_MAP_FILE"] = os.path.basename(temp_file.name)
@@ -174,6 +177,8 @@ class ConfigUtilTest(unittest.TestCase):
             self.assertIn("NODES", bucket_map)
             atm = bucket_map["NODES"]["ATM"]
             self.assertEqual(atm["buckets"]["staging"]["name"], "test-staging")
+        finally:
+            os.unlink(temp_file.name)
 
     # ------------------------------------------------------------------
     # Bucket map downloaded from S3 via mock boto3 client
