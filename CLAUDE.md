@@ -75,7 +75,7 @@ terraform apply
 ### Client Usage
 ```bash
 # Run ingress client
-pds-ingress-client -c <config path> -n <PDS node ID> -- <ingress path> [...]
+pds-ingress-client -c <config path> -n <PDS node ID> <ingress path> [...]
 
 # Run status client
 pds-status-client --help
