@@ -1,6 +1,6 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-10-08)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-10-10)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.10...«unknown»)
 
