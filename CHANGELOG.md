@@ -1,11 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-10-12)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-10-13)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.10...«unknown»)
 
 **Other closed issues:**
 
+- Upgrade DUM deployment in Test to allow test-platform-engineer role to execute S3 actions [\#395](https://github.com/NASA-PDS/data-upload-manager/issues/395)
 - Pilot DUM web log uploads with 1-2 nodes in production [\#383](https://github.com/NASA-PDS/data-upload-manager/issues/383)
 
 ## [v2.5.10](https://github.com/NASA-PDS/data-upload-manager/tree/v2.5.10) (2026-09-29)
