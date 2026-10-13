@@ -75,11 +75,11 @@ module "lambda_bucket" {
      "Version": "2012-10-17",
      "Statement": [
          {
-             "Sid": "AllowOnlyMCPTenantOperator",
+             "Sid": "AllowENPlatformEngineer",
              "Effect": "Allow",
              "Principal": {
                "AWS": [
-                 "arn:${var.lambda_s3_bucket_partition}:iam::${data.aws_caller_identity.current.account_id}:role/mcp-tenantOperator"
+                 "arn:${var.lambda_s3_bucket_partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.venue}-en-platform-engineer"
                ]
              },
              "Action": "s3:*",
