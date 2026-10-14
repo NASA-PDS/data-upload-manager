@@ -222,7 +222,7 @@ def setup_file_log(logger, config, log_level):
         # Otherwise, create a timestamped temporary file to capture logging to
         else:
             temp_file = tempfile.NamedTemporaryFile(
-                prefix=f"dum_{datetime.now().isoformat()}_", suffix=".log", delete=False
+                prefix=f"dum_{datetime.now().strftime('%Y%m%dT%H%M%S_%f')}_", suffix=".log", delete=False
             )
             log_file_path = temp_file.name
             temp_file.close()
@@ -350,7 +350,7 @@ class CloudWatchHandler(BufferingHandler):
 
         self.log_group_name = log_group_name
         self.api_gateway_config = api_gateway_config
-        self.creation_time = datetime.now().strftime("%s")
+        self.creation_time = str(int(datetime.now().timestamp()))
         self._bearer_token = None
         self._node_id = None
         self._stream_created = False

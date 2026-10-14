@@ -7,7 +7,7 @@ Module containing functions for working with tqdm progress bars to track various
 states of an upload request.
 
 """
-import multiprocessing
+import threading
 
 from pds.ingress.util.path_util import PathUtil
 from tqdm import tqdm
@@ -19,7 +19,7 @@ MANIFEST_BAR = None
 TOTAL_INGRESS_BAR = None
 BATCH_BARS = []
 
-BATCH_LOCK = multiprocessing.Lock()
+BATCH_LOCK = threading.Lock()
 """Lock used to control write access to Batch progress bars"""
 
 LIGHT_GREEN = "#05E520"

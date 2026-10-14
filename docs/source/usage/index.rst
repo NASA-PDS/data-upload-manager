@@ -316,7 +316,7 @@ them on behalf of the SBN node using Apache-format logs::
         --node sbn \
         --weblogs apache \
         --prefix /data/deliver2en \
-        -- /data/deliver2en/
+        /data/deliver2en/
 
 How the Destination Path Is Constructed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -389,7 +389,7 @@ subdirectory and setting ``--prefix`` to its parent::
         --node sbn \
         --weblogs apache \
         --prefix /data/deliver2en \
-        -- /data/deliver2en/pds.example1.edu/
+        /data/deliver2en/pds.example1.edu/
 
 This uploads only ``pds.example1.edu/`` logs, preserving the subdirectory structure in S3.
 
@@ -405,7 +405,7 @@ selected, without actually submitting anything::
         --weblogs apache \
         --prefix /data/deliver2en \
         --dry-run \
-        -- /data/deliver2en/
+        /data/deliver2en/
 
 Common Issues
 ^^^^^^^^^^^^^
@@ -421,7 +421,7 @@ you will see an error like::
 
 Compress the listed files with ``gzip`` and retry, or use ``--exclude`` to skip them::
 
-    $ pds-ingress-client ... --exclude "*.log" -- /data/deliver2en/
+    $ pds-ingress-client ... --exclude "*.log" /data/deliver2en/
 
 **Upload fails with "--prefix must also be provided" error**
 

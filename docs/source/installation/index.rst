@@ -93,17 +93,14 @@ in by an end-user prior to using the `pds-ingress-client` script to transfer
 files to PDS. The remaining fields should be left as-is.
 
 To obtain the correct values for `<API_Gateway_ID>`, `<API_Gateway_Stage_Name>`
-and `<Cognito_Client_ID>`, `<Cloudwatch_Log_Group_Name>` contact a PDS Operator.
-
-To obtain values for `<Cognito_Username>` and `<Cognito_Password>`, consult
-the section on User Registration within this document.
+`<Cognito_Client_ID>`, and `<Cloudwatch_Log_Group_Name>` or to verify values for `<Cognito_Username>` and `<Cognito_Password>` contact a PDS Operator.
 
 Running the Client script
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Once the `pds-data-upload-manager` has been installed, you can run ``pds-ingress-client --help``
 to get a usage message and ensure the client-side service is properly installed. You can
-also consult the `usage_` documentation for more details.
+also consult the usage_ documentation for more details.
 
 Updating the Tool
 -----------------

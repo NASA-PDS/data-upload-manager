@@ -11,6 +11,7 @@ import concurrent.futures
 import json
 import logging
 import os
+import posixpath
 from datetime import datetime
 from datetime import timezone
 from http import HTTPStatus
@@ -632,7 +633,7 @@ def process_ingress_request(ingress_request, request_index, node_bucket_map, req
             "Please contact PDS Engineering."
         )
 
-    object_key = join(request_node.lower(), trimmed_path)
+    object_key = posixpath.join(request_node.lower(), trimmed_path)
 
     if should_upload_file(
             destination_bucket,

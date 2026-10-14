@@ -112,6 +112,18 @@ This requirement is not impacted by the current version
 
 
 This requirement is not impacted by the current version
+## As a data provider, I want --prefix to be inferred automatically when --weblogs is used ([#378](https://github.com/NASA-PDS/data-upload-manager/issues/378)) 
+
+
+This requirement is not impacted by the current version
+## As an EN/node operator, I want clear documentation of the DUM onboarding process ([#382](https://github.com/NASA-PDS/data-upload-manager/issues/382)) 
+
+
+This requirement is not impacted by the current version
+## As a data provider, I want to run DUM client on Windows OS ([#389](https://github.com/NASA-PDS/data-upload-manager/issues/389)) 
+
+
+This requirement is not impacted by the current version
 # data-integrity
 
 ## As a user, I want to verify all my data has been uploaded to the cloud successfully ([#121](https://github.com/NASA-PDS/data-upload-manager/issues/121)) 
