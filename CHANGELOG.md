@@ -1,8 +1,12 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-10-13)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-10-14)
 
 [Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.10...«unknown»)
+
+**Defects:**
+
+- Dry run actually ran when placed at the end of the command list [\#392](https://github.com/NASA-PDS/data-upload-manager/issues/392) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
 
 **Other closed issues:**
 
