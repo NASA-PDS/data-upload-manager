@@ -5,7 +5,6 @@ Covers the bug where optional flags (e.g. --dry-run) placed after positional
 path arguments were silently ignored, causing actual uploads instead of dry runs.
 """
 import pytest
-
 from pds.ingress.client.pds_ingress_client import setup_argparser
 
 
