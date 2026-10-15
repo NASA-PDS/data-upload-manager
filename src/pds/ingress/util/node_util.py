@@ -47,4 +47,3 @@ class NodeUtil:
             raise ValueError(f'Unknown node ID "{node_id}"')
 
         return cls.node_id_to_cognito_groups[node_id.lower()]
-
