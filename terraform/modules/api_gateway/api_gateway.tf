@@ -86,6 +86,14 @@ resource "aws_api_gateway_stage" "stages" {
   }
 }
 
+# Optionally associate an existing WAFv2 web ACL with each stage (REGIONAL APIs only)
+resource "aws_wafv2_web_acl_association" "stages" {
+  count = var.api_gateway_web_acl_arn != null ? length(var.api_deployment_stages) : 0
+
+  resource_arn = aws_api_gateway_stage.stages[count.index].arn
+  web_acl_arn  = var.api_gateway_web_acl_arn
+}
+
 # Skip API Gateway account configuration as it's a global resource
 # and only needs to be set up once per AWS account
 # If you need to set up CloudWatch logging, configure this manually in the AWS console

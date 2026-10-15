@@ -99,6 +99,7 @@ module "nucleus_dum_api" {
   api_gateway_endpoint_type            = var.api_gateway_endpoint_type
   api_gateway_lambda_role_arn          = var.api_gateway_lambda_role_arn
   api_gateway_policy_source_vpc        = var.api_gateway_policy_source_vpc
+  api_gateway_web_acl_arn              = var.api_gateway_web_acl_arn
   lambda_authorizer_function_arn       = module.nucleus_dum_lambda_authorizer.lambda_authorizer_function_arn
   lambda_authorizer_function_name      = module.nucleus_dum_lambda_authorizer.lambda_authorizer_function_name
   lambda_ingress_service_function_name = module.nucleus_dum_ingress_service_lambda.lambda_ingress_service_function_name

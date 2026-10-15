@@ -19,8 +19,14 @@ variable "rest_api_description" {
 
 variable "api_gateway_endpoint_type" {
   type        = string
-  default     = "PRIVATE"
-  description = "The endpoint type to assign to the API Gateway. Should be one of PRIVATE or REGIONAL"
+  default     = "REGIONAL"
+  description = "The endpoint type to assign to the API Gateway. Should be one of REGIONAL or PRIVATE"
+}
+
+variable "api_gateway_web_acl_arn" {
+  type        = string
+  default     = null
+  description = "ARN of an existing REGIONAL WAFv2 web ACL to associate with each stage of the API Gateway. Leave null for no web ACL."
 }
 
 variable "api_gateway_lambda_role_arn" {
@@ -28,10 +34,10 @@ variable "api_gateway_lambda_role_arn" {
   description = "ARN of the IAM role to assign to the API Gateway. Must have permission to access AWS Lambda."
 }
 
-# TODO: this may go away when API is deployed as REGIONAL instead of PRIVATE
 variable "api_gateway_policy_source_vpc" {
   type        = string
-  description = "VPC ID to allow traffic from within the DUM API Gateway"
+  default     = ""
+  description = "VPC ID to allow traffic from within the DUM API Gateway. Only used, and required, when api_gateway_endpoint_type is PRIVATE."
 }
 
 variable "lambda_authorizer_function_arn" {
