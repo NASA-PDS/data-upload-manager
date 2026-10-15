@@ -38,13 +38,18 @@ variable "lambda_s3_bucket_name" {
 
 variable "api_gateway_endpoint_type" {
   type        = string
-  description = "API Gateway endpoint type. Expected values: REGIONAL (default, restrict access with a WAF web ACL) or PRIVATE (requires an execute-api VPC endpoint, see api_gateway_policy_source_vpc)"
-  default     = "REGIONAL"
+  description = "API Gateway endpoint type. PRIVATE (default) is only reachable from api_gateway_policy_source_vpc via an execute-api VPC endpoint. REGIONAL is publicly reachable and requires api_gateway_web_acl_arn."
+  default     = "PRIVATE"
+
+  validation {
+    condition     = contains(["PRIVATE", "REGIONAL"], var.api_gateway_endpoint_type)
+    error_message = "api_gateway_endpoint_type must be PRIVATE or REGIONAL."
+  }
 }
 
 variable "api_gateway_web_acl_arn" {
   type        = string
-  description = "ARN of an existing REGIONAL WAFv2 web ACL to associate with each API Gateway stage. Leave null to deploy without a web ACL."
+  description = "ARN of an existing REGIONAL WAFv2 web ACL, associated with each API Gateway stage. Required when api_gateway_endpoint_type is REGIONAL; the web ACL must restrict access (e.g. block by default and allow only approved IP ranges)."
   default     = null
 }
 

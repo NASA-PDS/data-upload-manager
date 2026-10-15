@@ -45,11 +45,13 @@ template can be used when creating a new `tfvars` file for use with a specific A
 
     lambda_s3_bucket_name = "<S3_Bucket_Name>"
 
-    api_gateway_endpoint_type = "<REGIONAL|PRIVATE>"
-    api_gateway_web_acl_arn   = "<WAF_Web_ACL_ARN>"  # optional, REGIONAL only
+    api_gateway_endpoint_type = "<PRIVATE|REGIONAL>"  # default: PRIVATE
 
-    # Only required when api_gateway_endpoint_type is "PRIVATE"
+    # Required when api_gateway_endpoint_type is "PRIVATE"
     api_gateway_policy_source_vpc = "<VPC_ID>"
+
+    # Required when api_gateway_endpoint_type is "REGIONAL"
+    api_gateway_web_acl_arn = "<WAF_Web_ACL_ARN>"
 
     api_gateway_lambda_role_arn        = "<AWS_IAM_Role_ARN>"
     lambda_ingress_service_iam_role_arn = "<AWS_IAM_Role_ARN>"
@@ -82,9 +84,9 @@ prior to deployment. Descriptions of each field follow:
 * ``<Path_to_local_aws_credentials_file>``: Path to a local file (such as ``~/.aws/credentials``) containing a valid set of AWS credentials_ for the specifed profile.
 * ``<S3_Bucket_Name>``: Name of an S3 bucket which Terraform will use to stage intermediate build products. The bucket will be created by Terraform and should not already exist.
 * ``<AWS_IAM_Role_ARN>``: Amazon Resource Name (ARN) for the AWS Identity Access Management Role which grants the required permissions for the DUM server components to communicate.
-* ``<REGIONAL|PRIVATE>``: Type of endpoint of the API Gateway. "REGIONAL" (the default) is recommended for all venues and should be restricted with a WAF web ACL. "PRIVATE" limits access to a VPC (see `Private API Gateways`_).
-* ``<WAF_Web_ACL_ARN>``: (Optional, REGIONAL only) ARN of an existing WAFv2 web ACL to associate with each API Gateway stage. Not created by Terraform.
+* ``<PRIVATE|REGIONAL>``: Type of endpoint of the API Gateway. "PRIVATE" (the default) limits access to a VPC (see `Private API Gateways`_). "REGIONAL" is publicly reachable, so Terraform requires a WAF web ACL (see `Restricting Access to a REGIONAL API Gateway`_). Use "REGIONAL" only when clients outside the VPC must reach the API, such as in OPS.
 * ``<VPC_ID>``: (PRIVATE only) ID of the VPC allowed to invoke the API Gateway.
+* ``<WAF_Web_ACL_ARN>``: (REGIONAL only) ARN of an existing WAFv2 web ACL to associate with each API Gateway stage. Not created by Terraform.
 
 .. note::
   * The selected Role(s) must include both ``lambda.amazonaws.com`` and ``apigateway.amazonaws.com`` as "Trusted Entities".
@@ -104,9 +106,9 @@ prior to deployment. Descriptions of each field follow:
 Restricting Access to a REGIONAL API Gateway
 --------------------------------------------
 
-A REGIONAL API Gateway is publicly reachable, so limit access with a REGIONAL AWS WAFv2 web ACL (for example, block by
-default and allow an IP set of permitted networks). Terraform does not create the web ACL; set its ARN as
-``api_gateway_web_acl_arn`` to associate it with each stage.
+A REGIONAL API Gateway is publicly reachable, so Terraform refuses to deploy one without ``api_gateway_web_acl_arn``.
+Terraform does not create the web ACL, and cannot check what it allows. It must be a REGIONAL AWS WAFv2 web ACL that
+restricts access, for example blocking by default and allowing only an IP set of approved networks.
 
 Requests from a network that is not allowed receive ``403 Forbidden`` from the web ACL. ``pds-ingress-client`` reports
 this and asks the user to send their IP range to PDS Engineering.

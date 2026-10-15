@@ -19,14 +19,25 @@ variable "rest_api_description" {
 
 variable "api_gateway_endpoint_type" {
   type        = string
-  default     = "REGIONAL"
-  description = "The endpoint type to assign to the API Gateway. Should be one of REGIONAL or PRIVATE"
+  default     = "PRIVATE"
+  description = "The endpoint type to assign to the API Gateway. Should be one of PRIVATE or REGIONAL. REGIONAL is publicly reachable and requires api_gateway_web_acl_arn."
+
+  validation {
+    condition     = contains(["PRIVATE", "REGIONAL"], var.api_gateway_endpoint_type)
+    error_message = "api_gateway_endpoint_type must be PRIVATE or REGIONAL."
+  }
 }
 
 variable "api_gateway_web_acl_arn" {
   type        = string
   default     = null
-  description = "ARN of an existing REGIONAL WAFv2 web ACL to associate with each stage of the API Gateway. Leave null for no web ACL."
+  description = "ARN of an existing REGIONAL WAFv2 web ACL to associate with each stage of the API Gateway. Required when api_gateway_endpoint_type is REGIONAL; the web ACL must restrict access."
+}
+
+variable "api_gateway_require_web_acl" {
+  type        = bool
+  default     = true
+  description = "Require api_gateway_web_acl_arn for REGIONAL endpoints. Only disabled for LocalStack deployments, which cannot host a WAF."
 }
 
 variable "api_gateway_lambda_role_arn" {
