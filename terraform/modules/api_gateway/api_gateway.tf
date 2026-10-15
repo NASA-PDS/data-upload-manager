@@ -35,6 +35,16 @@ resource "aws_api_gateway_rest_api" "nucleus_dum_api" {
   lifecycle {
     # Prevent errors when updating the API definition
     create_before_destroy = true
+
+    precondition {
+      condition     = var.api_gateway_endpoint_type != "REGIONAL" || !var.api_gateway_require_web_acl || var.api_gateway_web_acl_arn != null
+      error_message = "A REGIONAL API Gateway is publicly reachable and requires a restrictive WAF web ACL. Set api_gateway_web_acl_arn, or use api_gateway_endpoint_type = \"PRIVATE\"."
+    }
+
+    precondition {
+      condition     = var.api_gateway_endpoint_type != "PRIVATE" || var.api_gateway_policy_source_vpc != ""
+      error_message = "A PRIVATE API Gateway requires api_gateway_policy_source_vpc."
+    }
   }
 
   body = templatefile(
@@ -84,6 +94,14 @@ resource "aws_api_gateway_stage" "stages" {
   lifecycle {
     create_before_destroy = true
   }
+}
+
+# Optionally associate an existing WAFv2 web ACL with each stage (REGIONAL APIs only)
+resource "aws_wafv2_web_acl_association" "stages" {
+  count = var.api_gateway_web_acl_arn != null ? length(var.api_deployment_stages) : 0
+
+  resource_arn = aws_api_gateway_stage.stages[count.index].arn
+  web_acl_arn  = var.api_gateway_web_acl_arn
 }
 
 # Skip API Gateway account configuration as it's a global resource
