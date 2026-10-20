@@ -45,11 +45,15 @@ template can be used when creating a new `tfvars` file for use with a specific A
 
     lambda_s3_bucket_name = "<S3_Bucket_Name>"
 
+    api_gateway_endpoint_type = "<PRIVATE|REGIONAL>"  # default: PRIVATE
+
+    # Required when api_gateway_endpoint_type is "PRIVATE"
     api_gateway_policy_source_vpc = "<VPC_ID>"
 
-    api_gateway_endpoint_type = <"REGIONAL"|"PRIVATE">
+    # Required when api_gateway_endpoint_type is "REGIONAL"
+    api_gateway_web_acl_arn = "<WAF_Web_ACL_ARN>"
 
-    api_gateway_lambda_role_arn         = "<AWS_IAM_Role_ARN>"
+    api_gateway_lambda_role_arn        = "<AWS_IAM_Role_ARN>"
     lambda_ingress_service_iam_role_arn = "<AWS_IAM_Role_ARN>"
     lambda_authorizer_iam_role_arn      = "<AWS_IAM_Role_ARN>"
 
@@ -79,9 +83,10 @@ prior to deployment. Descriptions of each field follow:
 * ``<AWS_Profile_Name>``: The AWS Profile/Account name of the environment to deploy to.
 * ``<Path_to_local_aws_credentials_file>``: Path to a local file (such as ``~/.aws/credentials``) containing a valid set of AWS credentials_ for the specifed profile.
 * ``<S3_Bucket_Name>``: Name of an S3 bucket which Terraform will use to stage intermediate build products. The bucket will be created by Terraform and should not already exist.
-* ``<VPC_ID>``: ID of the Virtual Private Cloud instance where the deployed service will reside.
 * ``<AWS_IAM_Role_ARN>``: Amazon Resource Name (ARN) for the AWS Identity Access Management Role which grants the required permissions for the DUM server components to communicate.
-* ``<"REGIONAL"|"PRIVATE">``: Select the type of endpoint of the API Gateway. "REGIONAL" should only be used for deployments to the OPS environment.
+* ``<PRIVATE|REGIONAL>``: Type of endpoint of the API Gateway. "PRIVATE" (the default) limits access to a VPC (see `Private API Gateways`_). "REGIONAL" is publicly reachable, so Terraform requires a WAF web ACL (see `Restricting Access to a REGIONAL API Gateway`_). Use "REGIONAL" only when clients outside the VPC must reach the API, such as in OPS.
+* ``<VPC_ID>``: (PRIVATE only) ID of the VPC allowed to invoke the API Gateway.
+* ``<WAF_Web_ACL_ARN>``: (REGIONAL only) ARN of an existing WAFv2 web ACL to associate with each API Gateway stage. Not created by Terraform.
 
 .. note::
   * The selected Role(s) must include both ``lambda.amazonaws.com`` and ``apigateway.amazonaws.com`` as "Trusted Entities".
@@ -97,6 +102,41 @@ prior to deployment. Descriptions of each field follow:
   by Terraform for use with the bucket map of the Lambda Ingress Service.
     * Typically, there should be an entry for each PDS node that is expected to utilize DUM.
     * Each bucket name provided will be appended with the name of selected venue to ensure uniqueness across accounts. For example, an entry with the name "pds-sbn-staging" will result in a bucket named "pds-sbn-staging-prod" if the venue is set to "prod".
+
+Restricting Access to a REGIONAL API Gateway
+--------------------------------------------
+
+A REGIONAL API Gateway is publicly reachable, so Terraform refuses to deploy one without ``api_gateway_web_acl_arn``.
+Terraform does not create the web ACL, and cannot check what it allows. It must be a REGIONAL AWS WAFv2 web ACL that
+restricts access, for example blocking by default and allowing only an IP set of approved networks.
+
+Requests from a network that is not allowed receive ``403 Forbidden`` from the web ACL. ``pds-ingress-client`` reports
+this and asks the user to send their IP range to PDS Engineering.
+
+Private API Gateways
+--------------------
+
+A ``PRIVATE`` API Gateway can only be invoked through an ``execute-api`` interface VPC endpoint. Terraform creates a
+resource policy that allows the VPC in ``api_gateway_policy_source_vpc`` (``aws:SourceVpc``) but does **not** create the
+endpoint. Before deploying, ensure that:
+
+* An ``execute-api`` interface endpoint with private DNS enabled exists in that VPC. Private DNS applies to all API
+  Gateway hostnames resolved in the VPC.
+* The endpoint's security group allows inbound port 443 from the hosts running ``pds-ingress-client``, which must be in
+  (or connected to) the VPC.
+
+Requests that do not come through an allowed endpoint receive ``403 Forbidden``. To check a host::
+
+    API_HOST="<api_id>.execute-api.<region>.amazonaws.com"
+    STAGE="<stage_name>"
+    dig +short "${API_HOST}"
+    curl -i "https://${API_HOST}/${STAGE}/createstream"
+
+The hostname should resolve to private addresses and the request should return ``401 Unauthorized``. A ``403`` means the
+request is not using an allowed endpoint.
+
+.. note::
+  Manual edits to the resource policy are overwritten by the next ``terraform apply``.
 
 Setting up the S3 Backend
 -------------------------
