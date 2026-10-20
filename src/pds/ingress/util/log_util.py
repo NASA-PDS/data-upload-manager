@@ -501,7 +501,7 @@ class CloudWatchHandler(BufferingHandler):
 
             headers = {
                 "Authorization": self.bearer_token,
-                "UserGroup": NodeUtil.node_id_to_group_name(self.node_id),
+                "UserGroup": ",".join(NodeUtil.node_id_to_group_names(self.node_id)),
                 "content-type": "application/json",
                 "x-amz-docs-region": api_gateway_region,
             }
@@ -522,7 +522,7 @@ class CloudWatchHandler(BufferingHandler):
         payload["logEvents"] = log_events
         headers = {
             "Authorization": self.bearer_token,
-            "UserGroup": NodeUtil.node_id_to_group_name(self.node_id),
+            "UserGroup": ",".join(NodeUtil.node_id_to_group_names(self.node_id)),
             "content-type": "application/json",
             "x-amz-docs-region": api_gateway_region,
         }
