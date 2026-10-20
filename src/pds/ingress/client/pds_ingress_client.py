@@ -457,7 +457,7 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
     params = {"node": node_id, "node_name": NodeUtil.node_id_to_long_name[node_id]}
     headers = {
         "Authorization": BEARER_TOKEN,
-        "UserGroup": NodeUtil.node_id_to_group_name(node_id),
+        "UserGroup": ",".join(NodeUtil.node_id_to_group_names(node_id)),
         "ForceOverwrite": str(int(force_overwrite)),
         "ClientVersion": __version__,
         "content-type": "application/json",
