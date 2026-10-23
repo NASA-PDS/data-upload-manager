@@ -389,7 +389,7 @@ them on behalf of the SBN node using Apache-format logs:</p>
     --node sbn \
     --weblogs apache \
     --prefix /data/deliver2en \
-    -- /data/deliver2en/
+    /data/deliver2en/
 </pre></div>
 </div>
 </section>
@@ -457,7 +457,7 @@ subdirectory and setting <code class="docutils literal notranslate"><span class=
     --node sbn \
     --weblogs apache \
     --prefix /data/deliver2en \
-    -- /data/deliver2en/pds.example1.edu/
+    /data/deliver2en/pds.example1.edu/
 </pre></div>
 </div>
 <p>This uploads only <code class="docutils literal notranslate"><span class="pre">pds.example1.edu/</span></code> logs, preserving the subdirectory structure in S3.</p>
@@ -472,7 +472,7 @@ selected, without actually submitting anything:</p>
     --weblogs apache \
     --prefix /data/deliver2en \
     --dry-run \
-    -- /data/deliver2en/
+    /data/deliver2en/
 </pre></div>
 </div>
 </section>
@@ -487,7 +487,7 @@ you will see an error like:</p>
 </pre></div>
 </div>
 <p>Compress the listed files with <code class="docutils literal notranslate"><span class="pre">gzip</span></code> and retry, or use <code class="docutils literal notranslate"><span class="pre">--exclude</span></code> to skip them:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pds-ingress-client ... --exclude &quot;*.log&quot; -- /data/deliver2en/
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pds-ingress-client ... --exclude &quot;*.log&quot; /data/deliver2en/
 </pre></div>
 </div>
 <p><strong>Upload fails with “–prefix must also be provided” error</strong></p>
