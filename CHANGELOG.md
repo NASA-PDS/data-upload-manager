@@ -1,12 +1,13 @@
 # Changelog
 
-## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-10-14)
+## [release/2.6.1](https://github.com/NASA-PDS/data-upload-manager/tree/release/2.6.1) (2026-10-23)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.10...«unknown»)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.10...release/2.6.1)
 
 **Defects:**
 
 - Dry run actually ran when placed at the end of the command list [\#392](https://github.com/NASA-PDS/data-upload-manager/issues/392) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
+- Authorizer does not support multiple Cognito user groups per node ID [\#384](https://github.com/NASA-PDS/data-upload-manager/issues/384)
 
 **Other closed issues:**
 
