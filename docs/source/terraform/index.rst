@@ -208,6 +208,71 @@ the initial deploy was executed::
 
 Where ``<path to user .tfvars file>`` is the same `.tfvars` file used for the initial deployment.
 
+Troubleshooting
+---------------
+
+REGIONAL API Gateway requires a WAF web ACL
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``terraform plan`` stops with the following error when ``api_gateway_endpoint_type`` is ``"REGIONAL"`` and
+``api_gateway_web_acl_arn`` is not set::
+
+    Error: Resource precondition failed
+    ...
+    A REGIONAL API Gateway is publicly reachable and requires a restrictive WAF web ACL. Set api_gateway_web_acl_arn, or
+    use api_gateway_endpoint_type = "PRIVATE". See Troubleshooting in docs/source/terraform/index.rst.
+
+To fix it, add the ARN of a REGIONAL WAFv2 web ACL to the ``.tfvars`` file (see
+`Restricting Access to a REGIONAL API Gateway`_)::
+
+    api_gateway_web_acl_arn = "<WAF_Web_ACL_ARN>"
+
+To find the ARN, first check whether a web ACL is already associated with the deployed API Gateway stages::
+
+    AWS_PROFILE="<AWS_Profile_Name>"
+    REGION="us-west-2"
+    aws apigateway get-rest-apis --profile "${AWS_PROFILE}" --region "${REGION}" \
+      --query "items[].{name:name,id:id,type:endpointConfiguration.types[0]}" --output table
+
+    API_ID="<API_Gateway_ID>"
+    aws apigateway get-stages --rest-api-id "${API_ID}" --profile "${AWS_PROFILE}" --region "${REGION}" \
+      --query "item[].{stage:stageName,webAcl:webAclArn}" --output table
+
+If no stage has a web ACL, list the REGIONAL web ACLs available in the account::
+
+    aws wafv2 list-web-acls --scope REGIONAL --profile "${AWS_PROFILE}" --region "${REGION}" \
+      --query "WebACLs[].{name:Name,arn:ARN}" --output table
+
+If none of them is suitable, one must be created (outside of these Terraform scripts) before deploying. Before using a web
+ACL, confirm that it restricts access, for example that its default action is ``Block`` and that it allows only approved
+IP ranges::
+
+    WEB_ACL_NAME="<WAF_Web_ACL_Name>"
+    WEB_ACL_ID="<WAF_Web_ACL_ID>"
+    aws wafv2 get-web-acl --scope REGIONAL --name "${WEB_ACL_NAME}" --id "${WEB_ACL_ID}" \
+      --profile "${AWS_PROFILE}" --region "${REGION}"
+
+If the web ACL is already associated with the stages outside of Terraform, import each association into the Terraform
+state before running ``terraform apply``. Run the import once per stage, incrementing the index, in the same order as
+``api_deployment_stages``::
+
+    WEB_ACL_ARN="<WAF_Web_ACL_ARN>"
+    STAGE_NAME="<API_Gateway_Stage_Name>"
+    STAGE_INDEX="0"
+    TFVARS_FILE="<path to user .tfvars file>"
+    STAGE_ARN="arn:aws:apigateway:${REGION}::/restapis/${API_ID}/stages/${STAGE_NAME}"
+    terraform import -var-file="${TFVARS_FILE}" \
+      "module.nucleus_dum_api.aws_wafv2_web_acl_association.stages[${STAGE_INDEX}]" "${WEB_ACL_ARN},${STAGE_ARN}"
+
+PRIVATE API Gateway requires a source VPC
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``terraform plan`` stops with ``A PRIVATE API Gateway requires api_gateway_policy_source_vpc`` when
+``api_gateway_endpoint_type`` is ``"PRIVATE"`` (the default) and ``api_gateway_policy_source_vpc`` is not set. Add the ID
+of the VPC that contains the ``execute-api`` interface endpoint (see `Private API Gateways`_)::
+
+    api_gateway_policy_source_vpc = "<VPC_ID>"
+
 .. References:
 .. _usage: ../usage/index.html
 .. _installation: ../installation/index.html
