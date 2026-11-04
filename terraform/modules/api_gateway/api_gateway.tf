@@ -42,7 +42,7 @@ resource "aws_api_gateway_rest_api" "nucleus_dum_api" {
     }
 
     precondition {
-      condition     = var.api_gateway_endpoint_type != "PRIVATE" || var.api_gateway_policy_source_vpc != ""
+      condition     = var.api_gateway_endpoint_type != "PRIVATE" || length(trimspace(var.api_gateway_policy_source_vpc)) > 0
       error_message = "A PRIVATE API Gateway requires api_gateway_policy_source_vpc. See Troubleshooting in docs/source/terraform/index.rst."
     }
   }
@@ -96,9 +96,12 @@ resource "aws_api_gateway_stage" "stages" {
   }
 }
 
-# Optionally associate an existing WAFv2 web ACL with each stage (REGIONAL APIs only)
+# Associate an existing WAFv2 web ACL with each stage (REGIONAL APIs only)
 resource "aws_wafv2_web_acl_association" "stages" {
-  count = var.api_gateway_web_acl_arn != null ? length(var.api_deployment_stages) : 0
+  count = (
+    var.api_gateway_endpoint_type == "REGIONAL" &&
+    var.api_gateway_web_acl_arn != null
+  ) ? length(var.api_deployment_stages) : 0
 
   resource_arn = aws_api_gateway_stage.stages[count.index].arn
   web_acl_arn  = var.api_gateway_web_acl_arn

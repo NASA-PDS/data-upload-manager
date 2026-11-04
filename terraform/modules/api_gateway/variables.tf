@@ -31,7 +31,16 @@ variable "api_gateway_endpoint_type" {
 variable "api_gateway_web_acl_arn" {
   type        = string
   default     = null
-  description = "ARN of an existing REGIONAL WAFv2 web ACL to associate with each stage of the API Gateway. Required when api_gateway_endpoint_type is REGIONAL; the web ACL must restrict access."
+  description = "ARN of an existing REGIONAL WAFv2 web ACL to associate with each stage of the API Gateway. Required when api_gateway_endpoint_type is REGIONAL, and ignored when it is PRIVATE; the web ACL must restrict access."
+
+  validation {
+    # can() keeps the check safe for null, since || does not short-circuit
+    condition = (
+      var.api_gateway_web_acl_arn == null ||
+      can(regex("^arn:aws[a-z-]*:wafv2:[a-z0-9-]+:[0-9]{12}:regional/webacl/[^/]+/[^/]+$", var.api_gateway_web_acl_arn))
+    )
+    error_message = "api_gateway_web_acl_arn must be the ARN of a REGIONAL WAFv2 web ACL (arn:aws:wafv2:<region>:<account-id>:regional/webacl/<name>/<id>)."
+  }
 }
 
 variable "api_gateway_require_web_acl" {

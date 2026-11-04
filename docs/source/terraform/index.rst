@@ -7,7 +7,7 @@ operators who will be in charge of deploying and maintaining new instances of th
 DUM server components. For submitters of data to PDS Cloud, consult the usage_
 section for details on running the client-side script.
 
-Prior to utilizing this documentation, ensure Terraform 1.0.11 or greater has
+Prior to utilizing this documentation, ensure Terraform 1.2.0 or greater has
 been installed on the same machine that the DUM repository has been cloned to.
 
 Deployment Scripts
@@ -108,7 +108,12 @@ Restricting Access to a REGIONAL API Gateway
 
 A REGIONAL API Gateway is publicly reachable, so Terraform refuses to deploy one without ``api_gateway_web_acl_arn``.
 Terraform does not create the web ACL, and cannot check what it allows. It must be a REGIONAL AWS WAFv2 web ACL that
-restricts access, for example blocking by default and allowing only an IP set of approved networks.
+restricts access, for example blocking by default and allowing only an IP set of approved networks. The ARN must have
+the form ``arn:aws:wafv2:<region>:<account-id>:regional/webacl/<name>/<id>``, and is ignored when
+``api_gateway_endpoint_type`` is ``"PRIVATE"``.
+
+The web ACL requirement is skipped when ``localstack_context = true``, because LocalStack cannot host a WAF. That flag
+also points the Lambda functions at a LocalStack endpoint, so it must not be set for deployments to AWS.
 
 Requests from a network that is not allowed receive ``403 Forbidden`` from the web ACL. ``pds-ingress-client`` reports
 this and asks the user to send their IP range to PDS Engineering.
