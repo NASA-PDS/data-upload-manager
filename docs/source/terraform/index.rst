@@ -7,7 +7,7 @@ operators who will be in charge of deploying and maintaining new instances of th
 DUM server components. For submitters of data to PDS Cloud, consult the usage_
 section for details on running the client-side script.
 
-Prior to utilizing this documentation, ensure Terraform 1.0.11 or greater has
+Prior to utilizing this documentation, ensure Terraform 1.2.0 or greater has
 been installed on the same machine that the DUM repository has been cloned to.
 
 Deployment Scripts
@@ -45,11 +45,15 @@ template can be used when creating a new `tfvars` file for use with a specific A
 
     lambda_s3_bucket_name = "<S3_Bucket_Name>"
 
+    api_gateway_endpoint_type = "<PRIVATE|REGIONAL>"  # default: PRIVATE
+
+    # Required when api_gateway_endpoint_type is "PRIVATE"
     api_gateway_policy_source_vpc = "<VPC_ID>"
 
-    api_gateway_endpoint_type = <"REGIONAL"|"PRIVATE">
+    # Required when api_gateway_endpoint_type is "REGIONAL"
+    api_gateway_web_acl_arn = "<WAF_Web_ACL_ARN>"
 
-    api_gateway_lambda_role_arn         = "<AWS_IAM_Role_ARN>"
+    api_gateway_lambda_role_arn        = "<AWS_IAM_Role_ARN>"
     lambda_ingress_service_iam_role_arn = "<AWS_IAM_Role_ARN>"
     lambda_authorizer_iam_role_arn      = "<AWS_IAM_Role_ARN>"
 
@@ -79,9 +83,10 @@ prior to deployment. Descriptions of each field follow:
 * ``<AWS_Profile_Name>``: The AWS Profile/Account name of the environment to deploy to.
 * ``<Path_to_local_aws_credentials_file>``: Path to a local file (such as ``~/.aws/credentials``) containing a valid set of AWS credentials_ for the specifed profile.
 * ``<S3_Bucket_Name>``: Name of an S3 bucket which Terraform will use to stage intermediate build products. The bucket will be created by Terraform and should not already exist.
-* ``<VPC_ID>``: ID of the Virtual Private Cloud instance where the deployed service will reside.
 * ``<AWS_IAM_Role_ARN>``: Amazon Resource Name (ARN) for the AWS Identity Access Management Role which grants the required permissions for the DUM server components to communicate.
-* ``<"REGIONAL"|"PRIVATE">``: Select the type of endpoint of the API Gateway. "REGIONAL" should only be used for deployments to the OPS environment.
+* ``<PRIVATE|REGIONAL>``: Type of endpoint of the API Gateway. "PRIVATE" (the default) limits access to a VPC (see `Private API Gateways`_). "REGIONAL" is publicly reachable, so Terraform requires a WAF web ACL (see `Restricting Access to a REGIONAL API Gateway`_). Use "REGIONAL" only when clients outside the VPC must reach the API, such as in OPS.
+* ``<VPC_ID>``: (PRIVATE only) ID of the VPC allowed to invoke the API Gateway.
+* ``<WAF_Web_ACL_ARN>``: (REGIONAL only) ARN of an existing WAFv2 web ACL to associate with each API Gateway stage. Not created by Terraform.
 
 .. note::
   * The selected Role(s) must include both ``lambda.amazonaws.com`` and ``apigateway.amazonaws.com`` as "Trusted Entities".
@@ -97,6 +102,46 @@ prior to deployment. Descriptions of each field follow:
   by Terraform for use with the bucket map of the Lambda Ingress Service.
     * Typically, there should be an entry for each PDS node that is expected to utilize DUM.
     * Each bucket name provided will be appended with the name of selected venue to ensure uniqueness across accounts. For example, an entry with the name "pds-sbn-staging" will result in a bucket named "pds-sbn-staging-prod" if the venue is set to "prod".
+
+Restricting Access to a REGIONAL API Gateway
+--------------------------------------------
+
+A REGIONAL API Gateway is publicly reachable, so Terraform refuses to deploy one without ``api_gateway_web_acl_arn``.
+Terraform does not create the web ACL, and cannot check what it allows. It must be a REGIONAL AWS WAFv2 web ACL that
+restricts access, for example blocking by default and allowing only an IP set of approved networks. The ARN must have
+the form ``arn:aws:wafv2:<region>:<account-id>:regional/webacl/<name>/<id>``, and is ignored when
+``api_gateway_endpoint_type`` is ``"PRIVATE"``.
+
+The web ACL requirement is skipped when ``localstack_context = true``, because LocalStack cannot host a WAF. That flag
+also points the Lambda functions at a LocalStack endpoint, so it must not be set for deployments to AWS.
+
+Requests from a network that is not allowed receive ``403 Forbidden`` from the web ACL. ``pds-ingress-client`` reports
+this and asks the user to send their IP range to PDS Engineering.
+
+Private API Gateways
+--------------------
+
+A ``PRIVATE`` API Gateway can only be invoked through an ``execute-api`` interface VPC endpoint. Terraform creates a
+resource policy that allows the VPC in ``api_gateway_policy_source_vpc`` (``aws:SourceVpc``) but does **not** create the
+endpoint. Before deploying, ensure that:
+
+* An ``execute-api`` interface endpoint with private DNS enabled exists in that VPC. Private DNS applies to all API
+  Gateway hostnames resolved in the VPC.
+* The endpoint's security group allows inbound port 443 from the hosts running ``pds-ingress-client``, which must be in
+  (or connected to) the VPC.
+
+Requests that do not come through an allowed endpoint receive ``403 Forbidden``. To check a host::
+
+    API_HOST="<api_id>.execute-api.<region>.amazonaws.com"
+    STAGE="<stage_name>"
+    dig +short "${API_HOST}"
+    curl -i "https://${API_HOST}/${STAGE}/createstream"
+
+The hostname should resolve to private addresses and the request should return ``401 Unauthorized``. A ``403`` means the
+request is not using an allowed endpoint.
+
+.. note::
+  Manual edits to the resource policy are overwritten by the next ``terraform apply``.
 
 Setting up the S3 Backend
 -------------------------
@@ -167,6 +212,71 @@ the initial deploy was executed::
     terraform destroy -var-file="<path to user .tfvars file>"
 
 Where ``<path to user .tfvars file>`` is the same `.tfvars` file used for the initial deployment.
+
+Troubleshooting
+---------------
+
+REGIONAL API Gateway requires a WAF web ACL
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``terraform plan`` stops with the following error when ``api_gateway_endpoint_type`` is ``"REGIONAL"`` and
+``api_gateway_web_acl_arn`` is not set::
+
+    Error: Resource precondition failed
+    ...
+    A REGIONAL API Gateway is publicly reachable and requires a restrictive WAF web ACL. Set api_gateway_web_acl_arn, or
+    use api_gateway_endpoint_type = "PRIVATE". See Troubleshooting in docs/source/terraform/index.rst.
+
+To fix it, add the ARN of a REGIONAL WAFv2 web ACL to the ``.tfvars`` file (see
+`Restricting Access to a REGIONAL API Gateway`_)::
+
+    api_gateway_web_acl_arn = "<WAF_Web_ACL_ARN>"
+
+To find the ARN, first check whether a web ACL is already associated with the deployed API Gateway stages::
+
+    AWS_PROFILE="<AWS_Profile_Name>"
+    REGION="us-west-2"
+    aws apigateway get-rest-apis --profile "${AWS_PROFILE}" --region "${REGION}" \
+      --query "items[].{name:name,id:id,type:endpointConfiguration.types[0]}" --output table
+
+    API_ID="<API_Gateway_ID>"
+    aws apigateway get-stages --rest-api-id "${API_ID}" --profile "${AWS_PROFILE}" --region "${REGION}" \
+      --query "item[].{stage:stageName,webAcl:webAclArn}" --output table
+
+If no stage has a web ACL, list the REGIONAL web ACLs available in the account::
+
+    aws wafv2 list-web-acls --scope REGIONAL --profile "${AWS_PROFILE}" --region "${REGION}" \
+      --query "WebACLs[].{name:Name,arn:ARN}" --output table
+
+If none of them is suitable, one must be created (outside of these Terraform scripts) before deploying. Before using a web
+ACL, confirm that it restricts access, for example that its default action is ``Block`` and that it allows only approved
+IP ranges::
+
+    WEB_ACL_NAME="<WAF_Web_ACL_Name>"
+    WEB_ACL_ID="<WAF_Web_ACL_ID>"
+    aws wafv2 get-web-acl --scope REGIONAL --name "${WEB_ACL_NAME}" --id "${WEB_ACL_ID}" \
+      --profile "${AWS_PROFILE}" --region "${REGION}"
+
+If the web ACL is already associated with the stages outside of Terraform, import each association into the Terraform
+state before running ``terraform apply``. Run the import once per stage, incrementing the index, in the same order as
+``api_deployment_stages``::
+
+    WEB_ACL_ARN="<WAF_Web_ACL_ARN>"
+    STAGE_NAME="<API_Gateway_Stage_Name>"
+    STAGE_INDEX="0"
+    TFVARS_FILE="<path to user .tfvars file>"
+    STAGE_ARN="arn:aws:apigateway:${REGION}::/restapis/${API_ID}/stages/${STAGE_NAME}"
+    terraform import -var-file="${TFVARS_FILE}" \
+      "module.nucleus_dum_api.aws_wafv2_web_acl_association.stages[${STAGE_INDEX}]" "${WEB_ACL_ARN},${STAGE_ARN}"
+
+PRIVATE API Gateway requires a source VPC
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``terraform plan`` stops with ``A PRIVATE API Gateway requires api_gateway_policy_source_vpc`` when
+``api_gateway_endpoint_type`` is ``"PRIVATE"`` (the default) and ``api_gateway_policy_source_vpc`` is not set. Add the ID
+of the VPC that contains the ``execute-api`` interface endpoint (see `Private API Gateways`_)::
+
+    api_gateway_policy_source_vpc = "<VPC_ID>"
 
 .. References:
 .. _usage: ../usage/index.html

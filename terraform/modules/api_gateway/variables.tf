@@ -20,7 +20,33 @@ variable "rest_api_description" {
 variable "api_gateway_endpoint_type" {
   type        = string
   default     = "PRIVATE"
-  description = "The endpoint type to assign to the API Gateway. Should be one of PRIVATE or REGIONAL"
+  description = "The endpoint type to assign to the API Gateway. Should be one of PRIVATE or REGIONAL. REGIONAL is publicly reachable and requires api_gateway_web_acl_arn."
+
+  validation {
+    condition     = contains(["PRIVATE", "REGIONAL"], var.api_gateway_endpoint_type)
+    error_message = "api_gateway_endpoint_type must be PRIVATE or REGIONAL."
+  }
+}
+
+variable "api_gateway_web_acl_arn" {
+  type        = string
+  default     = null
+  description = "ARN of an existing REGIONAL WAFv2 web ACL to associate with each stage of the API Gateway. Required when api_gateway_endpoint_type is REGIONAL, and ignored when it is PRIVATE; the web ACL must restrict access."
+
+  validation {
+    # can() keeps the check safe for null, since || does not short-circuit
+    condition = (
+      var.api_gateway_web_acl_arn == null ||
+      can(regex("^arn:aws[a-z-]*:wafv2:[a-z0-9-]+:[0-9]{12}:regional/webacl/[^/]+/[^/]+$", var.api_gateway_web_acl_arn))
+    )
+    error_message = "api_gateway_web_acl_arn must be the ARN of a REGIONAL WAFv2 web ACL (arn:aws:wafv2:<region>:<account-id>:regional/webacl/<name>/<id>)."
+  }
+}
+
+variable "api_gateway_require_web_acl" {
+  type        = bool
+  default     = true
+  description = "Require api_gateway_web_acl_arn for REGIONAL endpoints. Only disabled for LocalStack deployments, which cannot host a WAF."
 }
 
 variable "api_gateway_lambda_role_arn" {
@@ -28,10 +54,10 @@ variable "api_gateway_lambda_role_arn" {
   description = "ARN of the IAM role to assign to the API Gateway. Must have permission to access AWS Lambda."
 }
 
-# TODO: this may go away when API is deployed as REGIONAL instead of PRIVATE
 variable "api_gateway_policy_source_vpc" {
   type        = string
-  description = "VPC ID to allow traffic from within the DUM API Gateway"
+  default     = ""
+  description = "VPC ID to allow traffic from within the DUM API Gateway. Only used, and required, when api_gateway_endpoint_type is PRIVATE."
 }
 
 variable "lambda_authorizer_function_arn" {
