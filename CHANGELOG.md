@@ -1,13 +1,26 @@
 # Changelog
 
-## [release/2.6.1](https://github.com/NASA-PDS/data-upload-manager/tree/release/2.6.1) (2026-10-23)
+## [«unknown»](https://github.com/NASA-PDS/data-upload-manager/tree/«unknown») (2026-11-05)
 
-[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.10...release/2.6.1)
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.6.1...«unknown»)
+
+**Requirements:**
+
+- As a PDS engineer, I want a REGIONAL DUM API Gateway to require a WAF web ACL, so that no API is deployed publicly without restricted access [\#399](https://github.com/NASA-PDS/data-upload-manager/issues/399)
+
+**Other closed issues:**
+
+- Document existing DUM IAM roles and policies on the wiki [\#404](https://github.com/NASA-PDS/data-upload-manager/issues/404)
+- DUM Test Deployment - Support multiple Cognito user groups per node ID [\#401](https://github.com/NASA-PDS/data-upload-manager/issues/401)
+
+## [v2.6.1](https://github.com/NASA-PDS/data-upload-manager/tree/v2.6.1) (2026-10-23)
+
+[Full Changelog](https://github.com/NASA-PDS/data-upload-manager/compare/v2.5.10...v2.6.1)
 
 **Defects:**
 
 - Dry run actually ran when placed at the end of the command list [\#392](https://github.com/NASA-PDS/data-upload-manager/issues/392) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
-- Authorizer does not support multiple Cognito user groups per node ID [\#384](https://github.com/NASA-PDS/data-upload-manager/issues/384)
+- Authorizer does not support multiple Cognito user groups per node ID [\#384](https://github.com/NASA-PDS/data-upload-manager/issues/384) [[s.high](https://github.com/NASA-PDS/data-upload-manager/labels/s.high)]
 
 **Other closed issues:**
 
