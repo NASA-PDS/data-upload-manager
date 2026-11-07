@@ -105,6 +105,8 @@ Currently, there are only two ways to configure new users within the User Pool:
 * Manually add new users via the AWS Admin Console for the Cognito service. More information on how to do so can be found here: https://docs.aws.amazon.com/cognito/latest/developerguide/how-to-create-user-accounts.html
 
 
+.. _weblog-smoke-test:
+
 Smoke Testing Weblog Ingress
 -----------------------------
 
@@ -116,9 +118,22 @@ the ``integration/scripts/weblog_smoke_test.sh`` script. The script:
 3. Confirms each file arrived in the weblogs bucket at the expected key with the expected size.
 4. Deletes exactly those objects from the bucket and confirms they are gone.
 
-The weblogs bucket, AWS region and AWS CLI profile are required arguments. The AWS credentials in use need
-permission to read and delete objects in that bucket, and the INI config must contain valid Cognito credentials for
-a user in the Engineering node group::
+The script is not installed with the ``pds-data-upload-manager`` package. Run it from a checkout of this repository.
+Run it after every deployment, because each Terraform apply regenerates the bucket map.
+
+Before running the script, make sure of the following:
+
+* ``pds-ingress-client`` is on the ``PATH`` (activate the virtual environment it is installed in), or the
+  ``PDS_INGRESS_CLIENT`` environment variable holds the path to it.
+* The AWS CLI is installed, and the profile passed to the script can read and delete objects in the weblogs bucket.
+* The client INI config is complete. It is used exactly as written, with no defaults filled in, so every section and
+  key in the Client Configuration template of the :doc:`installation </installation/index>` guide must be present
+  (``[API_GATEWAY]``, ``[COGNITO]`` and ``[OTHER]``, including ``region`` in both ``[API_GATEWAY]`` and
+  ``[COGNITO]``, and ``log_level`` and ``log_group_name`` in ``[OTHER]``). A missing key stops the client with a
+  ``KeyError`` before it contacts the service.
+* The Cognito user in the INI config belongs to the Engineering node group.
+
+The weblogs bucket, AWS region and AWS CLI profile are required arguments::
 
     WEBLOGS_BUCKET="<weblogs bucket name>"
     DUM_CONFIG="<path to the client INI config>"
@@ -130,9 +145,13 @@ a user in the Engineering node group::
       --region "${AWS_REGION}" \
       --profile "${AWS_PROFILE_NAME}"
 
-The script exits with status 0 only if the upload, verification, delete and delete verification all succeed. Use
-``--node`` to test a different node, ``--log-type`` to change the log type, and ``--count`` to change the number of
-files. Run the script with ``--help`` for the full list of options.
+The script exits with status 0 only if the upload, verification, delete and delete verification all succeed. It exits
+with status 1 if any step fails and with status 2 if its arguments are invalid. A successful run ends with::
+
+    PASS: weblog upload to s3://<weblogs bucket> succeeded and test objects were removed
+
+Use ``--node`` to test a different node, ``--log-type`` to change the log type, and ``--count`` to change the number
+of files. Run the script with ``--help`` for the full list of options.
 
 Every file created by the script contains a unique run ID, and only those exact object keys are deleted. If the
 weblogs bucket has versioning enabled, the delete leaves a delete marker and the uploaded (empty) object versions

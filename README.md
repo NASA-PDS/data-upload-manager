@@ -184,6 +184,25 @@ You can access the build files in the following directory relative to the projec
 build/sphinx/html/
 ```
 
+### Post-Deployment Smoke Test
+
+After deploying the service, verify weblog ingress end to end. The script uploads a few empty gzip files as the
+Engineering node, checks that they arrive in the weblogs bucket, then deletes exactly those objects:
+
+```bash
+WEBLOGS_BUCKET="<weblogs bucket name>"
+DUM_CONFIG="<path to the client INI config>"
+AWS_REGION="<aws region>"
+AWS_PROFILE_NAME="<aws cli profile>"
+integration/scripts/weblog_smoke_test.sh \
+  --bucket "${WEBLOGS_BUCKET}" \
+  --config "${DUM_CONFIG}" \
+  --region "${AWS_REGION}" \
+  --profile "${AWS_PROFILE_NAME}"
+```
+
+See the Operations guide (`docs/source/operations/index.rst`) for prerequisites and troubleshooting.
+
 ### Migration Steps for Existing Deployments
 
 If you are migrating from an existing deployment, follow these steps in order to transition to the new **Python 3.13** and **Docker-based** build system:
