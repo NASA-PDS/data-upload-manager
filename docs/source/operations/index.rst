@@ -105,6 +105,41 @@ Currently, there are only two ways to configure new users within the User Pool:
 * Manually add new users via the AWS Admin Console for the Cognito service. More information on how to do so can be found here: https://docs.aws.amazon.com/cognito/latest/developerguide/how-to-create-user-accounts.html
 
 
+Smoke Testing Weblog Ingress
+-----------------------------
+
+After deploying the DUM service, or after changing the bucket map, the weblog path can be checked end to end with
+the ``integration/scripts/weblog_smoke_test.sh`` script. The script:
+
+1. Creates a few empty gzip files named like weblogs.
+2. Uploads them as the Engineering node with ``pds-ingress-client --weblogs``.
+3. Confirms each file arrived in the weblogs bucket at the expected key with the expected size.
+4. Deletes exactly those objects from the bucket and confirms they are gone.
+
+The weblogs bucket, AWS region and AWS CLI profile are required arguments. The AWS credentials in use need
+permission to read and delete objects in that bucket, and the INI config must contain valid Cognito credentials for
+a user in the Engineering node group::
+
+    WEBLOGS_BUCKET="<weblogs bucket name>"
+    DUM_CONFIG="<path to the client INI config>"
+    AWS_REGION="<aws region>"
+    AWS_PROFILE_NAME="<aws cli profile>"
+    integration/scripts/weblog_smoke_test.sh \
+      --bucket "${WEBLOGS_BUCKET}" \
+      --config "${DUM_CONFIG}" \
+      --region "${AWS_REGION}" \
+      --profile "${AWS_PROFILE_NAME}"
+
+The script exits with status 0 only if the upload, verification, delete and delete verification all succeed. Use
+``--node`` to test a different node, ``--log-type`` to change the log type, and ``--count`` to change the number of
+files. Run the script with ``--help`` for the full list of options.
+
+Every file created by the script contains a unique run ID, and only those exact object keys are deleted. If the
+weblogs bucket has versioning enabled, the delete leaves a delete marker and the uploaded (empty) object versions
+are retained.
+
+If the script reports a failure at the upload step, follow the procedure in the next section.
+
 Troubleshooting Ingress Request Failures
 -----------------------------------------
 
