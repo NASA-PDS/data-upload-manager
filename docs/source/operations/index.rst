@@ -162,9 +162,7 @@ If the script reports a failure at the upload step, follow the procedure in the 
 Troubleshooting Ingress Request Failures
 -----------------------------------------
 
-When the ``pds-ingress-client`` reports a failure while requesting a batch, it prints only the HTTP
-status and a generic message. The client does not display the service response body, so the cause of
-a failure is found in the AWS-side logs. The procedure below applies to any ingress request that fails with
+When ``pds-ingress-client`` reports a failure while requesting a batch, it logs the HTTP status, truncated service response body, and API Gateway request IDs. Handled 500 responses also include a Lambda ``request_id``; use that ID and the AWS-side logs to identify the cause.
 an HTTP 5xx status, for example::
 
     Ingress request failed with HTTP status 500 (Internal Server Error)
