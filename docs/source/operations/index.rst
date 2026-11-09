@@ -314,8 +314,8 @@ Then check that the role is allowed to read and write objects in it::
 
     aws iam simulate-principal-policy \
       --policy-source-arn "${ROLE_ARN}" \
-      --action-names s3:ListBucket s3:GetObject s3:PutObject s3:CreateMultipartUpload \
-      --resource-arns "arn:aws:s3:::${BUCKET_NAME}" "arn:aws:s3:::${BUCKET_NAME}/*" \
+      --action-names s3:ListBucket s3:GetObject s3:PutObject s3:AbortMultipartUpload \
+      --resource-arns "arn:aws:s3:::${BUCKET_NAME}" "arn:aws:s3:::${BUCKET_NAME}/*"
       --query "EvaluationResults[].[EvalActionName,EvalDecision]" \
       --output text
 
