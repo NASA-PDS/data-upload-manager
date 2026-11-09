@@ -207,9 +207,9 @@ echo "== 3. Deleting the test objects =="
 KEY_PATTERN="^${NODE}/weblogs/${NODE}-${LOG_TYPE}/access_log\.smoketest-[0-9TZ]+-[0-9]+-[0-9]+\.gz$"
 for idx in "${!KEYS[@]}"; do
     key="${KEYS[$idx]}"
-    # Nothing to delete for an object that was never uploaded
-    if [ "${STATES[$idx]}" = "missing" ]; then
-        echo "Skipped (not in bucket): ${key}"
+    # Delete only an object confirmed present by head-object
+    if [ "${STATES[$idx]}" != "present" ]; then
+        echo "Skipped (not confirmed in bucket): ${key}"
         continue
     fi
     # Only ever delete keys this run generated
