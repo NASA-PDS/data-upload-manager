@@ -349,10 +349,9 @@ To read the file from the command line instead, download the code package deploy
 Open the bucket map file and confirm all of the following for the requesting node:
 
 1. The node ID (upper case, for example ``NAIF``) has a section under ``NODES``.
-2. The section has a ``default`` entry, or a path entry whose ``prefix`` matches the requested
-   path. For weblog uploads the path starts with ``weblogs/<node>-<log_type>/``, for example
-   ``weblogs/naif-apache/``.
-3. Every bucket named in the section exists and passes Step 5a.
+2. The section has ``buckets.staging`` and ``buckets.archive`` entries. Optional path overrides are listed under ``paths``; each override has a ``prefix`` and a ``bucket``.
+3. If no path override matches, the service uses the corresponding bucket from ``buckets``. For weblog uploads the path starts with ``weblogs/<node>-<log_type>/``, for example ``weblogs/naif-apache/``.
+4. Every bucket named in ``buckets`` and in any matching path override exists and passes Step 5a.
 
 Add the missing entry (see `Configuring the Server Side Bucket Map`_), redeploy the function, and retry.
 
