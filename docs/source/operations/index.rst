@@ -7,7 +7,7 @@ the DUM service in AWS.
 Configuring the Server Side Bucket Map
 ---------------------------------------
 
-Once the Server side components of DUM have been deployed to AWS (see terraform_ section),
+Once the Server side components of DUM have been deployed to AWS (see the :doc:`Terraform Deployment </terraform/index>` guide),
 how ingested files are routed to S3 buckets is controlled via a "Bucket Map" configuration
 file which gets bundled with the "nucleus-dum-ingress-service" lambda function.
 
@@ -101,7 +101,7 @@ the INI config used with the ``pds-ingress-client`` script.
 
 Currently, there are only two ways to configure new users within the User Pool:
 
-* Specify the list of users to pre-populate the User Pool with via the `.tfvars` file used with a Terraform deployment. See the terraform_ section for more information on how to configure this.
+* Specify the list of users to pre-populate the User Pool with via the `.tfvars` file used with a Terraform deployment. See the :doc:`Terraform Deployment </terraform/index>` guide for more information on how to configure this.
 * Manually add new users via the AWS Admin Console for the Cognito service. More information on how to do so can be found here: https://docs.aws.amazon.com/cognito/latest/developerguide/how-to-create-user-accounts.html
 
 
@@ -437,12 +437,13 @@ that is allowed to reach the API Gateway endpoint, using a Cognito user that bel
 Build a request body with a single file. Use the same ``trimmed_path`` form the client sends, for example a
 path under ``weblogs/<node>-<log_type>/`` for a weblog upload::
 
+    MD5=$(md5sum /path/to/local/access.log.gz | cut -d ' ' -f 1)
     cat > request.json <<EOF
     [
       {
         "ingress_path": "/path/to/local/access.log.gz",
         "trimmed_path": "weblogs/${NODE_ID}-apache/access.log.gz",
-        "md5": "d41d8cd98f00b204e9800998ecf8427e",
+        "md5": "${MD5}",
         "size": 1024,
         "last_modified": 1767225600.0
       }
