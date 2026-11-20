@@ -407,6 +407,37 @@ def _prepare_batch_for_ingress(ingress_path_batch, prefix, batch_index, batch_pb
     return request_batch
 
 
+def log_error_response_details(logger, response, max_body_length=1000):
+    """
+    Logs the details of a failed ingress request that are needed to locate the
+    failure in the service-side logs: the response body returned by the service
+    and the request IDs assigned by API Gateway.
+
+    Parameters
+    ----------
+    logger : logging.logger
+        Logger to write the details to.
+    response : requests.Response
+        The non-200 response returned by the Ingress Service.
+    max_body_length : int, optional
+        Maximum number of characters of the response body to log.
+
+    """
+    body = (response.text or "").strip()
+
+    if body:
+        if len(body) > max_body_length:
+            body = body[:max_body_length] + "... (truncated)"
+
+        logger.error("Response from service: %s", body)
+
+    for header in ("x-amzn-RequestId", "x-amz-apigw-id"):
+        value = response.headers.get(header)
+
+        if value:
+            logger.error("%s: %s", header, value)
+
+
 @backoff.on_exception(backoff.expo, Exception, max_time=120, on_backoff=backoff_handler, logger=None)
 def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwrite, api_gateway_config, request_timeout=600):
     """
@@ -508,6 +539,7 @@ def request_batch_for_ingress(request_batch, batch_index, node_id, force_overwri
 
     logger.error(Color.red("----------------------------------------------"))
     logger.error(Color.red_bold(f"Ingress request failed with HTTP status {response.status_code} ({response.reason})"))
+    log_error_response_details(logger, response)
 
     #
     # Special handling for 403 (user is authenticated but not allowed)

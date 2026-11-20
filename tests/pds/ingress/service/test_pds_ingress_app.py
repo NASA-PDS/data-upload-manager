@@ -15,6 +15,7 @@ import botocore.exceptions
 from importlib.resources import files
 
 from pds.ingress import __version__
+from pds.ingress.service.pds_ingress_app import check_bucket_access
 from pds.ingress.service.pds_ingress_app import check_client_version
 from pds.ingress.service.pds_ingress_app import get_dum_version
 from pds.ingress.service.pds_ingress_app import lambda_handler
@@ -227,6 +228,80 @@ class PDSIngressAppTest(unittest.TestCase):
 
         with self.assertRaises(RuntimeError, msg="No request node ID provided in queryStringParameters"):
             lambda_handler(test_event, context)
+
+    def test_check_bucket_access(self):
+        """Test the logging and return value of check_bucket_access for each S3 failure mode"""
+        mock_s3_client = MagicMock()
+
+        with patch("pds.ingress.service.pds_ingress_app.s3_client", mock_s3_client):
+            # Bucket exists and is accessible
+            self.assertTrue(check_bucket_access("some-bucket", "staging"))
+
+            # Bucket does not exist
+            mock_s3_client.head_bucket.side_effect = botocore.exceptions.ClientError(
+                {"Error": {"Code": "404", "Message": "Not Found"}}, "HeadBucket"
+            )
+
+            with self.assertLogs(logger=service_logger, level="ERROR") as cm:
+                self.assertFalse(check_bucket_access("some-bucket", "staging"))
+
+            self.assertIn("Staging bucket 'some-bucket' does not exist (404 Not Found)", cm.output[0])
+
+            # Bucket exists but access is forbidden
+            mock_s3_client.head_bucket.side_effect = botocore.exceptions.ClientError(
+                {"Error": {"Code": "403", "Message": "Forbidden"}}, "HeadBucket"
+            )
+
+            with self.assertLogs(logger=service_logger, level="ERROR") as cm:
+                self.assertFalse(check_bucket_access("some-bucket", "archive"))
+
+            self.assertIn("Archive bucket 'some-bucket' exists but access is forbidden (403)", cm.output[0])
+
+    def test_lambda_handler_inaccessible_bucket(self):
+        """Test that an inaccessible bucket results in a 500 response that includes the Lambda request ID"""
+        test_event = {
+            "body": json.dumps(
+                [
+                    {
+                        "ingress_path": "/home/user/data/weblogs/access.log.gz",
+                        "trimmed_path": "weblogs/sbn-apache/access.log.gz",
+                        "md5": "deadbeefdeadbeefdeadbeef",
+                        "size": 1,
+                        "last_modified": os.path.getmtime(os.path.abspath(__file__)),
+                    }
+                ]
+            ),
+            "queryStringParameters": {"node": "sbn"},
+            "headers": {"ClientVersion": __version__, "ForceOverwrite": False},
+        }
+
+        context = MagicMock()
+        context.aws_request_id = "test-request-id"
+
+        with patch("pds.ingress.service.pds_ingress_app.check_bucket_access", return_value=False):
+            with self.assertLogs(logger=service_logger, level="ERROR") as cm:
+                response = lambda_handler(test_event, context)
+
+        self.assertEqual(response["statusCode"], 500)
+
+        body = json.loads(response["body"])
+
+        self.assertIn("error", body)
+        self.assertEqual(body["request_id"], "test-request-id")
+
+        # The bucket name and node must be logged, and the message must not assume a permissions problem
+        log_output = "\n".join(cm.output)
+
+        self.assertIn("INTERNAL ERROR: Lambda cannot access staging bucket", log_output)
+        self.assertIn("for node sbn", log_output)
+        self.assertNotIn("Possible IAM role", log_output)
+
+        # No request ID is included when the invocation context does not provide one
+        with patch("pds.ingress.service.pds_ingress_app.check_bucket_access", return_value=False):
+            response = lambda_handler(test_event, {})
+
+        self.assertEqual(response["statusCode"], 500)
+        self.assertNotIn("request_id", json.loads(response["body"]))
 
     def test_should_upload_file(self):
         """Test decision logic for whether a file should be uploaded (with staging + archive bucket checks)."""

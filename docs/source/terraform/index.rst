@@ -175,6 +175,13 @@ Once the user ``.tfvars`` is created and saved locally, run the following comman
 
 If everything is configured correctly, deployment should only take about 5-10 minutes.
 
+Verifying the Deployment
+------------------------
+
+Each apply regenerates the bucket map bundled with the ingress Lambda function. After every deployment, confirm
+that weblog ingress works end to end with the weblog smoke test described in :ref:`weblog-smoke-test`. If the test
+fails, follow the troubleshooting procedure in the :doc:`Operations </operations/index>` guide.
+
 Utilizing Terraform Outputs
 ---------------------------
 

@@ -610,8 +610,10 @@ def process_ingress_request(ingress_request, request_index, node_bucket_map, req
         # Log full bucket name for internal debugging
         logger.error(
             "INTERNAL ERROR: Lambda cannot access staging bucket '%s'. "
-            "Possible IAM role or bucket policy misconfiguration.",
+            "See the preceding log entry for the reason (bucket does not exist, access forbidden, "
+            "or unexpected S3 error). Check the bucket map entry for node %s and the Lambda role permissions.",
             destination_bucket,
+            request_node,
         )
 
         # Send a generic error to the client (no bucket name)
@@ -624,8 +626,10 @@ def process_ingress_request(ingress_request, request_index, node_bucket_map, req
     if not archive_ok:
         logger.error(
             "INTERNAL ERROR: Lambda cannot access archive bucket '%s'. "
-            "Likely cross-account permissions or bucket policy issue.",
+            "See the preceding log entry for the reason (bucket does not exist, access forbidden, "
+            "or unexpected S3 error). Check the bucket map entry for node %s and the Lambda role permissions.",
             archive_bucket,
+            request_node,
         )
 
         raise RuntimeError(
@@ -784,16 +788,22 @@ def lambda_handler(event, context):
                 logger.exception("Ingress request failed inside worker thread")
 
                 # FAIL FAST: return 500 to the client
+                error_body = {
+                    "error": (
+                        "Internal server error: the ingestion service encountered a failure "
+                        "while processing this request. Please contact PDS Engineering."
+                    )
+                }
+
+                # Include the Lambda request ID so the failure can be located in the CloudWatch logs
+                request_id = getattr(context, "aws_request_id", None)
+
+                if request_id:
+                    error_body["request_id"] = request_id
+
                 return {
                     "statusCode": HTTPStatus.INTERNAL_SERVER_ERROR.value,
-                    "body": json.dumps(
-                        {
-                            "error": (
-                                "Internal server error: the ingestion service encountered a failure "
-                                "while processing this request. Please contact PDS Engineering."
-                            )
-                        }
-                    ),
+                    "body": json.dumps(error_body),
                 }
 
     # Determine top-level HTTP status for the entire batch.
