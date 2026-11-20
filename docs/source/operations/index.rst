@@ -370,9 +370,7 @@ access to them (Step 5a). The staging and archive buckets are both checked for e
 
 **5d. Malformed request.**
 
-Ask the reporter to re-run the client with ``--manifest-path`` pointing to a new file, then inspect the
-manifest for entries with an empty or non-hexadecimal ``md5`` value, or a ``size`` or
-``last_modified`` that is missing. Zero-length or unreadable files in the input set are a common cause.
+Ask the reporter to re-run the client with ``--manifest-path`` pointing to a new file, then inspect the manifest for stale or manually edited entries with an empty or non-hexadecimal ``md5`` value, or a missing ``size`` or ``last_modified``. Zero-length files have a valid MD5 and size of zero; unreadable files normally fail during client-side preparation.
 
 Step 6: No Lambda Logs Exist for the Failure
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
