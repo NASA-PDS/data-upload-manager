@@ -425,13 +425,30 @@ that is allowed to reach the API Gateway endpoint, using a Cognito user that bel
     USER_GROUP="<cognito group name for the node>"
     CLIENT_VERSION="<client version reported by the user>"
     read -r -s -p "Cognito password: " COGNITO_PASSWORD
-    ACCESS_TOKEN=$(aws cognito-idp initiate-auth \
-      --region "${AWS_REGION}" \
-      --auth-flow USER_PASSWORD_AUTH \
-      --client-id "${CLIENT_ID}" \
-      --auth-parameters "USERNAME=${COGNITO_USER},PASSWORD=${COGNITO_PASSWORD}" \
-      --query "AuthenticationResult.AccessToken" \
-      --output text)
+    ACCESS_TOKEN=$(
+      umask 077
+      AUTH_INPUT=$(mktemp)
+      trap 'rm -f "${AUTH_INPUT}"' EXIT
+      printf '%s' "${COGNITO_PASSWORD}" | python3 -c '
+    import json
+    import sys
+
+    print(json.dumps({
+        "AuthFlow": "USER_PASSWORD_AUTH",
+        "ClientId": sys.argv[1],
+        "AuthParameters": {
+            "USERNAME": sys.argv[2],
+            "PASSWORD": sys.stdin.read(),
+        },
+    }))
+    ' "${CLIENT_ID}" "${COGNITO_USER}" > "${AUTH_INPUT}"
+      aws cognito-idp initiate-auth \
+        --region "${AWS_REGION}" \
+        --cli-input-json "file://${AUTH_INPUT}" \
+        --query "AuthenticationResult.AccessToken" \
+        --output text
+    )
+    unset COGNITO_PASSWORD
 
 Build a request body with a single file. Use the same ``trimmed_path`` form the client sends, for example a
 path under ``weblogs/<node>-<log_type>/`` for a weblog upload::
