@@ -410,7 +410,7 @@ Work through these checks in order:
 Step 7: Reproduce the Request and Read the Response Body
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To see the response body the client does not print, send one request directly. Run this from a network
+To reproduce the request independently and inspect the response body and headers directly, run the request from a network
 that is allowed to reach the API Gateway endpoint, using a Cognito user that belongs to the node's user group::
 
     AWS_REGION="us-west-2"
