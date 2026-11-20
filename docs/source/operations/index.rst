@@ -163,7 +163,7 @@ Troubleshooting Ingress Request Failures
 -----------------------------------------
 
 When ``pds-ingress-client`` reports a failure while requesting a batch, it logs the HTTP status, truncated service response body, and API Gateway request IDs. Handled 500 responses also include a Lambda ``request_id``; use that ID and the AWS-side logs to identify the cause.
-an HTTP 5xx status, for example::
+For an HTTP 5xx status, for example::
 
     Ingress request failed with HTTP status 500 (Internal Server Error)
     The ingestion service encountered an internal error and could not process this request.
